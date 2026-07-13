@@ -1,19 +1,17 @@
-# Fly.io config for craw-music (TikTok music player).
-# Deploy: `fly launch --no-deploy` (or reuse this file), create a volume, then `fly deploy`.
-# Change `app` to your own unique name if this one is taken.
+# Fly.io config for craw-music (TikPlay).
 app = "craw-music"
-primary_region = "sin"  # Singapore — gần VN nhất. Đổi nếu muốn.
+primary_region = "sin"
 
 [build]
   dockerfile = "Dockerfile"
 
 [env]
   CACHE_DIR = "/app/cache"
+  DB_PATH = "/app/cache/tikplay.json"
   CACHE_TTL_DAYS = "7"
   CACHE_MAX_GB = "2"
   PORT = "3000"
 
-# Persistent disk for the audio cache (Fly gives 3GB free).
 [mounts]
   source = "craw_cache"
   destination = "/app/cache"
@@ -21,10 +19,16 @@ primary_region = "sin"  # Singapore — gần VN nhất. Đổi nếu muốn.
 [http_service]
   internal_port = 3000
   force_https = true
-  # Scale to zero when idle to save the free allowance; wakes on next request.
   auto_stop_machines = "stop"
   auto_start_machines = true
   min_machines_running = 0
+
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "30s"
+    method = "get"
+    path = "/"
 
 [[vm]]
   size = "shared-cpu-1x"

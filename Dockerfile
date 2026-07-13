@@ -32,6 +32,7 @@ RUN yt-dlp -U || true
 # Persistent cache volume. Mount a disk here in production.
 # CACHE_MAX_GB kept under Fly's 3GB free volume.
 ENV CACHE_DIR=/app/cache
+ENV DB_PATH=/app/cache/tikplay.json
 ENV CACHE_TTL_DAYS=7
 ENV CACHE_MAX_GB=2
 ENV PORT=3000
@@ -41,4 +42,5 @@ VOLUME ["/app/cache"]
 
 EXPOSE 3000
 
-CMD ["npm", "start"]
+# Bind explicitly to 0.0.0.0 so fly-proxy can reach the server.
+CMD ["npx", "next", "start", "-H", "0.0.0.0", "-p", "3000"]

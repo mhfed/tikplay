@@ -1,6 +1,7 @@
 node_modules
 .next
 cache/
+data/
 .env*
 .venv
 test-results/

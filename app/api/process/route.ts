@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { validateTikTokUrl, cacheKeyFromRaw } from '@/lib/tiktok/validate';
 import { FileCacheStore } from '@/lib/cache';
 import { MediaProcessor, TrackMeta } from '@/lib/media/processor';
+import { upsertTrack, applyAutoRules } from '@/lib/db/queries';
 
 // Long-running yt-dlp jobs must run on the Node.js runtime, never Edge.
 export const runtime = 'nodejs';
@@ -49,18 +50,34 @@ export async function POST(req: NextRequest) {
   const cached = cache.get(key);
   const meta = cache.getMeta(key) as TrackMeta | null;
   if (cached && meta) {
-    return NextResponse.json({ ok: true, data: payload(key, meta) });
+    const dbTrack = persistTrack(url, key, meta);
+    return NextResponse.json({ ok: true, data: payload(key, meta), trackId: dbTrack.id });
   }
 
   try {
     const result = await processor.process(url);
-    return NextResponse.json({ ok: true, data: payload(result.audioKey, result.meta) });
+    const dbTrack = persistTrack(url, result.audioKey, result.meta);
+    return NextResponse.json({ ok: true, data: payload(result.audioKey, result.meta), trackId: dbTrack.id });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: (e as Error).message || 'Xử lý thất bại' },
       { status: 400 },
     );
   }
+}
+
+function persistTrack(url: string, audioKey: string, meta: TrackMeta) {
+  const dbTrack = upsertTrack({
+    url,
+    audio_key: audioKey,
+    title: meta.title,
+    author: meta.author,
+    cover: meta.cover,
+    duration: meta.duration,
+    added_at: Date.now(),
+  });
+  applyAutoRules(dbTrack.id, dbTrack.title, dbTrack.author);
+  return dbTrack;
 }
 
 function payload(key: string, meta: TrackMeta) {

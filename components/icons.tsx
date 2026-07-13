@@ -173,6 +173,25 @@ export function PlusIcon({ size = 24, ...rest }: IconProps) {
   );
 }
 
+export function ShareIcon({ size = 24, ...rest }: IconProps) {
+  return (
+    <svg {...stroke(size)} aria-hidden {...rest}>
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <path d="M8.6 10.7 15.4 6.3M8.6 13.3l6.8 4.4" />
+    </svg>
+  );
+}
+
+export function CheckIcon({ size = 24, ...rest }: IconProps) {
+  return (
+    <svg {...stroke(size)} aria-hidden {...rest}>
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
 export function GripIcon({ size = 24, ...rest }: IconProps) {
   return (
     <svg {...stroke(size)} aria-hidden {...rest}>

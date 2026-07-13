@@ -23,13 +23,18 @@ function hash(str: string): number {
   return h >>> 0;
 }
 
-/** Build a pleasant two-stop gradient from a name. */
+/** Build a layered, name-seeded gradient: base sweep + light/shadow accents. */
 function palette(name: string) {
   const h = hash(name || '♪');
   const hue = h % 360;
   const hue2 = (hue + 38) % 360;
+  const hue3 = (hue + 310) % 360;
   return {
-    bg: `linear-gradient(135deg, hsl(${hue} 68% 52%), hsl(${hue2} 72% 40%))`,
+    bg: [
+      `radial-gradient(circle at 26% 20%, hsl(${hue} 88% 68% / 0.55), transparent 52%)`,
+      `radial-gradient(circle at 80% 84%, hsl(${hue3} 70% 24% / 0.85), transparent 62%)`,
+      `linear-gradient(135deg, hsl(${hue} 68% 50%), hsl(${hue2} 72% 36%))`,
+    ].join(', '),
     ring: `hsl(${hue} 80% 62%)`,
   };
 }
@@ -73,6 +78,9 @@ export default function Cover({
       aria-label={label}
       title={subtitle ? `${label} — ${subtitle}` : label}
     >
+      <span className="cover__note" aria-hidden>
+        ♪
+      </span>
       <span className="cover__title">{label}</span>
       {subtitle ? <span className="cover__sub">{subtitle}</span> : null}
     </div>

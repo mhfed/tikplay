@@ -77,7 +77,12 @@ export class MediaProcessor {
       '--audio-format',
       'm4a',
       '--audio-quality',
-      '0', // keep source quality, no re-encode down
+      '0', // best encoder quality (loudnorm forces a re-encode anyway)
+      // Normalize loudness (EBU R128) so every track plays at the same, hot
+      // level: -9 LUFS integrated, -1 dBTP ceiling. Applied in the same
+      // ffmpeg pass that extracts the audio.
+      '--postprocessor-args',
+      'ExtractAudio:-af loudnorm=I=-9:TP=-1:LRA=11',
       url,
       '-o',
       outputTemplate,

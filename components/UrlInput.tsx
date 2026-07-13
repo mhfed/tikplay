@@ -9,7 +9,6 @@ interface UrlInputProps {
   error: string | null;
 }
 
-/** Controlled TikTok URL input. Calls `onAdd` with a trimmed URL on submit. */
 export default function UrlInput({ onAdd, loading, error }: UrlInputProps) {
   const [value, setValue] = useState('');
 
@@ -26,7 +25,7 @@ export default function UrlInput({ onAdd, loading, error }: UrlInputProps) {
       <input
         type="text"
         className="url-input__field"
-        placeholder="Paste a TikTok video URL…"
+        placeholder="Paste a TikTok video URL..."
         value={value}
         onChange={(e) => setValue(e.target.value)}
         disabled={loading}
@@ -34,7 +33,7 @@ export default function UrlInput({ onAdd, loading, error }: UrlInputProps) {
         spellCheck={false}
       />
       <button type="submit" className="btn btn--primary" disabled={loading || !value.trim()}>
-        {loading ? 'Loading…' : (<><PlusIcon size={16} /> Add</>)}
+        {loading ? 'Loading...' : (<><PlusIcon size={14} /> Add</>)}
       </button>
       {error && <p className="url-input__error">{error}</p>}
     </form>

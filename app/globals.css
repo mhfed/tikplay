@@ -1,34 +1,58 @@
 /* ============================================================
-   TikPlay — design tokens & base
-   Palette: midnight indigo base + TikTok-echo cyan→magenta.
-   Type: Outfit (display) / Plus Jakarta Sans (UI) / Space Mono (URL).
+   TikPlay — Midnight Studio design tokens & base
+   Palette: warm dark + copper/gold accents.
+   Type: Outfit (display) / Plus Jakarta Sans (UI) / Space Mono (mono).
    ============================================================ */
 
 :root {
-  --bg: #0a0a12;
-  --bg-2: #0e0e1a;
-  --surface: #14141f;
-  --surface-2: #1b1b29;
-  --surface-3: #262638;
-  --border: #2a2a3d;
-  --border-soft: #20202f;
-  --text: #f4f4fa;
-  --muted: #9a9ab2;
-  --muted-2: #6f6f86;
+  /* Backgrounds */
+  --bg: #0b0b0c;
+  --bg-elevated: #111114;
+  --surface: #151518;
+  --surface-2: #1c1c21;
+  --surface-3: #242429;
 
-  --cyan: #25f4ee;
-  --magenta: #fe2c55;
-  --grad: linear-gradient(135deg, #25f4ee 0%, #7a5cff 50%, #fe2c55 100%);
-  --grad-cyan: linear-gradient(135deg, #25f4ee, #59b0ff);
+  /* Text */
+  --text: #f0ebe5;
+  --text-secondary: #d0cbc4;
+  --muted: #8e8a84;
+  --muted-2: #63605a;
 
-  --radius: 18px;
-  --radius-sm: 12px;
-  --shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
-  --shadow-sm: 0 8px 24px rgba(0, 0, 0, 0.35);
+  /* Borders */
+  --border: #2c2c34;
+  --border-soft: #1f1f26;
 
-  --font-display: 'Outfit', ui-sans-serif, system-ui, sans-serif;
-  --font-ui: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'Space Mono', ui-monospace, monospace;
+  /* Accents */
+  --accent: #d46a4a;
+  --accent-hover: #e07a5a;
+  --accent-muted: rgba(212, 106, 74, 0.12);
+  --accent-glow: rgba(212, 106, 74, 0.25);
+  --gold: #c9a06a;
+  --gold-muted: rgba(201, 160, 106, 0.12);
+  --teal: #4a8a8a;
+  --teal-muted: rgba(74, 138, 138, 0.12);
+  --wine: #8a3a5a;
+  --wine-muted: rgba(138, 58, 90, 0.12);
+  --danger: #c44;
+
+  /* Sizing */
+  --radius: 14px;
+  --radius-sm: 10px;
+  --radius-xs: 6px;
+  --sidebar-w: 240px;
+  --player-w: 360px;
+  --header-h: 64px;
+  --mini-h: 64px;
+
+  /* Shadows */
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --shadow-glow: 0 0 24px var(--accent-glow);
+
+  /* Fonts (populated by next/font variables) */
+  --font-display: var(--font-outfit, 'Outfit', ui-sans-serif, system-ui, sans-serif);
+  --font-ui: var(--font-jakarta, 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif);
+  --font-mono: var(--font-space-mono, 'Space Mono', ui-monospace, monospace);
 }
 
 * {
@@ -39,17 +63,14 @@
 
 html,
 body {
-  min-height: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 body {
   font-family: var(--font-ui);
   color: var(--text);
-  background:
-    radial-gradient(1200px 700px at 50% -10%, rgba(37, 244, 238, 0.10), transparent 60%),
-    radial-gradient(1000px 600px at 90% 0%, rgba(254, 44, 85, 0.10), transparent 55%),
-    linear-gradient(180deg, var(--bg-2), var(--bg) 60%);
-  background-attachment: fixed;
+  background: var(--bg);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   line-height: 1.5;
@@ -61,25 +82,29 @@ a {
 }
 
 ::selection {
-  background: rgba(37, 244, 238, 0.3);
+  background: var(--accent-muted);
+  color: var(--text);
 }
 
 button {
   font-family: inherit;
 }
 
-/* Thin, themed scrollbars */
+/* Thin scrollbars */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+  scrollbar-color: var(--surface-3) transparent;
 }
 *::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 *::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: var(--surface-3);
   border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--border);
 }
 
 @media (prefers-reduced-motion: reduce) {
