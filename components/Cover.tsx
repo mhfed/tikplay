@@ -78,9 +78,6 @@ export default function Cover({
       aria-label={label}
       title={subtitle ? `${label} — ${subtitle}` : label}
     >
-      <span className="cover__note" aria-hidden>
-        ♪
-      </span>
       <span className="cover__title">{label}</span>
       {subtitle ? <span className="cover__sub">{subtitle}</span> : null}
     </div>

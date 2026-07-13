@@ -569,17 +569,13 @@
   text-overflow: ellipsis;
 }
 
-/* Circular vinyl art */
+/* Circular vinyl art — the gradient fills the disc; the title/author
+   live in the meta block below, so the spinning disc stays text-free */
 .np__art.cover--thumb {
   border-radius: 50%;
-  padding: 6px;
 }
 
-.np__art.cover--thumb .cover__title {
-  font-size: 7px;
-  -webkit-line-clamp: 4;
-}
-
+.np__art.cover--thumb .cover__title,
 .np__art.cover--thumb .cover__sub {
   display: none;
 }
@@ -598,17 +594,15 @@
   overflow-y: auto;
 }
 
-/* ── Now playing — vinyl disc ─────────────────────────── */
+/* ── Now playing — vinyl picture disc ─────────────────── */
 .np__disc-wrap {
   position: relative;
-  width: min(55vw, 220px);
+  width: min(100%, 300px);
   aspect-ratio: 1;
-  display: grid;
-  place-items: center;
-  padding: 5px;
+  padding: 6px;
   border-radius: 50%;
   background: linear-gradient(145deg, var(--accent), var(--gold));
-  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.55);
 }
 
 .np__disc {
@@ -616,9 +610,9 @@
   width: 100%;
   height: 100%;
   border-radius: 50%;
+  overflow: hidden;
   background: repeating-radial-gradient(circle at 50% 50%, #16161f 0 3px, #0c0c14 3px 6px);
-  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.7);
-  animation: np-spin 8s linear infinite;
+  animation: np-spin 12s linear infinite;
   animation-play-state: paused;
 }
 
@@ -628,28 +622,63 @@
 
 .np__art {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 54%;
-  height: 54%;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid var(--bg);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
-.np__hole {
+/* Groove rings + vignette drawn over the art */
+.np__grooves {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: 50%;
+  pointer-events: none;
+  background: repeating-radial-gradient(
+    circle at 50% 50%,
+    transparent 0 5px,
+    rgba(0, 0, 0, 0.14) 5px 6px
+  );
+  box-shadow: inset 0 0 46px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* Static center label — doesn't spin, so it stays readable */
+.np__label {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 8px;
-  height: 8px;
+  width: 42%;
+  aspect-ratio: 1;
   border-radius: 50%;
-  background: var(--bg);
-  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.12);
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 35% 30%, #26262e, #131318 72%);
+  border: 2px solid rgba(201, 160, 106, 0.45);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  color: var(--gold);
+  font-size: 48px;
+  line-height: 1;
   z-index: 2;
+}
+
+/* Static light reflection — sits above the spinning disc */
+.np__sheen {
+  position: absolute;
+  inset: 6px;
+  z-index: 3;
+  border-radius: 50%;
+  pointer-events: none;
+  background: conic-gradient(
+    from 205deg at 50% 50%,
+    rgba(255, 255, 255, 0.14),
+    transparent 18%,
+    transparent 45%,
+    rgba(255, 255, 255, 0.07) 58%,
+    transparent 72%
+  );
 }
 
 .np__glow {
@@ -698,13 +727,14 @@
 }
 
 .np__title {
-  display: block;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 17px;
-  white-space: nowrap;
+  font-size: 18px;
+  line-height: 1.3;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .np__author {
@@ -1561,7 +1591,7 @@ input[type='range']::-moz-range-thumb {
   }
 
   .np__disc-wrap {
-    width: min(65vw, 200px);
+    width: min(72vw, 280px);
   }
 
   .eq__bands {

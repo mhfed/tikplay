@@ -118,7 +118,10 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
     params.set('track', String(currentTrack.id));
     if (engine.currentTime > 1) params.set('t', String(Math.floor(engine.currentTime)));
     const url = `${window.location.origin}${window.location.pathname}?${params}`;
-    if (navigator.share) {
+    // Native share sheet only on touch devices — on desktop, copying the link
+    // is what people actually want.
+    const isTouch = window.matchMedia('(pointer: coarse)').matches;
+    if (isTouch && navigator.share) {
       try {
         await navigator.share({ title: currentTrack.title, url });
         return;
@@ -150,7 +153,9 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
             className="np__art"
           />
           <div className="np__grooves" aria-hidden />
-          <div className="np__hole" aria-hidden />
+        </div>
+        <div className="np__label" aria-hidden>
+          ♪
         </div>
         <div className="np__sheen" aria-hidden />
         <div className="np__glow" aria-hidden />
