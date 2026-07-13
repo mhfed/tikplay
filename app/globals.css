@@ -74,6 +74,8 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   line-height: 1.5;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
 }
 
 a {
@@ -88,6 +90,7 @@ a {
 
 button {
   font-family: inherit;
+  touch-action: manipulation;
 }
 
 /* Thin scrollbars */

@@ -6,6 +6,7 @@
 .app {
   display: flex;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 
@@ -453,21 +454,25 @@
   background: var(--surface-2);
 }
 
+/* Block layout (not flex) on purpose: WebKit doesn't reliably
+   constrain flex children of <button>, so nowrap titles escape
+   the box on iOS. Block + overflow:hidden clips in every engine. */
 .track-row__info {
   flex: 1;
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   border: none;
   background: transparent;
   color: inherit;
   cursor: pointer;
   text-align: left;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
 }
 
 .track-row__title {
+  display: block;
+  max-width: 100%;
   font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
@@ -477,14 +482,18 @@
 }
 
 .track-row__author {
+  display: block;
+  max-width: 100%;
   font-size: 12px;
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-top: 1px;
 }
 
 .track-row__fav {
+  flex-shrink: 0;
   border: none;
   background: transparent;
   color: var(--muted-2);
@@ -512,6 +521,7 @@
 }
 
 .track-row__remove {
+  flex-shrink: 0;
   border: none;
   background: transparent;
   color: var(--muted-2);
@@ -1016,7 +1026,7 @@ input[type='range']::-moz-range-thumb {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 56px;
+  bottom: calc(56px + env(safe-area-inset-bottom));
   z-index: 30;
   height: var(--mini-h);
   align-items: center;
@@ -1315,7 +1325,7 @@ input[type='range']::-moz-range-thumb {
     right: 0;
     bottom: 0;
     z-index: 40;
-    height: 56px;
+    height: calc(56px + env(safe-area-inset-bottom));
     gap: 4px;
     padding: 4px 8px calc(4px + env(safe-area-inset-bottom));
     background: var(--bg-elevated);
@@ -1357,7 +1367,7 @@ input[type='range']::-moz-range-thumb {
   }
 
   .app {
-    padding-bottom: 56px;
+    padding-bottom: calc(56px + env(safe-area-inset-bottom));
   }
 
   /* Player panel: hidden by default on mobile, shown when tab active */
@@ -1369,11 +1379,11 @@ input[type='range']::-moz-range-thumb {
     display: flex;
     position: fixed;
     inset: 0;
-    bottom: 56px;
+    bottom: calc(56px + env(safe-area-inset-bottom));
     width: 100%;
     z-index: 35;
     border-left: none;
-    padding: 20px 24px;
+    padding: calc(20px + env(safe-area-inset-top)) 24px 20px;
     overflow-y: auto;
   }
 
@@ -1405,7 +1415,7 @@ input[type='range']::-moz-range-thumb {
     position: fixed;
     top: 0;
     left: 0;
-    bottom: 56px;
+    bottom: calc(56px + env(safe-area-inset-bottom));
     width: min(320px, 85vw);
     z-index: 50;
     background: var(--bg-elevated);
@@ -1530,10 +1540,37 @@ input[type='range']::-moz-range-thumb {
   }
 }
 
+/* Touch devices: no hover, so show actions permanently
+   and give them finger-sized hit areas */
+@media (hover: none) {
+  .track-row__remove {
+    opacity: 1;
+  }
+
+  .track-row__fav,
+  .track-row__remove {
+    padding: 10px 8px;
+    min-width: 36px;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .track-row {
+    gap: 6px;
+  }
+
+  .track-row__drag {
+    opacity: 0.6;
+    padding: 10px 4px;
+  }
+}
+
 /* Small phones: tighter spacing */
 @media (max-width: 640px) {
   .main__header {
     padding: 0 16px;
+    padding-top: env(safe-area-inset-top);
+    height: calc(var(--header-h) + env(safe-area-inset-top));
     gap: 10px;
   }
 
@@ -1583,6 +1620,21 @@ input[type='range']::-moz-range-thumb {
 
   .track-row__remove {
     opacity: 1;
+  }
+
+  /* 16px stops iOS Safari from auto-zooming focused inputs */
+  .url-input__field,
+  .search-bar__field,
+  .modal__input {
+    font-size: 16px;
+  }
+
+  .url-input__field {
+    padding: 11px 16px;
+  }
+
+  .search-bar__field {
+    padding: 8px 32px 8px 34px;
   }
 
   /* Mobile player adjustments */
