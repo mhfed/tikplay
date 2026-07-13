@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { Outfit, Plus_Jakarta_Sans, Space_Mono } from 'next/font/google';
+import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -29,6 +30,13 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
     title: 'TikPlay',
   },
+  icons: {
+    icon: [
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: '/icons/apple-touch-icon.png',
+  },
 };
 
 export const viewport: Viewport = {
@@ -47,7 +55,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="vi" className={`${outfit.variable} ${jakarta.variable} ${mono.variable}`}>
-      <body>{children}</body>
+      <body>
+        <ServiceWorkerRegister />
+        {children}
+      </body>
     </html>
   );
 }

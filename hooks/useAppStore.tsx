@@ -39,6 +39,8 @@ interface AppActions {
   playTrack: (track: Track) => void;
   playAll: () => void;
   togglePlay: () => void;
+  /** Explicit play/pause — used by Media Session (lock screen) handlers where a toggle could desync. */
+  setPlaying: (playing: boolean) => void;
   next: () => void;
   prev: () => void;
   toggleFavorite: (trackId: number) => Promise<void>;
@@ -236,6 +238,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     setIsPlaying((p) => !p);
   }, [currentTrack, tracks]);
 
+  const setPlaying = useCallback((playing: boolean) => {
+    setIsPlaying(playing);
+  }, []);
+
   const pickRandom = useCallback((): number => {
     if (tracks.length <= 1) return 0;
     let r = currentIndex;
@@ -431,6 +437,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     playTrack,
     playAll,
     togglePlay,
+    setPlaying,
     next,
     prev,
     toggleFavorite: toggleFavoriteAction,

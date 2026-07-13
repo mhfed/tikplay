@@ -43,6 +43,9 @@
   --player-w: 360px;
   --header-h: 64px;
   --mini-h: 64px;
+  --nav-h: 56px;
+  /* Total height of the fixed bottom stack (nav + home indicator) */
+  --bottom-stack: calc(var(--nav-h) + env(safe-area-inset-bottom));
 
   /* Shadows */
   --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
@@ -74,6 +77,8 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   line-height: 1.5;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
 }
 
 a {
@@ -88,6 +93,7 @@ a {
 
 button {
   font-family: inherit;
+  touch-action: manipulation;
 }
 
 /* Thin scrollbars */

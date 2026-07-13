@@ -18,6 +18,7 @@ import {
   RepeatOneIcon,
   ShareIcon,
   CheckIcon,
+  SlidersIcon,
 } from './icons';
 
 function formatTime(seconds: number): string {
@@ -44,6 +45,7 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
     pendingSeek,
     clearPendingSeek,
     togglePlay,
+    setPlaying,
     next,
     prev,
     setVolume,
@@ -55,6 +57,7 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
   } = useAppStore();
 
   const [shareCopied, setShareCopied] = useState(false);
+  const [showExtras, setShowExtras] = useState(false);
 
   const engine = useAudioEngine({
     onEnded: () => {
@@ -98,18 +101,71 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
     engine.setAllBands(eqGains);
   }, [eqGains]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Media Session API
+  // Media Session API — lock-screen / notification controls. Handlers are
+  // explicit play/pause (not toggle): after an OS interruption (call, screen
+  // lock) the element can pause without the store knowing, and a toggle from
+  // the lock screen would then invert the intent.
   useEffect(() => {
     if (!('mediaSession' in navigator) || !currentTrack) return;
     navigator.mediaSession.metadata = new MediaMetadata({
       title: currentTrack.title,
       artist: currentTrack.author,
+      artwork: currentTrack.cover
+        ? [{ src: currentTrack.cover, sizes: '512x512', type: 'image/jpeg' }]
+        : [],
     });
-    navigator.mediaSession.setActionHandler('play', () => togglePlay());
-    navigator.mediaSession.setActionHandler('pause', () => togglePlay());
+    navigator.mediaSession.setActionHandler('play', () => {
+      setPlaying(true);
+      engine.play();
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      setPlaying(false);
+      engine.pause();
+    });
     navigator.mediaSession.setActionHandler('previoustrack', () => prev());
     navigator.mediaSession.setActionHandler('nexttrack', () => next());
-  }, [currentTrack, togglePlay, prev, next]);
+    try {
+      navigator.mediaSession.setActionHandler('seekto', (e) => {
+        if (e.seekTime != null) engine.seek(e.seekTime);
+      });
+    } catch {
+      // 'seekto' not supported on some browsers.
+    }
+  }, [currentTrack, setPlaying, prev, next]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep lock-screen state/position in sync so the OS renders the correct
+  // button and a live scrubber.
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+    navigator.mediaSession.playbackState = currentTrack
+      ? isPlaying
+        ? 'playing'
+        : 'paused'
+      : 'none';
+  }, [isPlaying, currentTrack]);
+
+  useEffect(() => {
+    if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
+    if (!currentTrack || !Number.isFinite(engine.duration) || engine.duration <= 0) return;
+    navigator.mediaSession.setPositionState({
+      duration: engine.duration,
+      playbackRate: speed,
+      position: Math.min(engine.currentTime, engine.duration),
+    });
+  }, [currentTrack?.id, engine.duration, engine.currentTime, speed]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Coming back from background: if the OS paused the element (interruption)
+  // while the app still thinks it's playing, restart it.
+  useEffect(() => {
+    const handleVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (isPlaying && currentTrack && engine.audioRef.current?.paused) {
+        engine.play();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisible);
+    return () => document.removeEventListener('visibilitychange', handleVisible);
+  }, [isPlaying, currentTrack]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const shareTrack = async () => {
     if (!currentTrack) return;
@@ -118,7 +174,10 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
     params.set('track', String(currentTrack.id));
     if (engine.currentTime > 1) params.set('t', String(Math.floor(engine.currentTime)));
     const url = `${window.location.origin}${window.location.pathname}?${params}`;
-    if (navigator.share) {
+    // Native share sheet only on touch devices — on desktop, copying the link
+    // is what people actually want.
+    const isTouch = window.matchMedia('(pointer: coarse)').matches;
+    if (isTouch && navigator.share) {
       try {
         await navigator.share({ title: currentTrack.title, url });
         return;
@@ -136,6 +195,12 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
   const progressPercent =
     engine.duration > 0 ? (engine.currentTime / engine.duration) * 100 : 0;
 
+  // MiniPlayer lives outside this component; publish progress as a CSS var
+  // so its bar tracks playback without lifting engine state into the store.
+  useEffect(() => {
+    document.documentElement.style.setProperty('--mini-progress', `${progressPercent}%`);
+  }, [progressPercent]);
+
   const panelClass = `player-panel${mobileTab === 'player' ? ' mobile-visible' : ''}`;
 
   return (
@@ -150,7 +215,9 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
             className="np__art"
           />
           <div className="np__grooves" aria-hidden />
-          <div className="np__hole" aria-hidden />
+        </div>
+        <div className="np__label" aria-hidden>
+          ♪
         </div>
         <div className="np__sheen" aria-hidden />
         <div className="np__glow" aria-hidden />
@@ -255,19 +322,28 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
         </span>
       </div>
 
-      {/* Speed */}
-      <SpeedControl speed={speed} onChange={setSpeed} />
-
-      {/* Equalizer */}
-      <Equalizer
-        gains={eqGains}
-        onGainChange={(i, v) => {
-          const next = [...eqGains];
-          next[i] = v;
-          setEqGains(next);
-        }}
-        onPreset={setEqGains}
-      />
+      {/* Speed + EQ — always visible on desktop, behind a toggle on mobile */}
+      <button
+        type="button"
+        className={`np__extras-toggle${showExtras ? ' is-on' : ''}`}
+        onClick={() => setShowExtras((v) => !v)}
+        aria-expanded={showExtras}
+      >
+        <SlidersIcon size={14} />
+        <span>Speed & EQ</span>
+      </button>
+      <div className={`np__extras${showExtras ? ' is-open' : ''}`}>
+        <SpeedControl speed={speed} onChange={setSpeed} />
+        <Equalizer
+          gains={eqGains}
+          onGainChange={(i, v) => {
+            const next = [...eqGains];
+            next[i] = v;
+            setEqGains(next);
+          }}
+          onPreset={setEqGains}
+        />
+      </div>
     </div>
   );
 }

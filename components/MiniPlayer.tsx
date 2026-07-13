@@ -19,6 +19,9 @@ export default function MiniPlayer({ mobileTab, onOpenPlayer }: MiniPlayerProps)
 
   return (
     <div className={className} onClick={onOpenPlayer}>
+      <div className="mini-player__progress" aria-hidden>
+        <div className="mini-player__progress-fill" />
+      </div>
       <Cover
         src={currentTrack.cover}
         alt={currentTrack.title}
@@ -35,14 +38,14 @@ export default function MiniPlayer({ mobileTab, onOpenPlayer }: MiniPlayerProps)
           onClick={togglePlay}
           aria-label={isPlaying ? 'Pause' : 'Play'}
         >
-          {isPlaying ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
+          {isPlaying ? <PauseIcon size={18} /> : <PlayIcon size={18} />}
         </button>
         <button
           className="mini-player__btn"
           onClick={next}
           aria-label="Next"
         >
-          <NextIcon size={14} />
+          <NextIcon size={16} />
         </button>
       </div>
     </div>
