@@ -1,0 +1,11 @@
+node_modules
+.next
+cache/
+.env*
+.venv
+test-results/
+playwright-report/
+
+# build artifacts
+*.tsbuildinfo
+.DS_Store
