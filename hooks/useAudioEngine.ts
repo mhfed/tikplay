@@ -35,12 +35,29 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
     return audioRef.current;
   }, []);
 
+  // Mobile browsers suspend (iOS: "interrupted") the context on screen lock,
+  // app switch, or incoming calls. The media element keeps advancing into the
+  // dead graph, so playback turns silent until the context is resumed.
+  const resumeContext = useCallback(() => {
+    const ctx = ctxRef.current;
+    if (ctx && ctx.state !== 'running' && ctx.state !== 'closed') {
+      ctx.resume().catch(() => {});
+    }
+  }, []);
+
   const ensureAudioGraph = useCallback(() => {
     if (connectedRef.current) return;
     const audio = getOrCreateAudio();
 
     const ctx = new AudioContext();
     ctxRef.current = ctx;
+
+    ctx.addEventListener('statechange', () => {
+      const el = audioRef.current;
+      if (ctx.state !== 'running' && el && !el.paused) {
+        ctx.resume().catch(() => {});
+      }
+    });
 
     const source = ctx.createMediaElementSource(audio);
     sourceRef.current = source;
@@ -165,6 +182,10 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
     const audio = getOrCreateAudio();
 
     const handleTimeUpdate = () => {
+      // Watchdog: media events keep firing in the background even when the
+      // context got suspended, so this is the one hook that can revive audio
+      // while the page is hidden or the screen is locked.
+      resumeContext();
       setCurrentTime(audio.currentTime);
       setDuration(audio.duration || 0);
       opts.onTimeUpdate?.(audio.currentTime, audio.duration || 0);
@@ -179,18 +200,28 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
       setDuration(audio.duration || 0);
     };
 
+    const handleVisible = () => {
+      if (document.visibilityState === 'visible') resumeContext();
+    };
+
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('ended', handleEnded);
     audio.addEventListener('canplay', handleCanPlay);
     audio.addEventListener('loadedmetadata', handleCanPlay);
+    audio.addEventListener('play', resumeContext);
+    document.addEventListener('visibilitychange', handleVisible);
+    window.addEventListener('pageshow', handleVisible);
 
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('canplay', handleCanPlay);
       audio.removeEventListener('loadedmetadata', handleCanPlay);
+      audio.removeEventListener('play', resumeContext);
+      document.removeEventListener('visibilitychange', handleVisible);
+      window.removeEventListener('pageshow', handleVisible);
     };
-  }, [getOrCreateAudio]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [getOrCreateAudio, resumeContext]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     loadTrack,

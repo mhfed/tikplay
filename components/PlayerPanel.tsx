@@ -44,6 +44,7 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
     pendingSeek,
     clearPendingSeek,
     togglePlay,
+    setPlaying,
     next,
     prev,
     setVolume,
@@ -98,18 +99,71 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
     engine.setAllBands(eqGains);
   }, [eqGains]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Media Session API
+  // Media Session API — lock-screen / notification controls. Handlers are
+  // explicit play/pause (not toggle): after an OS interruption (call, screen
+  // lock) the element can pause without the store knowing, and a toggle from
+  // the lock screen would then invert the intent.
   useEffect(() => {
     if (!('mediaSession' in navigator) || !currentTrack) return;
     navigator.mediaSession.metadata = new MediaMetadata({
       title: currentTrack.title,
       artist: currentTrack.author,
+      artwork: currentTrack.cover
+        ? [{ src: currentTrack.cover, sizes: '512x512', type: 'image/jpeg' }]
+        : [],
     });
-    navigator.mediaSession.setActionHandler('play', () => togglePlay());
-    navigator.mediaSession.setActionHandler('pause', () => togglePlay());
+    navigator.mediaSession.setActionHandler('play', () => {
+      setPlaying(true);
+      engine.play();
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      setPlaying(false);
+      engine.pause();
+    });
     navigator.mediaSession.setActionHandler('previoustrack', () => prev());
     navigator.mediaSession.setActionHandler('nexttrack', () => next());
-  }, [currentTrack, togglePlay, prev, next]);
+    try {
+      navigator.mediaSession.setActionHandler('seekto', (e) => {
+        if (e.seekTime != null) engine.seek(e.seekTime);
+      });
+    } catch {
+      // 'seekto' not supported on some browsers.
+    }
+  }, [currentTrack, setPlaying, prev, next]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep lock-screen state/position in sync so the OS renders the correct
+  // button and a live scrubber.
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+    navigator.mediaSession.playbackState = currentTrack
+      ? isPlaying
+        ? 'playing'
+        : 'paused'
+      : 'none';
+  }, [isPlaying, currentTrack]);
+
+  useEffect(() => {
+    if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
+    if (!currentTrack || !Number.isFinite(engine.duration) || engine.duration <= 0) return;
+    navigator.mediaSession.setPositionState({
+      duration: engine.duration,
+      playbackRate: speed,
+      position: Math.min(engine.currentTime, engine.duration),
+    });
+  }, [currentTrack?.id, engine.duration, engine.currentTime, speed]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Coming back from background: if the OS paused the element (interruption)
+  // while the app still thinks it's playing, restart it.
+  useEffect(() => {
+    const handleVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (isPlaying && currentTrack && engine.audioRef.current?.paused) {
+        engine.play();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisible);
+    return () => document.removeEventListener('visibilitychange', handleVisible);
+  }, [isPlaying, currentTrack]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const shareTrack = async () => {
     if (!currentTrack) return;
