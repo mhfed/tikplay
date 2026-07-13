@@ -126,7 +126,12 @@ export default function Player({
       <div className="np__disc-wrap" aria-hidden>
         <div className="np__disc">
           <div className="np__grooves" />
-          <Cover src={currentTrack?.cover} className="np__art" />
+          <Cover
+            src={currentTrack?.cover}
+            alt={currentTrack?.title ?? ''}
+            subtitle={currentTrack?.author}
+            className="np__art"
+          />
           <div className="np__hole" />
         </div>
         <div className="np__glow" />
