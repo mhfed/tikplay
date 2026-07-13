@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { PlusIcon } from './icons';
 
 interface UrlInputProps {
   onAdd: (url: string) => void;
@@ -33,7 +34,7 @@ export default function UrlInput({ onAdd, loading, error }: UrlInputProps) {
         spellCheck={false}
       />
       <button type="submit" className="btn btn--primary" disabled={loading || !value.trim()}>
-        {loading ? 'Loading…' : 'Add'}
+        {loading ? 'Loading…' : (<><PlusIcon size={16} /> Add</>)}
       </button>
       {error && <p className="url-input__error">{error}</p>}
     </form>

@@ -1,6 +1,8 @@
 'use client';
 
 import type { Track } from '../lib/types';
+import Cover from './Cover';
+import { ClockIcon } from './icons';
 
 interface HistoryProps {
   tracks: Track[];
@@ -13,7 +15,10 @@ export default function History({ tracks, currentTrackUrl, onPlay }: HistoryProp
   return (
     <div className="panel">
       <div className="panel__header">
-        <h2 className="panel__title">History</h2>
+        <h2 className="panel__title">
+          <ClockIcon size={18} className="panel__title-icon" />
+          History
+        </h2>
       </div>
 
       {tracks.length === 0 ? (
@@ -24,8 +29,7 @@ export default function History({ tracks, currentTrackUrl, onPlay }: HistoryProp
             const active = track.url === currentTrackUrl;
             return (
               <li key={track.url} className={`track-item${active ? ' track-item--active' : ''}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img className="track-item__cover" src={track.cover} alt="" />
+                <Cover src={track.cover} className="track-item__cover" />
                 <button className="track-item__meta" onClick={() => onPlay(track)} title="Play">
                   <span className="track-item__title">{track.title}</span>
                   <span className="track-item__author">{track.author}</span>

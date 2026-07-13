@@ -9,3 +9,13 @@ playwright-report/
 # build artifacts
 *.tsbuildinfo
 .DS_Store
+
+# playwright MCP debug artifacts
+.playwright-mcp/
+
+# screenshot artifacts
+shot-*.png
+e2e/shot-*.png
+
+# local claude settings
+.claude/settings.local.json

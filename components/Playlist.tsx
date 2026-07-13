@@ -1,6 +1,8 @@
 'use client';
 
 import type { Track, RepeatMode } from '../lib/types';
+import Cover from './Cover';
+import { ShuffleIcon, RepeatIcon, RepeatOneIcon, ListMusicIcon } from './icons';
 
 interface PlaylistProps {
   tracks: Track[];
@@ -15,9 +17,9 @@ interface PlaylistProps {
 }
 
 const REPEAT_LABEL: Record<RepeatMode, string> = {
-  off: 'Repeat',
-  all: 'Repeat all',
-  one: 'Repeat one',
+  off: 'Tắt lặp',
+  all: 'Lặp tất cả',
+  one: 'Lặp một bài',
 };
 
 /** The active playlist with per-track controls plus shuffle / repeat toggles. */
@@ -35,22 +37,27 @@ export default function Playlist({
   return (
     <div className="panel">
       <div className="panel__header">
-        <h2 className="panel__title">Playlist</h2>
+        <h2 className="panel__title">
+          <ListMusicIcon size={18} className="panel__title-icon" />
+          Playlist
+        </h2>
         <div className="panel__tools">
           <button
-            className={`chip${shuffle ? ' chip--on' : ''}`}
+            className={`iconbtn${shuffle ? ' iconbtn--on' : ''}`}
             onClick={onToggleShuffle}
             aria-pressed={shuffle}
-            title="Shuffle"
+            aria-label="Phát ngẫu nhiên"
+            title="Phát ngẫu nhiên"
           >
-            🔀 Shuffle
+            <ShuffleIcon size={18} />
           </button>
           <button
-            className={`chip${repeat !== 'off' ? ' chip--on' : ''}`}
+            className={`iconbtn${repeat !== 'off' ? ' iconbtn--on' : ''}`}
             onClick={onCycleRepeat}
-            title="Cycle repeat mode"
+            aria-label={REPEAT_LABEL[repeat]}
+            title={REPEAT_LABEL[repeat]}
           >
-            {repeat === 'one' ? '🔂' : '🔁'} {REPEAT_LABEL[repeat]}
+            {repeat === 'one' ? <RepeatOneIcon size={18} /> : <RepeatIcon size={18} />}
           </button>
         </div>
       </div>
@@ -63,8 +70,7 @@ export default function Playlist({
             const active = track.url === currentTrackUrl;
             return (
               <li key={track.url} className={`track-item${active ? ' track-item--active' : ''}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img className="track-item__cover" src={track.cover} alt="" />
+                <Cover src={track.cover} className="track-item__cover" />
                 <button className="track-item__meta" onClick={() => onPlay(track)} title="Play">
                   <span className="track-item__title">{track.title}</span>
                   <span className="track-item__author">{track.author}</span>

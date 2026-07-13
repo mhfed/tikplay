@@ -62,7 +62,8 @@ test('clone a TikTok URL and play the extracted audio', async ({ page }) => {
   //    timeline is controllable, proving real audio playback is possible even
   //    when the headless browser has no audio output device.
   await page.locator('audio').evaluate((el) => {
-    (el as HTMLAudioElement).currentTime = Math.min(10, (el.duration || 0) / 2);
+    const a = el as HTMLAudioElement;
+    a.currentTime = Math.min(10, (a.duration || 0) / 2);
   });
   const seekedTo = await page
     .locator('audio')

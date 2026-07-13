@@ -8,6 +8,8 @@ import Player from '../components/Player';
 import Playlist from '../components/Playlist';
 import History from '../components/History';
 import SearchBar from '../components/SearchBar';
+import MobileLibrary from '../components/MobileLibrary';
+import { MusicIcon } from '../components/icons';
 import './components.css';
 
 const HISTORY_LIMIT = 100;
@@ -205,41 +207,66 @@ export default function Page() {
   return (
     <div className="app">
       <header className="app__header">
-        <h1 className="app__logo">🎵 TikPlay</h1>
-        <p className="app__tagline">Paste a TikTok link and play — no account needed.</p>
+        <div className="brand">
+          <span className="brand__mark">
+            <MusicIcon size={20} />
+          </span>
+          <span className="brand__name">TikPlay</span>
+        </div>
+        <SearchBar value={query} onChange={setQuery} />
       </header>
 
       <div className="app__topbar">
         <UrlInput onAdd={handleAdd} loading={loading} error={error} />
-        <SearchBar value={query} onChange={setQuery} />
       </div>
 
       <main className="app__grid">
-        <Playlist
-          tracks={filteredPlaylist}
-          currentTrackUrl={currentTrackUrl}
-          isPlaying={isPlaying}
-          shuffle={shuffle}
-          repeat={repeat}
-          onPlay={playFromTrack}
-          onRemove={removeTrack}
-          onToggleShuffle={() => setShuffle((s) => !s)}
-          onCycleRepeat={cycleRepeat}
-        />
-        <History tracks={filteredHistory} currentTrackUrl={currentTrackUrl} onPlay={playFromTrack} />
+        <section className="col col--main">
+          <Player
+            currentTrack={currentTrack}
+            isPlaying={isPlaying}
+            repeat={repeat}
+            onToggle={handleToggle}
+            onNext={handleNext}
+            onPrev={handlePrev}
+            onProgress={(_t, _d) => setProgress({ currentTime: _t, duration: _d })}
+            onEnded={handleEnded}
+            volume={volume}
+            onVolumeChange={setVolume}
+          />
+        </section>
+
+        <div className="col col--side">
+          <Playlist
+            tracks={filteredPlaylist}
+            currentTrackUrl={currentTrackUrl}
+            isPlaying={isPlaying}
+            shuffle={shuffle}
+            repeat={repeat}
+            onPlay={playFromTrack}
+            onRemove={removeTrack}
+            onToggleShuffle={() => setShuffle((s) => !s)}
+            onCycleRepeat={cycleRepeat}
+          />
+          <History
+            tracks={filteredHistory}
+            currentTrackUrl={currentTrackUrl}
+            onPlay={playFromTrack}
+          />
+        </div>
       </main>
 
-      <Player
-        currentTrack={currentTrack}
+      <MobileLibrary
+        playlist={filteredPlaylist}
+        history={filteredHistory}
+        currentTrackUrl={currentTrackUrl}
         isPlaying={isPlaying}
+        shuffle={shuffle}
         repeat={repeat}
-        onToggle={handleToggle}
-        onNext={handleNext}
-        onPrev={handlePrev}
-        onProgress={(_t, _d) => setProgress({ currentTime: _t, duration: _d })}
-        onEnded={handleEnded}
-        volume={volume}
-        onVolumeChange={setVolume}
+        onPlay={playFromTrack}
+        onRemove={removeTrack}
+        onToggleShuffle={() => setShuffle((s) => !s)}
+        onCycleRepeat={cycleRepeat}
       />
     </div>
   );

@@ -1,5 +1,7 @@
 'use client';
 
+import { SearchIcon, CloseIcon } from './icons';
+
 interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
@@ -9,6 +11,7 @@ interface SearchBarProps {
 export default function SearchBar({ value, onChange }: SearchBarProps) {
   return (
     <div className="search-bar">
+      <SearchIcon size={16} className="search-bar__icon" />
       <input
         type="text"
         className="search-bar__field"
@@ -25,7 +28,7 @@ export default function SearchBar({ value, onChange }: SearchBarProps) {
           onClick={() => onChange('')}
           aria-label="Clear search"
         >
-          ×
+          <CloseIcon size={16} />
         </button>
       )}
     </div>

@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { Track, RepeatMode } from '../lib/types';
+import Cover from './Cover';
+import { PlayIcon, PauseIcon, PrevIcon, NextIcon, VolumeIcon, VolumeMuteIcon } from './icons';
 
 interface PlayerProps {
   currentTrack: Track | null;
@@ -24,9 +26,8 @@ function formatTime(seconds: number): string {
 }
 
 /**
- * Single global <audio> element + transport controls. The parent owns playback
- * state (currentTrack / isPlaying); this component bridges it to the DOM audio
- * element and surfaces progress/ended events.
+ * Now-playing panel: a spinning vinyl disc (centre thumbnail, gradient ring)
+ * that rotates only while audio is playing, plus transport + progress + volume.
  */
 export default function Player({
   currentTrack,
@@ -42,10 +43,19 @@ export default function Player({
 }: PlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastUrl = useRef<string | null>(null);
+  const lastVolume = useRef(volume || 0.8);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  // Load a new source whenever the track's audio URL changes.
+  const toggleMute = () => {
+    if (volume > 0) {
+      lastVolume.current = volume;
+      onVolumeChange(0);
+    } else {
+      onVolumeChange(lastVolume.current || 0.8);
+    }
+  };
+
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
@@ -57,20 +67,16 @@ export default function Player({
     }
   }, [currentTrack]);
 
-  // Play / pause in response to the parent's isPlaying flag.
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
     if (isPlaying) {
-      audio.play().catch(() => {
-        // Autoplay can be blocked until a user gesture; ignore.
-      });
+      audio.play().catch(() => {});
     } else {
       audio.pause();
     }
   }, [isPlaying, currentTrack]);
 
-  // Keep the audio element's volume in sync.
   useEffect(() => {
     const audio = audioRef.current;
     if (audio) audio.volume = volume;
@@ -84,8 +90,6 @@ export default function Player({
     onProgress(audio.currentTime, audio.duration || 0);
   };
 
-  // Repeat-one is handled locally so the audio truly restarts; otherwise defer
-  // to the parent to decide what plays next.
   const handleEnded = () => {
     if (repeat === 'one' && currentTrack) {
       const audio = audioRef.current;
@@ -107,8 +111,10 @@ export default function Player({
   };
 
   return (
-    <section className={`player${currentTrack ? ' player--active' : ''}`} aria-label="Player">
-      {/* The single shared audio element for the whole app. */}
+    <section
+      className={`np${currentTrack ? ' np--active' : ''}${isPlaying ? ' np--playing' : ''}`}
+      aria-label="Trình phát nhạc"
+    >
       <audio
         ref={audioRef}
         onTimeUpdate={handleTimeUpdate}
@@ -117,67 +123,92 @@ export default function Player({
         preload="metadata"
       />
 
-      <div className="player__info">
+      <div className="np__disc-wrap" aria-hidden>
+        <div className="np__disc">
+          <div className="np__grooves" />
+          <Cover src={currentTrack?.cover} className="np__art" />
+          <div className="np__hole" />
+        </div>
+        <div className="np__glow" />
+      </div>
+
+      <div className="np__meta">
         {currentTrack ? (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="player__cover" src={currentTrack.cover} alt="" />
-            <div className="player__meta">
-              <span className="player__title" title={currentTrack.title}>
-                {currentTrack.title}
-              </span>
-              <span className="player__author">{currentTrack.author}</span>
-            </div>
+            <span className="np__title" title={currentTrack.title}>
+              {currentTrack.title}
+            </span>
+            <span className="np__author">{currentTrack.author}</span>
           </>
         ) : (
-          <div className="player__meta player__meta--empty">
-            <span className="player__title">Nothing playing</span>
-            <span className="player__author">Add a TikTok URL to start</span>
-          </div>
+          <>
+            <span className="np__title">Chưa có bài hát</span>
+            <span className="np__author">Dán link TikTok để bắt đầu</span>
+          </>
         )}
       </div>
 
-      <div className="player__center">
-        <div className="player__controls">
-          <button className="btn btn--icon" onClick={onPrev} aria-label="Previous" disabled={!currentTrack}>
-            ⏮
-          </button>
-          <button className="btn btn--play" onClick={onToggle} aria-label={isPlaying ? 'Pause' : 'Play'}>
-            {isPlaying ? '⏸' : '▶'}
-          </button>
-          <button className="btn btn--icon" onClick={onNext} aria-label="Next" disabled={!currentTrack}>
-            ⏭
-          </button>
-        </div>
-
-        <div className="player__progress">
-          <span className="player__time">{formatTime(currentTime)}</span>
-          <input
-            type="range"
-            className="player__seek"
-            min={0}
-            max={duration || 0}
-            step={0.1}
-            value={Math.min(currentTime, duration || 0)}
-            onChange={handleSeek}
-            disabled={!currentTrack}
-            aria-label="Seek"
-          />
-          <span className="player__time">{formatTime(duration)}</span>
-        </div>
+      <div className="np__controls">
+        <button
+          className="btn btn--icon"
+          onClick={onPrev}
+          aria-label="Bài trước"
+          disabled={!currentTrack}
+        >
+          <PrevIcon size={20} />
+        </button>
+        <button
+          className="btn btn--play"
+          onClick={onToggle}
+          aria-label={isPlaying ? 'Tạm dừng' : 'Phát'}
+        >
+          {isPlaying ? <PauseIcon size={24} /> : <PlayIcon size={24} />}
+        </button>
+        <button
+          className="btn btn--icon"
+          onClick={onNext}
+          aria-label="Bài tiếp"
+          disabled={!currentTrack}
+        >
+          <NextIcon size={20} />
+        </button>
       </div>
 
-      <div className="player__volume">
-        <span className="player__vol-icon" aria-hidden>🔊</span>
+      <div className="np__progress">
+        <span className="np__time">{formatTime(currentTime)}</span>
         <input
           type="range"
-          className="player__vol-range"
+          className="np__seek"
+          min={0}
+          max={duration || 0}
+          step={0.1}
+          value={Math.min(currentTime, duration || 0)}
+          onChange={handleSeek}
+          disabled={!currentTrack}
+          aria-label="Tua"
+        />
+        <span className="np__time">{formatTime(duration)}</span>
+      </div>
+
+      <div className="np__volume">
+        <button
+          type="button"
+          className="np__vol-btn"
+          onClick={toggleMute}
+          aria-label={volume > 0 ? 'Tắt tiếng' : 'Bật tiếng'}
+          title={volume > 0 ? 'Tắt tiếng' : 'Bật tiếng'}
+        >
+          {volume > 0 ? <VolumeIcon size={18} /> : <VolumeMuteIcon size={18} />}
+        </button>
+        <input
+          type="range"
+          className="np__vol-range"
           min={0}
           max={1}
           step={0.01}
           value={volume}
           onChange={(e) => onVolumeChange(Number(e.target.value))}
-          aria-label="Volume"
+          aria-label="Âm lượng"
         />
       </div>
     </section>
