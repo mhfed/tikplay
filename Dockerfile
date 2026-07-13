@@ -9,8 +9,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
-# Install yt-dlp via pip (reliable on Debian slim).
-RUN pip3 install --no-cache-dir yt-dlp
+# Install yt-dlp + curl_cffi (curl_cffi is REQUIRED — TikTok now needs
+# impersonation, without it yt-dlp fails with "Requested format is not
+# available"). --break-system-packages needed on Debian bookworm (PEP 668).
+RUN pip3 install --no-cache-dir --break-system-packages yt-dlp curl_cffi
 
 WORKDIR /app
 
@@ -28,9 +30,12 @@ RUN npm run build
 RUN yt-dlp -U || true
 
 # Persistent cache volume. Mount a disk here in production.
+# CACHE_MAX_GB kept under Fly's 3GB free volume.
 ENV CACHE_DIR=/app/cache
 ENV CACHE_TTL_DAYS=7
-ENV CACHE_MAX_GB=5
+ENV CACHE_MAX_GB=2
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 
 VOLUME ["/app/cache"]
 

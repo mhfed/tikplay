@@ -1,0 +1,10 @@
+node_modules
+.next
+.venv
+cache
+test-results
+playwright-report
+.git
+.DS_Store
+*.tsbuildinfo
+npm-debug.log

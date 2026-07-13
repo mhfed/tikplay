@@ -109,6 +109,31 @@ Fly.io / Docker VPS**. Mount volume cho thư mục cache (`CACHE_DIR`).
 **Không dùng Vercel serverless** cho MVP: filesystem read-only, timeout ngắn,
 và khó chạy binary yt-dlp/ffmpeg. Có thể cân nhắc sau này nếu tách riêng worker.
 
+### Fly.io (khuyên dùng — có volume free 3GB, hỗ trợ ổ đĩa bền cho cache)
+
+1. Cài Fly CLI: `brew install flyctl` (hoặc xem https://fly.io/docs/hands-on/install/).
+2. Đăng nhập: `fly auth login`.
+3. (Tùy chọn) Đổi tên app trong `fly.toml` (`app = "..."`) cho unique.
+4. Tạo volume cho cache (chỉ làm 1 lần):
+   ```bash
+   fly volumes create craw_cache --region sin --size 3
+   ```
+5. Deploy:
+   ```bash
+   fly deploy
+   ```
+6. Mở app: `fly open` (hoặc `fly apps open`).
+
+Lưu ý:
+- App cấu hình **auto-stop khi rảnh** để tiết kiến free allowance; request đầu
+  sau khi wake sẽ chậm ~20–30s (đang tải lại + xử lý TikTok).
+- Volume `craw_cache` gắn tại `/app/cache` → cache audio **bền**, không mất khi
+  restart (quan trọng vì mỗi lần xử lý TikTok tốn thời gian tải).
+- yt-dlp nằm trong image; để luôn mới chạy `fly ssh console` rồi `yt-dlp -U`,
+  hoặc thêm cron trong container.
+- Free tier: 3 máy 256MB-shared + 3GB volume. Nếu cần RAM hơn, sửa `memory`
+  trong `fly.toml` (tốn thêm trong giới hạn tài khoản).
+
 Để yt-dlp luôn mới (TikTok hay đổi API), chạy định kỳ:
 ```bash
 yt-dlp -U
