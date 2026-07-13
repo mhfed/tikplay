@@ -200,12 +200,18 @@
 /* ── URL input ────────────────────────────────────────── */
 .url-input {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 16px;
 }
 
+.url-input__error {
+  flex-basis: 100%;
+}
+
 .url-input__field {
   flex: 1;
+  min-width: 0;
   padding: 12px 16px;
   border-radius: 999px;
   border: 1px solid var(--border);
@@ -967,6 +973,19 @@ input[type='range']::-moz-range-thumb {
   text-align: center;
 }
 
+/* ── Secondary controls (speed + EQ) ──────────────────── */
+/* Always expanded on desktop; behind a toggle on mobile */
+.np__extras {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.np__extras-toggle {
+  display: none;
+}
+
 /* ── Speed control ────────────────────────────────────── */
 .speed {
   width: 100%;
@@ -1026,7 +1045,7 @@ input[type='range']::-moz-range-thumb {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(56px + env(safe-area-inset-bottom));
+  bottom: var(--bottom-stack);
   z-index: 30;
   height: var(--mini-h);
   align-items: center;
@@ -1078,8 +1097,8 @@ input[type='range']::-moz-range-thumb {
 }
 
 .mini-player__btn {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: none;
   background: var(--surface-2);
@@ -1116,6 +1135,8 @@ input[type='range']::-moz-range-thumb {
 .mini-player__progress-fill {
   height: 100%;
   background: var(--accent);
+  /* Fed by PlayerPanel via a CSS var on <html> */
+  width: var(--mini-progress, 0%);
   transition: width 0.3s linear;
 }
 
@@ -1325,7 +1346,7 @@ input[type='range']::-moz-range-thumb {
     right: 0;
     bottom: 0;
     z-index: 40;
-    height: calc(56px + env(safe-area-inset-bottom));
+    height: var(--bottom-stack);
     gap: 4px;
     padding: 4px 8px calc(4px + env(safe-area-inset-bottom));
     background: var(--bg-elevated);
@@ -1367,7 +1388,20 @@ input[type='range']::-moz-range-thumb {
   }
 
   .app {
-    padding-bottom: calc(56px + env(safe-area-inset-bottom));
+    padding-bottom: var(--bottom-stack);
+  }
+
+  /* Header must clear the status bar in standalone/notch mode at every
+     mobile width, not just small phones */
+  .main__header {
+    padding-top: env(safe-area-inset-top);
+    height: calc(var(--header-h) + env(safe-area-inset-top));
+  }
+
+  /* Reserve room for the floating MiniPlayer so the last rows of the
+     list are never hidden behind it */
+  .main__body {
+    padding-bottom: calc(var(--mini-h) + 24px);
   }
 
   /* Player panel: hidden by default on mobile, shown when tab active */
@@ -1379,12 +1413,85 @@ input[type='range']::-moz-range-thumb {
     display: flex;
     position: fixed;
     inset: 0;
-    bottom: calc(56px + env(safe-area-inset-bottom));
+    bottom: var(--bottom-stack);
     width: 100%;
     z-index: 35;
     border-left: none;
-    padding: calc(20px + env(safe-area-inset-top)) 24px 20px;
+    padding: calc(16px + env(safe-area-inset-top)) 24px 16px;
     overflow-y: auto;
+    gap: 14px;
+  }
+
+  /* Children keep their natural height; the panel scrolls instead of
+     flex-shrink squashing the disc out of its aspect ratio */
+  .player-panel.mobile-visible > * {
+    flex-shrink: 0;
+  }
+
+  /* Grow-able spacers vertically center the player when it fits the
+     screen, and collapse to zero (top-aligned scroll) when it doesn't */
+  .player-panel.mobile-visible::before,
+  .player-panel.mobile-visible::after {
+    content: '';
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  /* Disc sized against the viewport height so it can never clip */
+  .player-panel.mobile-visible .np__disc-wrap {
+    width: min(68vw, 36vh, 320px);
+    width: min(68vw, 36dvh, 320px);
+  }
+
+  /* Finger-sized transport controls */
+  .player-panel.mobile-visible .btn--play {
+    width: 68px;
+    height: 68px;
+  }
+
+  .player-panel.mobile-visible .btn--icon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .player-panel.mobile-visible .iconbtn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .player-panel.mobile-visible .np__controls {
+    gap: 16px;
+  }
+
+  /* Speed + EQ collapse behind a pill toggle on mobile */
+  .player-panel.mobile-visible .np__extras {
+    display: none;
+  }
+
+  .player-panel.mobile-visible .np__extras.is-open {
+    display: flex;
+  }
+
+  .player-panel.mobile-visible .np__extras-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 8px 18px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+  }
+
+  .player-panel.mobile-visible .np__extras-toggle.is-on {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-muted);
   }
 
   /* Hide main content when on player/playlists tab */
@@ -1397,6 +1504,8 @@ input[type='range']::-moz-range-thumb {
     display: block;
     position: fixed;
     inset: 0;
+    /* Keep the bottom nav tappable while the sheet is open */
+    bottom: var(--bottom-stack);
     z-index: 45;
     background: rgba(0, 0, 0, 0.5);
     opacity: 0;
@@ -1415,11 +1524,10 @@ input[type='range']::-moz-range-thumb {
     position: fixed;
     top: 0;
     left: 0;
-    bottom: calc(56px + env(safe-area-inset-bottom));
-    width: min(320px, 85vw);
+    bottom: var(--bottom-stack);
+    width: 100%;
     z-index: 50;
     background: var(--bg-elevated);
-    border-right: 1px solid var(--border-soft);
     transform: translateX(-100%);
     transition: transform 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
     overflow-y: auto;
@@ -1433,7 +1541,7 @@ input[type='range']::-moz-range-thumb {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 16px 12px;
+    padding: calc(16px + env(safe-area-inset-top)) 16px 12px;
     border-bottom: 1px solid var(--border-soft);
     flex-shrink: 0;
   }
@@ -1567,16 +1675,19 @@ input[type='range']::-moz-range-thumb {
 
 /* Small phones: tighter spacing */
 @media (max-width: 640px) {
+  /* Two rows: title + Play All on top, full-width search below */
   .main__header {
-    padding: 0 16px;
-    padding-top: env(safe-area-inset-top);
-    height: calc(var(--header-h) + env(safe-area-inset-top));
+    flex-wrap: wrap;
+    row-gap: 10px;
     gap: 10px;
+    height: auto;
+    padding: calc(10px + env(safe-area-inset-top)) 16px 12px;
   }
 
   .main__header .search-bar {
+    order: 3;
+    flex: 1 1 100%;
     max-width: none;
-    flex: 1;
   }
 
   .main__title {
@@ -1589,11 +1700,7 @@ input[type='range']::-moz-range-thumb {
   }
 
   .main__body {
-    padding: 12px 16px 80px;
-  }
-
-  .url-input {
-    flex-direction: column;
+    padding: 12px 16px calc(var(--mini-h) + 24px);
   }
 
   .track-row {
@@ -1639,11 +1746,7 @@ input[type='range']::-moz-range-thumb {
 
   /* Mobile player adjustments */
   .player-panel.mobile-visible {
-    padding: 16px;
-  }
-
-  .np__disc-wrap {
-    width: min(72vw, 280px);
+    padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
   }
 
   .eq__bands {

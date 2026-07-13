@@ -43,6 +43,9 @@
   --player-w: 360px;
   --header-h: 64px;
   --mini-h: 64px;
+  --nav-h: 56px;
+  /* Total height of the fixed bottom stack (nav + home indicator) */
+  --bottom-stack: calc(var(--nav-h) + env(safe-area-inset-bottom));
 
   /* Shadows */
   --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);

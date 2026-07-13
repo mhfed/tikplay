@@ -18,6 +18,7 @@ import {
   RepeatOneIcon,
   ShareIcon,
   CheckIcon,
+  SlidersIcon,
 } from './icons';
 
 function formatTime(seconds: number): string {
@@ -56,6 +57,7 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
   } = useAppStore();
 
   const [shareCopied, setShareCopied] = useState(false);
+  const [showExtras, setShowExtras] = useState(false);
 
   const engine = useAudioEngine({
     onEnded: () => {
@@ -193,6 +195,12 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
   const progressPercent =
     engine.duration > 0 ? (engine.currentTime / engine.duration) * 100 : 0;
 
+  // MiniPlayer lives outside this component; publish progress as a CSS var
+  // so its bar tracks playback without lifting engine state into the store.
+  useEffect(() => {
+    document.documentElement.style.setProperty('--mini-progress', `${progressPercent}%`);
+  }, [progressPercent]);
+
   const panelClass = `player-panel${mobileTab === 'player' ? ' mobile-visible' : ''}`;
 
   return (
@@ -314,19 +322,28 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
         </span>
       </div>
 
-      {/* Speed */}
-      <SpeedControl speed={speed} onChange={setSpeed} />
-
-      {/* Equalizer */}
-      <Equalizer
-        gains={eqGains}
-        onGainChange={(i, v) => {
-          const next = [...eqGains];
-          next[i] = v;
-          setEqGains(next);
-        }}
-        onPreset={setEqGains}
-      />
+      {/* Speed + EQ — always visible on desktop, behind a toggle on mobile */}
+      <button
+        type="button"
+        className={`np__extras-toggle${showExtras ? ' is-on' : ''}`}
+        onClick={() => setShowExtras((v) => !v)}
+        aria-expanded={showExtras}
+      >
+        <SlidersIcon size={14} />
+        <span>Speed & EQ</span>
+      </button>
+      <div className={`np__extras${showExtras ? ' is-open' : ''}`}>
+        <SpeedControl speed={speed} onChange={setSpeed} />
+        <Equalizer
+          gains={eqGains}
+          onGainChange={(i, v) => {
+            const next = [...eqGains];
+            next[i] = v;
+            setEqGains(next);
+          }}
+          onPreset={setEqGains}
+        />
+      </div>
     </div>
   );
 }
