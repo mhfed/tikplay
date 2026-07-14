@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&family=Hanken+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@500&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@100..900&family=JetBrains+Mono:wght@100..900&family=Montserrat:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+                  "inverse-on-surface": "#313030",
+                  "surface-container-high": "#2a2a2a",
+                  "on-primary-container": "#006a66",
+                  "on-secondary": "#67001b",
+                  "on-tertiary": "#40008c",
+                  "surface-container-highest": "#353534",
+                  "tertiary-fixed": "#ebdcff",
+                  "surface-dim": "#131313",
+                  "on-primary": "#003735",
+                  "tertiary-container": "#e3d1ff",
+                  "outline": "#849492",
+                  "surface-tint": "#00ddd6",
+                  "inverse-primary": "#006a66",
+                  "on-secondary-fixed": "#40000d",
+                  "on-surface": "#e5e2e1",
+                  "surface-bright": "#3a3939",
+                  "surface": "#131313",
+                  "secondary": "#ffb2b7",
+                  "background": "#131313",
+                  "on-tertiary-container": "#7900fe",
+                  "surface-container": "#201f1f",
+                  "outline-variant": "#3a4a48",
+                  "surface-container-low": "#1c1b1b",
+                  "on-secondary-container": "#5b0017",
+                  "primary": "#cffffb",
+                  "on-tertiary-fixed": "#260059",
+                  "primary-container": "#00f2ea",
+                  "error": "#ffb4ab",
+                  "inverse-surface": "#e5e2e1",
+                  "on-error": "#690005",
+                  "on-secondary-fixed-variant": "#92002a",
+                  "error-container": "#93000a",
+                  "tertiary-fixed-dim": "#d4bbff",
+                  "secondary-container": "#ff516a",
+                  "on-error-container": "#ffdad6",
+                  "secondary-fixed-dim": "#ffb2b7",
+                  "surface-container-lowest": "#0e0e0e",
+                  "on-surface-variant": "#b9cac8",
+                  "on-primary-fixed": "#00201e",
+                  "primary-fixed": "#29fcf3",
+                  "on-primary-fixed-variant": "#00504d",
+                  "surface-variant": "#353534",
+                  "primary-fixed-dim": "#00ddd6",
+                  "secondary-fixed": "#ffdadb",
+                  "on-background": "#e5e2e1",
+                  "tertiary": "#fbf2ff",
+                  "on-tertiary-fixed-variant": "#5c00c3"
+          },
+          "borderRadius": {
+                  "DEFAULT": "0.25rem",
+                  "lg": "0.5rem",
+                  "xl": "0.75rem",
+                  "full": "9999px"
+          },
+          "spacing": {
+                  "margin-desktop": "40px",
+                  "unit": "8px",
+                  "gutter": "24px",
+                  "margin-mobile": "16px",
+                  "container-max": "1440px"
+          },
+          "fontFamily": {
+                  "headline-lg-mobile": ["Montserrat"],
+                  "label-sm": ["JetBrains Mono"],
+                  "display-lg": ["Montserrat"],
+                  "body-md": ["Hanken Grotesk"],
+                  "headline-lg": ["Montserrat"]
+          },
+          "fontSize": {
+                  "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "800"}],
+                  "label-sm": ["12px", {"lineHeight": "1.0", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                  "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "900"}],
+                  "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                  "headline-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "800"}]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    
+    .vinyl-rotation {
+      animation: rotate 20s linear infinite;
+    }
+
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .glass-surface {
+      background: rgba(22, 22, 22, 0.45);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .neon-glow-primary {
+      box-shadow: 0 0 40px rgba(0, 221, 214, 0.2);
+    }
+
+    .pulse-visualizer span {
+      display: inline-block;
+      width: 4px;
+      background: #00ddd6;
+      margin: 0 2px;
+      border-radius: 2px;
+      animation: pulse 1s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { height: 8px; opacity: 0.5; }
+      50% { height: 24px; opacity: 1; }
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #3a4a48;
+      border-radius: 10px;
+    }
+
+    .neumorphic-inset {
+      box-shadow: inset 4px 4px 8px rgba(0,0,0,0.5), inset -4px -4px 8px rgba(255,255,255,0.05);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface selection:bg-primary selection:text-on-primary">
+<!-- SideNavBar Anchor -->
+<aside class="fixed left-0 top-0 h-full w-[280px] border-r border-outline-variant bg-background dark:bg-surface-container-lowest border-r border-outline-variant bg-opacity-95 backdrop-blur-xl shadow-xl dark:shadow-none flex flex-col py-10 z-50">
+<div class="px-8 mb-12">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container" style="font-variation-settings: 'FILL' 1;">music_note</span>
+</div>
+<div>
+<h1 class="text-headline-lg font-headline-lg font-black tracking-tighter text-on-surface dark:text-primary">TikPlay</h1>
+<p class="font-label-sm text-label-sm opacity-60">Vibe with TikTok</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<div class="px-8 py-2">
+<p class="font-label-sm text-label-sm uppercase tracking-widest text-on-surface-variant mb-4">Library</p>
+<a class="flex items-center gap-4 text-primary font-bold bg-primary-container/20 border-r-4 border-primary px-6 py-3 transition-all duration-300 ml-[-32px] pl-8" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-body-md text-body-md">Home</span>
+</a>
+<a class="flex items-center gap-4 text-on-surface-variant hover:text-on-surface px-6 py-3 transition-all duration-300 ml-[-32px] pl-8 hover:bg-surface-container-high/50" href="#">
+<span class="material-symbols-outlined">library_music</span>
+<span class="font-body-md text-body-md">All Tracks</span>
+</a>
+<a class="flex items-center gap-4 text-on-surface-variant hover:text-on-surface px-6 py-3 transition-all duration-300 ml-[-32px] pl-8 hover:bg-surface-container-high/50" href="#">
+<span class="material-symbols-outlined">favorite</span>
+<span class="font-body-md text-body-md">Favorites</span>
+</a>
+</div>
+<div class="px-8 py-6">
+<p class="font-label-sm text-label-sm uppercase tracking-widest text-on-surface-variant mb-4">Playlists</p>
+<a class="flex items-center gap-4 text-on-surface-variant hover:text-on-surface px-6 py-3 transition-all duration-300 ml-[-32px] pl-8 hover:bg-surface-container-high/50" href="#">
+<span class="material-symbols-outlined">album</span>
+<span class="font-body-md text-body-md">Remix</span>
+</a>
+<a class="flex items-center gap-4 text-on-surface-variant hover:text-on-surface px-6 py-3 transition-all duration-300 ml-[-32px] pl-8 hover:bg-surface-container-high/50" href="#">
+<span class="material-symbols-outlined">add_circle</span>
+<span class="font-body-md text-body-md">New Playlist</span>
+</a>
+</div>
+</nav>
+<div class="px-8 mt-auto">
+<button class="w-full bg-primary-container text-on-primary-container font-bold py-4 rounded-xl hover:scale-[1.02] active:scale-95 transition-all">
+        Upgrade to Pro
+      </button>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="ml-[280px] min-h-screen flex flex-col">
+<!-- TopAppBar Anchor -->
+<header class="sticky top-0 w-full z-40 backdrop-blur-2xl border-b border-outline-variant/30 flex justify-between items-center px-10 py-6">
+<div class="flex items-center gap-8">
+<div class="flex gap-6">
+<a class="font-body-md text-body-md text-primary border-b-2 border-primary pb-1" href="#">Discover</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-on-surface transition-colors" href="#">Trending</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-on-surface transition-colors" href="#">Radio</a>
+</div>
+</div>
+<div class="flex-1 max-w-xl mx-8">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors">search</span>
+<input class="w-full bg-surface-container border-b-2 border-outline-variant focus:border-primary-fixed focus:ring-0 transition-all pl-12 pr-4 py-3 font-label-sm text-label-sm rounded-t-lg" placeholder="Search by title, artist or TikTok URL..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-all">mic</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-all">notifications</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-all">account_circle</button>
+</div>
+</header>
+<!-- Content Layout -->
+<div class="flex-1 flex overflow-hidden">
+<!-- Track List Section -->
+<section class="flex-1 p-10 overflow-y-auto custom-scrollbar">
+<div class="flex items-center justify-between mb-8">
+<h2 class="font-headline-lg text-headline-lg">All Tracks</h2>
+<button class="flex items-center gap-2 bg-secondary-container text-on-secondary-container px-6 py-2 rounded-full font-bold hover:scale-105 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+            Play All
+          </button>
+</div>
+<!-- Track Cards - Bento Style Hover -->
+<div class="grid gap-4">
+<!-- Active Track -->
+<div class="glass-surface p-4 rounded-2xl border border-primary/20 flex items-center gap-6 group hover:border-primary transition-all cursor-pointer relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="w-16 h-16 rounded-lg overflow-hidden relative">
+<img class="w-full h-full object-cover" data-alt="A vibrant, neon-lit digital album cover with abstract teal and magenta wave patterns, high-energy Gen-Z aesthetic, polished 3D glass texture." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBrjaTkV-bqHXZh2NJJXCOQbk_ejY3TfAyRJwnMOtCcGguTc_S2D8XYJ_28-IAIPceoHkOFpMImT4ctHt3FXnuav2ncziCDJmmirBPN0IokCiu4uFzRlennragroMad19uGkhF0nEEO--NvWXwU4TixemUtG9pNXNsithODLHtvth0l5UOhenxRrAoPi7QlfLS94EwAmPoLEwT3xcAilDcFfzpmw25Xig_wjzBcjyYZgmCCfo-AOCPd20cPLcxWIGdnFjnF5a9_mqA"/>
+<div class="absolute inset-0 bg-black/40 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">equalizer</span>
+</div>
+</div>
+<div class="flex-1">
+<h4 class="font-body-md text-on-surface font-bold">Nhạc Việt Mix 2026 - Nhạc Remix TikTok Hot Trend</h4>
+<p class="font-label-sm text-label-sm text-on-surface-variant">air.remix</p>
+</div>
+<div class="flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity pr-4">
+<span class="material-symbols-outlined text-primary">favorite</span>
+<span class="material-symbols-outlined text-on-surface-variant">more_vert</span>
+</div>
+</div>
+<!-- Iterative Tracks -->
+<script>
+            const tracks = [
+              { title: "TÌM EM - KAINE X KAI REMIX", artist: "omns57", color: "secondary" },
+              { title: "Tìm Em || Hngle Ft Bảo Anh Remix", artist: "longvumrcapcut01", color: "primary" },
+              { title: "Em Nào Có Tội x Em Hát Ai Nghe", artist: "longvumrcapcut01", color: "tertiary" },
+              { title: "Bên Anh Đêm Nay x Thương Một Người", artist: "longvumrcapcut01", color: "secondary" },
+              { title: "Đừng Giữ Trong Lòng Full || Vh Remix", artist: "longvumrcapcut01", color: "primary" },
+              { title: "Để Anh Lương Thiện x Sai Lầm Của Anh", artist: "longvumrcapcut01", color: "secondary" },
+              { title: "Sao Em Vô Tình x Đổi Tình Đổi Áo Remix", artist: "longvumrcapcut01", color: "tertiary" }
+            ];
+            
+            tracks.forEach((track, index) => {
+              document.write(`
+                <div class="p-4 rounded-2xl flex items-center gap-6 group hover:bg-surface-container-high transition-all cursor-pointer">
+                  <div class="w-16 h-16 rounded-lg overflow-hidden bg-surface-container-highest flex items-center justify-center relative">
+                    <img src="placeholder" data-alt="Modern digital art with glitch effects and neon gradients, nocturnal studio vibe, sharp details, futuristic music theme in ${track.color} tones." class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 flex items-center justify-center transition-all">
+                      <span class="material-symbols-outlined text-white opacity-0 group-hover:opacity-100 transition-opacity">play_arrow</span>
+                    </div>
+                  </div>
+                  <div class="flex-1">
+                    <h4 class="font-body-md text-on-surface font-medium group-hover:text-primary transition-colors">${track.title}</h4>
+                    <p class="font-label-sm text-label-sm text-on-surface-variant">${track.artist}</p>
+                  </div>
+                  <div class="flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity pr-4">
+                    <span class="material-symbols-outlined text-on-surface-variant hover:text-secondary transition-colors">favorite</span>
+                    <span class="material-symbols-outlined text-on-surface-variant hover:text-primary">share</span>
+                  </div>
+                </div>
+              `);
+            });
+          </script>
+</div>
+</section>
+<!-- Right Cockpit (Player) -->
+<aside class="w-[420px] glass-surface border-l border-outline-variant/30 p-10 flex flex-col items-center justify-between">
+<!-- Rotating Vinyl Disc -->
+<div class="relative w-full aspect-square flex items-center justify-center group mb-8">
+<div class="absolute inset-0 rounded-full bg-gradient-to-tr from-primary/20 via-transparent to-secondary/20 blur-3xl opacity-50"></div>
+<!-- Outer Vinyl -->
+<div class="w-72 h-72 rounded-full bg-[#0a0a0a] border-[12px] border-surface-container-highest vinyl-rotation shadow-2xl relative overflow-hidden">
+<div class="absolute inset-0 opacity-20 bg-[repeating-radial-gradient(circle,transparent_0,transparent_1px,#fff_2px)]"></div>
+<!-- Disc Art -->
+<div class="absolute inset-[15%] rounded-full overflow-hidden border-4 border-black">
+<img class="w-full h-full object-cover" data-alt="Detailed close-up of a holographic vinyl record label featuring electric cyan and magenta gradients, futuristic font typography, deep blacks, high contrast studio lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXcETAM-VadStuCQuEKA5JXXgpmpHvRZjhgSPCYHdgj9KHEywBA_FGpAHp-DrYwtiHUr3DXJPJFMLLaT564uiAeFV3K5H5jNe2SKt5ESpvxAKtSh-hkG0LFgASf3uXzkEZK3_cKeoqQoce8sY_8uK4EaMgOpas2TB0Xs1YoAmGqUQR9PYb8AkFFUvUszVsJVjOAJ8CqwoCuuiLTgy6C95Xew6WWLGUVgwsrg0k17cv3nuESPnRI9NDuYJvsyq2ChQ3oX3b727ES1s"/>
+</div>
+<!-- Center Hole -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-black rounded-full border-2 border-surface-container-high z-10"></div>
+</div>
+<!-- Pulsing Visualizer Halo -->
+<div class="absolute inset-0 border-2 border-dashed border-primary/20 rounded-full animate-[spin_60s_linear_infinite]"></div>
+</div>
+<div class="text-center mb-8">
+<h3 class="font-headline-lg text-headline-lg-mobile text-on-surface line-clamp-2 px-4 mb-2">Nhạc Việt Mix 2026 - Nhạc Remix TikTok Hot Trend</h3>
+<p class="font-label-sm text-label-sm text-primary opacity-80 uppercase tracking-widest">air.remix</p>
+<div class="flex justify-center gap-4 mt-4">
+<button class="flex items-center gap-2 bg-surface-container border border-outline-variant px-4 py-1 rounded-full text-xs hover:border-primary transition-all">
+<span class="material-symbols-outlined text-sm">share</span>
+              Chia sẻ
+            </button>
+</div>
+</div>
+<!-- Controls -->
+<div class="w-full space-y-8">
+<!-- Timeline -->
+<div class="space-y-2">
+<div class="flex justify-between font-label-sm text-label-sm text-on-surface-variant">
+<span>2:45</span>
+<span>10:00</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container rounded-full relative overflow-hidden group cursor-pointer">
+<div class="absolute top-0 left-0 h-full w-[27.5%] bg-gradient-to-r from-primary to-primary-fixed shadow-[0_0_10px_rgba(0,221,214,0.5)]"></div>
+<div class="absolute left-[27.5%] top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg scale-0 group-hover:scale-100 transition-transform"></div>
+</div>
+</div>
+<!-- Buttons Cluster -->
+<div class="flex items-center justify-between">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-all">shuffle</button>
+<button class="material-symbols-outlined text-on-surface hover:text-primary transition-all text-3xl">skip_previous</button>
+<button class="w-20 h-20 rounded-full bg-gradient-to-br from-primary-container to-primary flex items-center justify-center text-on-primary-container shadow-2xl hover:scale-110 active:scale-95 transition-all neon-glow-primary">
+<span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">pause</span>
+</button>
+<button class="material-symbols-outlined text-on-surface hover:text-primary transition-all text-3xl">skip_next</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-all">repeat</button>
+</div>
+<!-- Speed & Equalizer Toggle -->
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container-low p-3 rounded-2xl neumorphic-inset flex items-center justify-between">
+<span class="font-label-sm text-label-sm opacity-60">Speed</span>
+<span class="font-label-sm text-label-sm text-primary font-bold">1.25x</span>
+</div>
+<div class="bg-surface-container-low p-3 rounded-2xl neumorphic-inset flex items-center justify-between">
+<span class="font-label-sm text-label-sm opacity-60">EQ</span>
+<span class="font-label-sm text-label-sm text-secondary font-bold">Bass Boost</span>
+</div>
+</div>
+</div>
+</aside>
+</div>
+<!-- BottomNavBar Anchor -->
+<footer class="fixed bottom-0 right-0 left-[280px] h-24 backdrop-blur-3xl border-t border-primary/20 bg-gradient-to-r from-surface-container-lowest to-surface-container flex items-center justify-between px-10 z-50">
+<div class="flex items-center gap-12 flex-1 justify-center">
+<button class="flex flex-col items-center justify-center text-primary drop-shadow-[0_0_8px_rgba(0,221,214,0.5)] hover:scale-110 transition-transform duration-200">
+<span class="material-symbols-outlined">play_circle</span>
+<span class="font-label-sm text-label-sm">Playing</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:scale-110 transition-transform duration-200">
+<span class="material-symbols-outlined">queue_music</span>
+<span class="font-label-sm text-label-sm">Queue</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:scale-110 transition-transform duration-200">
+<span class="material-symbols-outlined">lyrics</span>
+<span class="font-label-sm text-label-sm">Lyrics</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:scale-110 transition-transform duration-200">
+<span class="material-symbols-outlined">graphic_eq</span>
+<span class="font-label-sm text-label-sm">Equalizer</span>
+</button>
+</div>
+<!-- Visualizer Micro-Interaction -->
+<div class="pulse-visualizer flex items-end h-8 gap-0.5">
+<span style="animation-delay: 0.1s"></span>
+<span style="animation-delay: 0.3s"></span>
+<span style="animation-delay: 0.2s"></span>
+<span style="animation-delay: 0.5s"></span>
+<span style="animation-delay: 0.4s"></span>
+<span style="animation-delay: 0.2s"></span>
+<span style="animation-delay: 0.1s"></span>
+</div>
+</footer>
+</main>
+<script>
+    // Micro-interaction for playback controls
+    document.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('mousedown', () => btn.classList.add('scale-90'));
+      btn.addEventListener('mouseup', () => btn.classList.remove('scale-90'));
+      btn.addEventListener('mouseleave', () => btn.classList.remove('scale-90'));
+    });
+
+    // Interactive waveform simulation logic
+    const visualizerSpans = document.querySelectorAll('.pulse-visualizer span');
+    setInterval(() => {
+      visualizerSpans.forEach(span => {
+        const height = Math.random() * 24 + 4;
+        span.style.height = `${height}px`;
+      });
+    }, 150);
+  </script>
+</body></html>

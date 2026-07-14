@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>TikPlay - Now Playing</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&amp;family=Hanken+Grotesk:wght@400;600&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-container": "#006a66",
+                    "inverse-primary": "#006a66",
+                    "secondary-fixed": "#ffdadb",
+                    "outline": "#849492",
+                    "secondary-fixed-dim": "#ffb2b7",
+                    "on-tertiary-container": "#7900fe",
+                    "error": "#ffb4ab",
+                    "surface-container-low": "#1c1b1b",
+                    "on-tertiary-fixed-variant": "#5c00c3",
+                    "surface-container-highest": "#353534",
+                    "surface-variant": "#353534",
+                    "surface-container-lowest": "#0e0e0e",
+                    "on-tertiary": "#40008c",
+                    "on-secondary-fixed-variant": "#92002a",
+                    "tertiary-fixed-dim": "#d4bbff",
+                    "tertiary-fixed": "#ebdcff",
+                    "inverse-on-surface": "#313030",
+                    "primary": "#cffffb",
+                    "on-primary-fixed-variant": "#00504d",
+                    "on-error-container": "#ffdad6",
+                    "on-secondary-fixed": "#40000d",
+                    "surface-tint": "#00ddd6",
+                    "on-tertiary-fixed": "#260059",
+                    "tertiary-container": "#e3d1ff",
+                    "surface": "#131313",
+                    "on-secondary-container": "#5b0017",
+                    "error-container": "#93000a",
+                    "background": "#131313",
+                    "on-surface-variant": "#b9cac8",
+                    "on-surface": "#e5e2e1",
+                    "primary-fixed-dim": "#00ddd6",
+                    "tertiary": "#fbf2ff",
+                    "surface-container": "#201f1f",
+                    "surface-bright": "#3a3939",
+                    "outline-variant": "#3a4a48",
+                    "surface-dim": "#131313",
+                    "on-primary-fixed": "#00201e",
+                    "on-primary": "#003735",
+                    "surface-container-high": "#2a2a2a",
+                    "secondary-container": "#ff516a",
+                    "secondary": "#ffb2b7",
+                    "on-background": "#e5e2e1",
+                    "on-error": "#690005",
+                    "primary-container": "#00f2ea",
+                    "on-secondary": "#67001b",
+                    "inverse-surface": "#e5e2e1",
+                    "primary-fixed": "#29fcf3"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "24px",
+                    "container-max": "1440px",
+                    "unit": "8px",
+                    "margin-mobile": "16px",
+                    "margin-desktop": "40px"
+            },
+            "fontFamily": {
+                    "headline-lg": ["Montserrat"],
+                    "headline-lg-mobile": ["Montserrat"],
+                    "display-lg": ["Montserrat"],
+                    "body-md": ["Hanken Grotesk"],
+                    "label-sm": ["JetBrains Mono"]
+            },
+            "fontSize": {
+                    "headline-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "800"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "800"}],
+                    "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "900"}],
+                    "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "1.0", "letterSpacing": "0.05em", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        @keyframes vinyl-rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-vinyl {
+            animation: vinyl-rotate 20s linear infinite;
+        }
+        .animate-vinyl-paused {
+            animation-play-state: paused;
+        }
+        .neon-glow-cyan {
+            box-shadow: 0 0 40px -10px rgba(0, 221, 214, 0.6);
+        }
+        .neon-glow-pink {
+            box-shadow: 0 0 40px -10px rgba(255, 81, 106, 0.4);
+        }
+        .glass-panel {
+            background: rgba(22, 22, 22, 0.45);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .neumorphic-btn {
+            background: #161616;
+            box-shadow: 4px 4px 10px rgba(0,0,0,0.5), -4px -4px 10px rgba(255,255,255,0.05);
+        }
+        .neumorphic-btn:active {
+            box-shadow: inset 2px 2px 5px rgba(0,0,0,0.8), inset -2px -2px 5px rgba(255,255,255,0.05);
+        }
+        .eq-bar {
+            width: 3px;
+            background: linear-gradient(to top, #00ddd6, #ff516a);
+            border-radius: 2px;
+            animation: eq-pulse 1.2s ease-in-out infinite;
+        }
+        @keyframes eq-pulse {
+            0%, 100% { height: 8px; }
+            50% { height: 24px; }
+        }
+        .vinyl-grooves {
+            background: repeating-radial-gradient(
+                circle at center,
+                transparent 0,
+                transparent 2px,
+                rgba(255, 255, 255, 0.05) 3px,
+                transparent 4px
+            );
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md overflow-hidden selection:bg-primary-container selection:text-on-primary-container">
+<!-- Background Atmospheric Effect -->
+<div class="fixed inset-0 z-0">
+<div class="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-on-primary-container/20 blur-[120px] rounded-full"></div>
+<div class="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-on-secondary-container/20 blur-[120px] rounded-full"></div>
+</div>
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full z-50 bg-gradient-to-b from-black/80 to-transparent flex justify-between items-center px-margin-mobile py-4">
+<button class="text-primary-fixed-dim hover:opacity-80 transition-opacity active:scale-95 transition-transform">
+<span class="material-symbols-outlined">expand_more</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-black tracking-tighter text-primary-fixed-dim drop-shadow-[0_0_10px_rgba(0,221,214,0.5)]">TikPlay</h1>
+<button class="text-primary-fixed-dim hover:opacity-80 transition-opacity active:scale-95 transition-transform">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</header>
+<main class="relative z-10 h-screen flex flex-col justify-between pt-24 pb-32 px-margin-mobile">
+<!-- Center Vinyl Section -->
+<div class="flex-1 flex items-center justify-center relative">
+<!-- Pulsing Halo -->
+<div class="absolute w-72 h-72 rounded-full border-2 border-primary-fixed-dim/20 animate-pulse duration-1000" id="halo"></div>
+<!-- Vinyl Disk -->
+<div class="relative w-80 h-80 flex items-center justify-center" id="vinyl-container">
+<!-- Inner Vinyl Base -->
+<div class="absolute inset-0 bg-[#050505] rounded-full shadow-2xl vinyl-grooves border-4 border-surface-container-highest"></div>
+<!-- Album Art Image -->
+<div class="animate-vinyl relative w-48 h-48 rounded-full overflow-hidden border-8 border-black z-10 neon-glow-cyan" id="vinyl-art">
+<img class="w-full h-full object-cover" data-alt="A high-contrast cinematic album cover art featuring a mysterious silhouette of a musician under neon cyan and hot pink spotlights. The style is futuristic and electric with a slight glitch texture, set in a dark, atmospheric urban environment. Vibrant light trails swirl around the figure, evoking a high-energy electronic music vibe." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDHNqyp-NEGmSOOHPzfZBF0_Rz7tYJ5pG1f2a_3cYe-fy03F0V71rZe0ZiHB7wDIeLiYrKI0DuBOUyCR0o0UVwMqNJwl9HDCnivVHIDyvQhqbJrwxO_V3fsulY4lx10TnglS6nOsrQUV6jhz17NFxAE1uoDhicS_HnpQJXDkjs3F6W5nQE2lyyqncBGvgIaG_iLsKzcZFHKCzBfkzE3EVwBauMXN2R9X3u8IHgHmT4hMhzN9QAL1huM50ComHxFRLihrcXyUnsrqUQ"/>
+<!-- Spindle Hole -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-black rounded-full border border-white/20 shadow-inner z-20"></div>
+</div>
+</div>
+</div>
+<!-- Track Info & Progress -->
+<div class="space-y-6">
+<div class="text-center">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Nocturnal Dreams</h2>
+<p class="text-primary-fixed-dim font-label-sm tracking-widest mt-1">CYBER_PULSE ft. LUNA</p>
+</div>
+<!-- Seeker / Waveform Logic -->
+<div class="space-y-2">
+<div class="relative h-1 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="absolute top-0 left-0 h-full w-[35%] bg-primary-container shadow-[0_0_10px_#00ddd6]" id="progress-bar"></div>
+</div>
+<div class="flex justify-between text-on-surface-variant font-label-sm text-[10px]">
+<span>01:42</span>
+<span>04:15</span>
+</div>
+</div>
+</div>
+<!-- Modern Controls (One-hand focused) -->
+<div class="mt-8 flex flex-col items-center gap-8">
+<div class="flex items-center justify-center gap-10">
+<button class="text-on-surface-variant hover:text-primary-fixed-dim transition-colors active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-[28px]">shuffle</span>
+</button>
+<button class="text-on-surface hover:text-primary-fixed-dim transition-colors active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-[40px]">skip_previous</span>
+</button>
+<!-- Play/Pause Button Neumorphic -->
+<button class="w-20 h-20 rounded-full neumorphic-btn flex items-center justify-center text-primary-fixed-dim border border-white/5 active:scale-95 transition-all duration-200 neon-glow-cyan" id="play-pause">
+<span class="material-symbols-outlined text-[48px]" id="play-icon" style="font-variation-settings: 'FILL' 1;">pause</span>
+</button>
+<button class="text-on-surface hover:text-primary-fixed-dim transition-colors active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-[40px]">skip_next</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary-fixed-dim transition-colors active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-[28px]">repeat</span>
+</button>
+</div>
+<!-- Equalizer Visualizer (Bottom) -->
+<div class="flex items-end gap-1 h-8 opacity-60" id="eq">
+<!-- JS will populate bars -->
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Layer (Mini Shell) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 glass-panel flex justify-around items-center px-4 h-16 pb-safe rounded-t-xl border-t border-white/10 shadow-[0_-4px_20px_rgba(0,0,0,0.5)]">
+<button class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:text-primary-fixed transition-colors active:scale-90">
+<span class="material-symbols-outlined">home</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:text-primary-fixed transition-colors active:scale-90">
+<span class="material-symbols-outlined">explore</span>
+</button>
+<button class="flex flex-col items-center justify-center text-primary-fixed-dim drop-shadow-[0_0_8px_rgba(0,221,214,0.8)] scale-110">
+<span class="material-symbols-outlined">library_music</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:text-primary-fixed transition-colors active:scale-90">
+<span class="material-symbols-outlined">person</span>
+</button>
+</nav>
+<!-- Action Drawer Hook -->
+<div class="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 bg-surface-container-high/40 backdrop-blur-md px-6 py-2 rounded-full border border-white/5 flex gap-6 text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px] active:text-primary-fixed-dim transition-colors">favorite</span>
+<span class="material-symbols-outlined text-[20px] active:text-primary-fixed-dim transition-colors">playlist_add</span>
+<span class="material-symbols-outlined text-[20px] active:text-primary-fixed-dim transition-colors">share</span>
+</div>
+<script>
+        // EQ Generation
+        const eqContainer = document.getElementById('eq');
+        for (let i = 0; i < 30; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'eq-bar';
+            bar.style.animationDelay = `${Math.random() * 2}s`;
+            bar.style.animationDuration = `${0.5 + Math.random() * 1.5}s`;
+            eqContainer.appendChild(bar);
+        }
+
+        // Toggle Play/Pause Logic
+        const playBtn = document.getElementById('play-pause');
+        const playIcon = document.getElementById('play-icon');
+        const vinylArt = document.getElementById('vinyl-art');
+        const eqBars = document.querySelectorAll('.eq-bar');
+        const progressBar = document.getElementById('progress-bar');
+        const halo = document.getElementById('halo');
+
+        let isPlaying = true;
+        let progressPercent = 35;
+
+        playBtn.addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            if (isPlaying) {
+                playIcon.innerText = 'pause';
+                vinylArt.classList.remove('animate-vinyl-paused');
+                halo.classList.add('animate-pulse');
+                eqBars.forEach(bar => bar.style.animationPlayState = 'running');
+                playBtn.classList.add('neon-glow-cyan');
+            } else {
+                playIcon.innerText = 'play_arrow';
+                vinylArt.classList.add('animate-vinyl-paused');
+                halo.classList.remove('animate-pulse');
+                eqBars.forEach(bar => bar.style.animationPlayState = 'paused');
+                playBtn.classList.remove('neon-glow-cyan');
+            }
+        });
+
+        // Simple Progress Simulation
+        setInterval(() => {
+            if (isPlaying && progressPercent < 100) {
+                progressPercent += 0.1;
+                progressBar.style.width = `${progressPercent}%`;
+            }
+        }, 1000);
+    </script>
+</body></html>
