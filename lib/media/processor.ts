@@ -64,7 +64,20 @@ export class MediaProcessor {
     const [, cover] = await Promise.all([
       this.execYtDlp([
         '-f',
-        'bestaudio*/best',
+        // TikTok's format list often *claims* acodec: aac on its high-quality
+        // bytevc1/h265 muxed formats, but the actual file served for some
+        // videos/regions is video-only — ffprobe then finds no audio stream
+        // and yt-dlp's ExtractAudio postprocessor hard-fails. TikTok's own
+        // "download" format (the watermarked one meant for saving the video)
+        // reliably muxes real audio, so prefer it; audio quality is the same
+        // regardless of which video codec/watermark it's paired with, and we
+        // only keep the extracted audio anyway.
+        'download/bestaudio*/best',
+        // Without this, yt-dlp sees a same-named file already on disk (e.g.
+        // left over from a prior failed attempt) and skips straight to
+        // postprocessing it instead of redownloading — silently reusing a
+        // stale/bad intermediate file forever.
+        '--force-overwrites',
         '--extract-audio',
         '--audio-format',
         'm4a',
