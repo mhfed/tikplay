@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import { pickArt, pickArtAt } from '../lib/artwork';
 import type { Track } from '../lib/types';
+import { withViewTransition } from '../lib/viewTransition';
 import { ClockIcon, ListMusicIcon, PlayIcon, ShuffleIcon } from './icons';
 
 interface HomeProps {
@@ -52,7 +53,7 @@ export default function Home({ onOpenLibrary }: HomeProps) {
   );
 
   const goToPlaylist = (id: number) => {
-    selectPlaylist(id);
+    withViewTransition(() => selectPlaylist(id));
     onOpenLibrary?.();
   };
 

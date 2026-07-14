@@ -308,6 +308,7 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
         <div className="np__disc-guide" aria-hidden />
         <div className="np__disc">
           <div className="np__grooves" aria-hidden />
+          <div className="np__sheen" aria-hidden />
         </div>
         {currentTrack ? (
           <Cover
@@ -322,7 +323,6 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
           </div>
         )}
         <div className="np__spindle" aria-hidden />
-        <div className="np__sheen" aria-hidden />
         <div className="np__glow" aria-hidden />
       </div>
 
