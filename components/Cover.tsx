@@ -40,17 +40,19 @@ function palette(name: string) {
 }
 
 /**
- * Thumbnail. TikTok's signed cover URLs often come back as solid-black
- * images (they "load" fine, so onError never fires). Instead of showing a
- * black square we render a generated placeholder: a name-derived gradient
- * with the song title + author in small text.
+ * Thumbnail. Real covers are downloaded at crawl time (with the TikTok
+ * Referer header TikTok's CDN requires) and re-served from our own
+ * /api/cover/[key] cache, so — unlike hotlinking TikTok's signed URLs
+ * directly — they don't expire or resolve to solid black. Falls back to a
+ * generated, name-seeded gradient placeholder when there's no cover (legacy
+ * tracks crawled before caching existed, or any fetch failure).
  */
 export default function Cover({
   src,
   alt = '',
   subtitle,
   className = '',
-  useImage = false,
+  useImage = true,
 }: CoverProps) {
   const [failed, setFailed] = useState(false);
   const { bg, ring } = useMemo(() => palette(alt), [alt]);

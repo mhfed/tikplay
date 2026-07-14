@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
+import { withViewTransition } from '../lib/viewTransition';
 import Home from './Home';
 import MiniPlayer from './MiniPlayer';
 import MobileNav, { type MobileTab } from './MobileNav';
@@ -22,8 +23,8 @@ export default function AppShell() {
 
   const handleTabChange = (tab: MobileTab) => {
     setMobileTab(tab);
-    if (tab === 'home') goHome();
-    else if (tab === 'tracks') setView('library');
+    if (tab === 'home') withViewTransition(goHome);
+    else if (tab === 'tracks') withViewTransition(() => setView('library'));
   };
 
   const isContentTab = mobileTab === 'tracks' || mobileTab === 'home';

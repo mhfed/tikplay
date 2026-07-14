@@ -1,7 +1,7 @@
 node_modules
 .next
-cache/
-data/
+/cache/
+/data/
 .env*
 .venv
 test-results/

@@ -807,7 +807,8 @@
   z-index: 4;
 }
 
-/* Static light reflection — sits above the spinning disc */
+/* Light reflection — lives inside .np__disc so it sweeps around with the
+   spin; grooves alone are radially symmetric and don't read as rotating */
 .np__sheen {
   position: absolute;
   inset: 0;
@@ -1110,10 +1111,27 @@ input[type="range"]::-moz-range-thumb {
   display: none;
   flex-direction: column;
   gap: 16px;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    display 0.2s allow-discrete;
 }
 
 .np__extras.is-open {
   display: flex;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Animates the display:none -> flex swap itself, so the panel eases in
+   instead of popping — no JS mount/height measuring needed. */
+@starting-style {
+  .np__extras.is-open {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
 }
 
 /* Up-next list, shown behind the "Queue" tab */
@@ -1767,7 +1785,18 @@ input[type="range"]::-moz-range-thumb {
   overflow: hidden;
   box-shadow: var(--glass-border);
   border: var(--glass-border);
-  transition: box-shadow 0.15s ease;
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.track-card:hover .track-card__art {
+  transform: translateY(-4px);
+}
+
+.track-card:active .track-card__art {
+  transform: translateY(-1px) scale(0.98);
+  transition-duration: 0.08s;
 }
 
 .track-card.is-active .track-card__art {
@@ -1878,11 +1907,16 @@ input[type="range"]::-moz-range-thumb {
   inset: 0;
   background-size: cover;
   background-position: center;
-  transition: transform 0.3s ease;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .playlist-card:hover .playlist-card__art {
   transform: scale(1.06);
+}
+
+.playlist-card:active .playlist-card__art {
+  transform: scale(1.02);
+  transition-duration: 0.08s;
 }
 
 .playlist-card__scrim {
@@ -1922,6 +1956,36 @@ input[type="range"]::-moz-range-thumb {
   color: var(--text-secondary);
 }
 
+/* Scroll-driven reveal — cards fade/rise in as the dashboard scrolls them
+   into view. Native CSS scroll-timelines (no JS, GPU-only opacity+transform);
+   @supports keeps unsupported browsers at the plain, fully-visible layout. */
+@supports (animation-timeline: view()) {
+  .track-card,
+  .playlist-card {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: home-card-reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 25%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .track-card,
+    .playlist-card {
+      opacity: 1;
+      transform: none;
+      animation: none;
+    }
+  }
+}
+
+@keyframes home-card-reveal {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (max-width: 640px) {
   .home {
     padding: 16px 16px calc(var(--bottom-stack) + 24px);
@@ -1944,6 +2008,7 @@ input[type="range"]::-moz-range-thumb {
   min-width: 0;
   display: flex;
   overflow: hidden;
+  view-transition-name: main-content;
 }
 
 /* ── Mobile bottom nav ────────────────────────────────── */

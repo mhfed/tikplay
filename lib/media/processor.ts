@@ -61,28 +61,75 @@ export class MediaProcessor {
     ensureCacheDir(cacheDir);
     const outputTemplate = join(cacheDir, `${key}.m4a`);
 
-    await this.execYtDlp([
-      '-f',
-      'bestaudio*/best',
-      '--extract-audio',
-      '--audio-format',
-      'm4a',
-      '--audio-quality',
-      '0', // best encoder quality (loudnorm forces a re-encode anyway)
-      // Normalize loudness (EBU R128) so every track plays at the same, hot
-      // level: -9 LUFS integrated, -1 dBTP ceiling. Applied in the same
-      // ffmpeg pass that extracts the audio.
-      '--postprocessor-args',
-      'ExtractAudio:-c:a aac -af loudnorm=I=-9:TP=-1:LRA=11',
-      url,
-      '-o',
-      outputTemplate,
+    const [, cover] = await Promise.all([
+      this.execYtDlp([
+        '-f',
+        // TikTok's format list often *claims* acodec: aac on its high-quality
+        // bytevc1/h265 muxed formats, but the actual file served for some
+        // videos/regions is video-only — ffprobe then finds no audio stream
+        // and yt-dlp's ExtractAudio postprocessor hard-fails. TikTok's own
+        // "download" format (the watermarked one meant for saving the video)
+        // reliably muxes real audio, so prefer it; audio quality is the same
+        // regardless of which video codec/watermark it's paired with, and we
+        // only keep the extracted audio anyway.
+        'download/bestaudio*/best',
+        // Without this, yt-dlp sees a same-named file already on disk (e.g.
+        // left over from a prior failed attempt) and skips straight to
+        // postprocessing it instead of redownloading — silently reusing a
+        // stale/bad intermediate file forever.
+        '--force-overwrites',
+        '--extract-audio',
+        '--audio-format',
+        'm4a',
+        '--audio-quality',
+        '0', // best encoder quality (loudnorm forces a re-encode anyway)
+        // Normalize loudness (EBU R128) so every track plays at the same, hot
+        // level: -9 LUFS integrated, -1 dBTP ceiling. Applied in the same
+        // ffmpeg pass that extracts the audio.
+        '--postprocessor-args',
+        'ExtractAudio:-c:a aac -af loudnorm=I=-9:TP=-1:LRA=11',
+        url,
+        '-o',
+        outputTemplate,
+      ]),
+      this.downloadCover(meta.cover),
     ]);
+
+    // TikTok's cover URL is signed and expires; re-host it under our own
+    // cache/route so playback UI can hotlink it indefinitely. Best-effort —
+    // if the download fails, leave meta.cover as the raw (eventually-dead)
+    // TikTok URL rather than failing the whole crawl.
+    if (cover) {
+      await this.cache.saveCover(key, cover.buffer, cover.contentType);
+      meta.cover = `/api/cover/${key}`;
+    }
 
     // Persist metadata so the API can serve it from cache without re-running.
     await this.cache.saveMeta(key, meta);
 
     return { audioKey: key, meta };
+  }
+
+  /** Best-effort fetch of the TikTok cover image; TikTok gates the CDN on Referer. */
+  private async downloadCover(
+    url: string,
+  ): Promise<{ buffer: Buffer; contentType: string } | null> {
+    if (!url) return null;
+    try {
+      const res = await fetch(url, {
+        headers: {
+          Referer: 'https://www.tiktok.com/',
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
+      });
+      if (!res.ok) return null;
+      const contentType = res.headers.get('content-type') || 'image/jpeg';
+      const buffer = Buffer.from(await res.arrayBuffer());
+      return { buffer, contentType };
+    } catch {
+      return null;
+    }
   }
 
   /** Run `yt-dlp --dump-json` and map the response to our TrackMeta shape. */

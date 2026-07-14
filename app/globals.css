@@ -140,3 +140,13 @@ button {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* View Transitions — smooth native crossfade when the main content swaps
+   (Home <-> Library, player tab switch). ::view-transition-* pseudo-elements
+   live outside the document tree, so the `*` reduced-motion rule above can't
+   reach them; they're skipped separately (see lib/viewTransition.ts). */
+::view-transition-old(main-content),
+::view-transition-new(main-content) {
+  animation-duration: 0.32s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
