@@ -99,7 +99,9 @@
   background: transparent;
   width: 100%;
   text-align: left;
-  transition: background 0.12s ease, color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
 }
 
 .sidebar__item:hover {
@@ -152,7 +154,9 @@
   background: transparent;
   width: 100%;
   text-align: left;
-  transition: background 0.12s ease, color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
 }
 
 .sidebar__action:hover {
@@ -217,7 +221,9 @@
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  transition: filter 0.12s ease, transform 0.06s ease;
+  transition:
+    filter 0.12s ease,
+    transform 0.06s ease;
   box-shadow: 0 0 20px var(--accent-glow);
   flex-shrink: 0;
 }
@@ -311,7 +317,9 @@
   font-family: var(--font-mono);
   font-size: 13px;
   outline: none;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .search-bar__field::placeholder {
@@ -354,7 +362,10 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: background 0.12s ease, border-color 0.12s ease, transform 0.06s ease;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease,
+    transform 0.06s ease;
 }
 
 .btn:hover {
@@ -393,7 +404,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.12s ease, transform 0.06s ease;
+  transition:
+    background 0.12s ease,
+    transform 0.06s ease;
 }
 
 .btn--icon {
@@ -429,7 +442,10 @@
   background: var(--surface-2);
   color: var(--muted);
   cursor: pointer;
-  transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+  transition:
+    color 0.12s ease,
+    background 0.12s ease,
+    border-color 0.12s ease;
 }
 
 .iconbtn:hover {
@@ -467,7 +483,9 @@
   border: 1px solid transparent;
   border-left: 2px solid transparent;
   cursor: default;
-  transition: background 0.1s ease, border-color 0.15s ease;
+  transition:
+    background 0.1s ease,
+    border-color 0.15s ease;
 }
 
 .track-row:hover {
@@ -597,7 +615,9 @@
   display: flex;
   align-items: center;
   opacity: 0;
-  transition: opacity 0.12s ease, color 0.12s ease;
+  transition:
+    opacity 0.12s ease,
+    color 0.12s ease;
 }
 
 .track-row:hover .track-row__remove {
@@ -696,9 +716,15 @@
   height: 100%;
   border-radius: 50%;
   overflow: hidden;
-  background: repeating-radial-gradient(circle at 50% 50%, #1c1c22 0 3px, #0a0a0e 3px 6px);
+  background: repeating-radial-gradient(
+    circle at 50% 50%,
+    #1c1c22 0 3px,
+    #0a0a0e 3px 6px
+  );
   border: 1px solid var(--accent-glow);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04), inset 0 0 32px rgba(0, 0, 0, 0.6);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 0 32px rgba(0, 0, 0, 0.6);
   animation: np-spin 12s linear infinite;
   animation-play-state: paused;
 }
@@ -719,7 +745,9 @@
     transparent 0 5px,
     rgba(255, 255, 255, 0.03) 5px 6px
   );
-  box-shadow: inset 0 0 46px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  box-shadow:
+    inset 0 0 46px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 /* Static center label — doesn't spin, so it stays readable */
@@ -735,7 +763,9 @@
   place-items: center;
   background: radial-gradient(circle at 35% 30%, #26262e, #131318 72%);
   border: 2px solid rgba(212, 187, 255, 0.45);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  box-shadow:
+    0 4px 18px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   color: var(--tertiary-light);
   font-size: 44px;
   line-height: 1;
@@ -771,7 +801,9 @@
   aspect-ratio: 1;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #55555e, #0c0c10 72%);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08), 0 1px 3px rgba(0, 0, 0, 0.6);
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.6);
   z-index: 4;
 }
 
@@ -871,7 +903,9 @@
   border: 1px solid var(--border);
   border-radius: 999px;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
 }
 
 .np__share:hover {
@@ -930,7 +964,7 @@
 }
 
 /* ── Range inputs ─────────────────────────────────────── */
-input[type='range'] {
+input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   height: 4px;
@@ -968,7 +1002,7 @@ input[type='range'] {
   color: var(--gold);
 }
 
-input[type='range']::-webkit-slider-thumb {
+input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 12px;
@@ -980,7 +1014,7 @@ input[type='range']::-webkit-slider-thumb {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
-input[type='range']::-moz-range-thumb {
+input[type="range"]::-moz-range-thumb {
   width: 12px;
   height: 12px;
   border-radius: 50%;
@@ -1186,7 +1220,10 @@ input[type='range']::-moz-range-thumb {
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition: color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+  transition:
+    color 0.12s ease,
+    background 0.12s ease,
+    box-shadow 0.12s ease;
 }
 
 .np__tab:hover {
@@ -1570,7 +1607,12 @@ input[type='range']::-moz-range-thumb {
 .home-hero__scrim {
   position: absolute;
   inset: 0;
-  background: linear-gradient(0deg, var(--bg) 8%, rgba(10, 10, 10, 0.35) 55%, rgba(10, 10, 10, 0.1) 100%);
+  background: linear-gradient(
+    0deg,
+    var(--bg) 8%,
+    rgba(10, 10, 10, 0.35) 55%,
+    rgba(10, 10, 10, 0.1) 100%
+  );
   z-index: 0;
 }
 
@@ -1632,7 +1674,9 @@ input[type='range']::-moz-range-thumb {
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  transition: filter 0.12s ease, transform 0.06s ease;
+  transition:
+    filter 0.12s ease,
+    transform 0.06s ease;
 }
 
 .home-hero__play {
@@ -1727,7 +1771,9 @@ input[type='range']::-moz-range-thumb {
 }
 
 .track-card.is-active .track-card__art {
-  box-shadow: 0 0 0 2px var(--accent), 0 0 20px var(--accent-glow);
+  box-shadow:
+    0 0 0 2px var(--accent),
+    0 0 20px var(--accent-glow);
 }
 
 .track-card__play {
@@ -1744,7 +1790,9 @@ input[type='range']::-moz-range-thumb {
   justify-content: center;
   opacity: 0;
   transform: translateY(6px);
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
 }
 
 .track-card:hover .track-card__play,
@@ -1798,7 +1846,8 @@ input[type='range']::-moz-range-thumb {
 }
 
 @keyframes eq-bounce {
-  0%, 100% {
+  0%,
+  100% {
     transform: scaleY(0.5);
   }
   50% {
@@ -1839,7 +1888,11 @@ input[type='range']::-moz-range-thumb {
 .playlist-card__scrim {
   position: absolute;
   inset: 0;
-  background: linear-gradient(0deg, rgba(10, 10, 10, 0.9) 15%, rgba(10, 10, 10, 0.1) 70%);
+  background: linear-gradient(
+    0deg,
+    rgba(10, 10, 10, 0.9) 15%,
+    rgba(10, 10, 10, 0.1) 70%
+  );
 }
 
 .playlist-card__body {
@@ -1950,7 +2003,10 @@ input[type='range']::-moz-range-thumb {
     font-weight: 600;
     padding: 4px;
     border-radius: var(--radius-sm);
-    transition: color 0.12s ease, transform 0.2s ease, filter 0.2s ease;
+    transition:
+      color 0.12s ease,
+      transform 0.2s ease,
+      filter 0.2s ease;
   }
 
   .mobile-nav__tab:hover {
@@ -2019,7 +2075,7 @@ input[type='range']::-moz-range-thumb {
      screen, and collapse to zero (top-aligned scroll) when it doesn't */
   .player-panel.mobile-visible::before,
   .player-panel.mobile-visible::after {
-    content: '';
+    content: "";
     flex: 1 1 0;
     min-height: 0;
   }
@@ -2066,7 +2122,9 @@ input[type='range']::-moz-range-thumb {
     background: rgba(0, 0, 0, 0.5);
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.25s ease, visibility 0.25s ease;
+    transition:
+      opacity 0.25s ease,
+      visibility 0.25s ease;
   }
 
   .mobile-sidebar-backdrop.is-visible {
@@ -2154,7 +2212,9 @@ input[type='range']::-moz-range-thumb {
     background: transparent;
     width: 100%;
     text-align: left;
-    transition: background 0.12s ease, color 0.12s ease;
+    transition:
+      background 0.12s ease,
+      color 0.12s ease;
   }
 
   .mobile-sidebar__item:hover {
@@ -2198,7 +2258,9 @@ input[type='range']::-moz-range-thumb {
     background: transparent;
     width: 100%;
     text-align: left;
-    transition: background 0.12s ease, color 0.12s ease;
+    transition:
+      background 0.12s ease,
+      color 0.12s ease;
   }
 
   .mobile-sidebar__action:hover {

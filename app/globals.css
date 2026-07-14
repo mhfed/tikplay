@@ -61,9 +61,21 @@
   --shadow-glow-pink: 0 0 32px var(--secondary-glow);
 
   /* Fonts (populated by next/font variables) */
-  --font-display: var(--font-montserrat, 'Montserrat', ui-sans-serif, system-ui, sans-serif);
-  --font-ui: var(--font-hanken, 'Hanken Grotesk', ui-sans-serif, system-ui, sans-serif);
-  --font-mono: var(--font-jetbrains, 'JetBrains Mono', ui-monospace, monospace);
+  --font-display: var(
+    --font-montserrat,
+    "Montserrat",
+    ui-sans-serif,
+    system-ui,
+    sans-serif
+  );
+  --font-ui: var(
+    --font-hanken,
+    "Hanken Grotesk",
+    ui-sans-serif,
+    system-ui,
+    sans-serif
+  );
+  --font-mono: var(--font-jetbrains, "JetBrains Mono", ui-monospace, monospace);
 }
 
 * {

@@ -3,8 +3,8 @@
 import { useMemo } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import { pickArt, pickArtAt } from '../lib/artwork';
-import { PlayIcon, ShuffleIcon, ClockIcon, ListMusicIcon } from './icons';
 import type { Track } from '../lib/types';
+import { ClockIcon, ListMusicIcon, PlayIcon, ShuffleIcon } from './icons';
 
 interface HomeProps {
   /** Fires after navigating to a playlist/track list — lets the mobile shell flip to the Library tab. */
@@ -70,7 +70,9 @@ export default function Home({ onOpenLibrary }: HomeProps) {
       <div className="home">
         <div className="home__empty">
           <p className="home__empty-title">Chưa có bài hát nào</p>
-          <p className="home__empty-sub">Dán một link TikTok ở tab Thư viện để bắt đầu vibe.</p>
+          <p className="home__empty-sub">
+            Dán một link TikTok ở tab Thư viện để bắt đầu vibe.
+          </p>
         </div>
       </div>
     );
@@ -93,7 +95,9 @@ export default function Home({ onOpenLibrary }: HomeProps) {
             <div className="home-hero__actions">
               <button className="home-hero__play" onClick={handlePlayHero}>
                 <PlayIcon size={16} />
-                {currentTrack?.id === heroTrack.id && isPlaying ? 'Đang phát' : 'Phát ngay'}
+                {currentTrack?.id === heroTrack.id && isPlaying
+                  ? 'Đang phát'
+                  : 'Phát ngay'}
               </button>
               <button className="home-hero__shuffle" onClick={handleShuffleAll}>
                 <ShuffleIcon size={16} />
@@ -105,7 +109,11 @@ export default function Home({ onOpenLibrary }: HomeProps) {
       )}
 
       {recentlyPlayed.length > 0 && (
-        <HomeRow icon={<ClockIcon size={16} />} title="Tiếp tục nghe" subtitle="Những bài bạn vừa nghe">
+        <HomeRow
+          icon={<ClockIcon size={16} />}
+          title="Tiếp tục nghe"
+          subtitle="Những bài bạn vừa nghe"
+        >
           {recentlyPlayed.map((t, i) => (
             <TrackCard
               key={t.id}
@@ -221,8 +229,14 @@ function TrackCard({
   onPlay: () => void;
 }) {
   return (
-    <button className={`track-card${active ? ' is-active' : ''}`} onClick={onPlay}>
-      <span className="track-card__art" style={{ backgroundImage: `url(${art})` }}>
+    <button
+      className={`track-card${active ? ' is-active' : ''}`}
+      onClick={onPlay}
+    >
+      <span
+        className="track-card__art"
+        style={{ backgroundImage: `url(${art})` }}
+      >
         <span className="track-card__play" aria-hidden>
           {active && playing ? <EqDots /> : <PlayIcon size={18} />}
         </span>
@@ -244,11 +258,16 @@ function PlaylistCard({
 }) {
   return (
     <button className="playlist-card" onClick={onClick}>
-      <span className="playlist-card__art" style={{ backgroundImage: `url(${pickArt(name)})` }} />
+      <span
+        className="playlist-card__art"
+        style={{ backgroundImage: `url(${pickArt(name)})` }}
+      />
       <span className="playlist-card__scrim" aria-hidden />
       <span className="playlist-card__body">
         <span className="playlist-card__name">{name}</span>
-        {count != null && <span className="playlist-card__count">{count} bài</span>}
+        {count != null && (
+          <span className="playlist-card__count">{count} bài</span>
+        )}
       </span>
     </button>
   );

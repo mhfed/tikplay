@@ -26,7 +26,13 @@ function stroke(size: number): SVGProps<SVGSVGElement> {
 
 export function PlayIcon({ size = 24, ...rest }: IconProps) {
   return (
-    <svg {...stroke(size)} fill="currentColor" stroke="none" aria-hidden {...rest}>
+    <svg
+      {...stroke(size)}
+      fill="currentColor"
+      stroke="none"
+      aria-hidden
+      {...rest}
+    >
       <path d="M7 5.5v13a1 1 0 0 0 1.54.84l10.3-6.5a1 1 0 0 0 0-1.68L8.54 4.66A1 1 0 0 0 7 5.5Z" />
     </svg>
   );
@@ -34,7 +40,13 @@ export function PlayIcon({ size = 24, ...rest }: IconProps) {
 
 export function PauseIcon({ size = 24, ...rest }: IconProps) {
   return (
-    <svg {...stroke(size)} fill="currentColor" stroke="none" aria-hidden {...rest}>
+    <svg
+      {...stroke(size)}
+      fill="currentColor"
+      stroke="none"
+      aria-hidden
+      {...rest}
+    >
       <rect x="6.5" y="5" width="3.6" height="14" rx="1.2" />
       <rect x="13.9" y="5" width="3.6" height="14" rx="1.2" />
     </svg>
@@ -107,7 +119,11 @@ export function SearchIcon({ size = 24, ...rest }: IconProps) {
 export function VolumeIcon({ size = 24, ...rest }: IconProps) {
   return (
     <svg {...stroke(size)} aria-hidden {...rest}>
-      <path d="M4 9.5v5a1 1 0 0 0 1.5.86L10 13.2V10.8L5.5 8.64A1 1 0 0 0 4 9.5Z" fill="currentColor" stroke="none" />
+      <path
+        d="M4 9.5v5a1 1 0 0 0 1.5.86L10 13.2V10.8L5.5 8.64A1 1 0 0 0 4 9.5Z"
+        fill="currentColor"
+        stroke="none"
+      />
       <path d="M14.5 9a4 4 0 0 1 0 6" />
       <path d="M17.5 6.5a7.5 7.5 0 0 1 0 11" />
     </svg>
@@ -117,7 +133,11 @@ export function VolumeIcon({ size = 24, ...rest }: IconProps) {
 export function VolumeMuteIcon({ size = 24, ...rest }: IconProps) {
   return (
     <svg {...stroke(size)} aria-hidden {...rest}>
-      <path d="M4 9.5v5a1 1 0 0 0 1.5.86L10 13.2V10.8L5.5 8.64A1 1 0 0 0 4 9.5Z" fill="currentColor" stroke="none" />
+      <path
+        d="M4 9.5v5a1 1 0 0 0 1.5.86L10 13.2V10.8L5.5 8.64A1 1 0 0 0 4 9.5Z"
+        fill="currentColor"
+        stroke="none"
+      />
       <path d="m15.5 9.5 5 5" />
       <path d="m20.5 9.5-5 5" />
     </svg>

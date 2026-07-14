@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { Track, RepeatMode } from '../lib/types';
-import Playlist from './Playlist';
+import type { RepeatMode, Track } from '../lib/types';
 import History from './History';
-import { ListMusicIcon, ClockIcon, GripIcon } from './icons';
+import { ClockIcon, GripIcon, ListMusicIcon } from './icons';
+import Playlist from './Playlist';
 
 interface MobileLibraryProps {
   playlist: Track[];

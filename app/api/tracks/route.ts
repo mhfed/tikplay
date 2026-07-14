@@ -1,12 +1,21 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getAllTracks, upsertTrack, deleteTrack, searchTracks, applyAutoRules } from '@/lib/db/queries';
+import { type NextRequest, NextResponse } from 'next/server';
+import {
+  applyAutoRules,
+  deleteTrack,
+  getAllTracks,
+  searchTracks,
+  upsertTrack,
+} from '@/lib/db/queries';
 import { getFavoriteIds, toTrack } from './helpers';
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get('q');
   const rows = q ? searchTracks(q) : getAllTracks();
   const favIds = getFavoriteIds();
-  return NextResponse.json({ ok: true, tracks: rows.map((r) => toTrack(r, favIds)) });
+  return NextResponse.json({
+    ok: true,
+    tracks: rows.map((r) => toTrack(r, favIds)),
+  });
 }
 
 export async function POST(req: NextRequest) {

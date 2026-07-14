@@ -64,7 +64,12 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
 
     const filters: BiquadFilterNode[] = EQ_BANDS.map((freq, i) => {
       const filter = ctx.createBiquadFilter();
-      filter.type = i === 0 ? 'lowshelf' : i === EQ_BANDS.length - 1 ? 'highshelf' : 'peaking';
+      filter.type =
+        i === 0
+          ? 'lowshelf'
+          : i === EQ_BANDS.length - 1
+            ? 'highshelf'
+            : 'peaking';
       filter.frequency.value = freq;
       filter.Q.value = 1.414;
       filter.gain.value = 0;
@@ -168,14 +173,17 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
 
   // Track mute state from the store's volume (not audio.volume, which caps at
   // 1) so boosted levels above 100% survive a mute/unmute round-trip.
-  const toggleMute = useCallback((volume: number, setVol: (v: number) => void) => {
-    if (volume > 0) {
-      lastVolumeRef.current = volume;
-      setVol(0);
-    } else {
-      setVol(lastVolumeRef.current || 0.8);
-    }
-  }, []);
+  const toggleMute = useCallback(
+    (volume: number, setVol: (v: number) => void) => {
+      if (volume > 0) {
+        lastVolumeRef.current = volume;
+        setVol(0);
+      } else {
+        setVol(lastVolumeRef.current || 0.8);
+      }
+    },
+    [],
+  );
 
   // Attach event listeners
   useEffect(() => {

@@ -4,7 +4,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Track } from '../lib/types';
 import Cover from './Cover';
-import { GripIcon, PlayIcon, PauseIcon } from './icons';
+import { GripIcon, PauseIcon, PlayIcon } from './icons';
 
 interface TrackRowProps {
   track: Track;

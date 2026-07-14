@@ -1,0 +1,60 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.3/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "**",
+      "!.next",
+      "!next-env.d.ts",
+      "!public/stitch-art",
+      "!stitch_toktune_music_hub",
+      "!docs"
+    ]
+  },
+  "linter": {
+    "enabled": true,
+    "domains": {
+      "next": "recommended",
+      "react": "recommended"
+    },
+    "rules": {
+      "preset": "recommended",
+      "correctness": {
+        "useExhaustiveDependencies": "warn"
+      },
+      "style": {
+        "noNonNullAssertion": "off",
+        "noDescendingSpecificity": "off"
+      },
+      "suspicious": {
+        "noDuplicateProperties": "off",
+        "noShorthandPropertyOverrides": "off",
+        "noApproximativeNumericConstant": "off"
+      },
+      "complexity": {
+        "noImportantStyles": "off"
+      },
+      "a11y": {
+        "useButtonType": "warn",
+        "noSvgWithoutTitle": "warn",
+        "useKeyWithClickEvents": "warn",
+        "noStaticElementInteractions": "warn",
+        "useMediaCaption": "warn",
+        "noAutofocus": "warn"
+      }
+    }
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space"
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single"
+    }
+  }
+}

@@ -1,6 +1,6 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
-import { Montserrat, Hanken_Grotesk, JetBrains_Mono } from 'next/font/google';
+import { Hanken_Grotesk, JetBrains_Mono, Montserrat } from 'next/font/google';
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 
 const montserrat = Montserrat({
@@ -55,7 +55,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="vi" className={`${montserrat.variable} ${hanken.variable} ${mono.variable}`}>
+    <html
+      lang="vi"
+      className={`${montserrat.variable} ${hanken.variable} ${mono.variable}`}
+    >
       <body>
         <ServiceWorkerRegister />
         {children}

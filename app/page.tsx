@@ -1,64 +1,69 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { AppStoreProvider, useAppStore } from '../hooks/useAppStore';
-import Sidebar from '../components/Sidebar';
-import Home from '../components/Home';
-import PlaylistView from '../components/PlaylistView';
-import PlayerPanel from '../components/PlayerPanel';
-import MiniPlayer from '../components/MiniPlayer';
-import MobileNav, { type MobileTab } from '../components/MobileNav';
-import MobileSidebar from '../components/MobileSidebar';
+import AppShell from '@/components/AppShell';
+import { AppStoreProvider, type InitialAppData } from '@/hooks/useAppStore';
+import {
+  getAllPlaylists,
+  getAllTracks,
+  getAutoRules,
+  getFavoriteIds,
+  getFavoriteTracks,
+  getPlaylistTracks,
+} from '@/lib/db/queries';
+import { type Track, toTrack } from '@/lib/types';
 import './components.css';
 
-function AppShell() {
-  const [mobileTab, setMobileTab] = useState<MobileTab>('home');
-  const { currentTrack, view, goHome, setView } = useAppStore();
+// Reads searchParams and the on-disk DB directly — must never be statically
+// cached, or mutations (add/remove/favorite) would appear to silently fail.
+export const dynamic = 'force-dynamic';
 
-  // A shared link (?pl=&track=) flips the store straight to 'library' on
-  // load — mirror that on the mobile tab bar so it doesn't still say "Home".
-  useEffect(() => {
-    if (view === 'library') setMobileTab((t) => (t === 'home' ? 'tracks' : t));
-  }, [view]);
-
-  const handleTabChange = (tab: MobileTab) => {
-    setMobileTab(tab);
-    if (tab === 'home') goHome();
-    else if (tab === 'tracks') setView('library');
-  };
-
-  const isContentTab = mobileTab === 'tracks' || mobileTab === 'home';
-
-  return (
-    <>
-      <div className="app">
-        <Sidebar />
-        <div className={`main-wrap${isContentTab ? '' : ' mobile-hidden'}`}>
-          {view === 'home' ? (
-            <Home onOpenLibrary={() => setMobileTab('tracks')} />
-          ) : (
-            <PlaylistView />
-          )}
-        </div>
-        <PlayerPanel mobileTab={mobileTab} />
-      </div>
-      <MiniPlayer mobileTab={mobileTab} onOpenPlayer={() => setMobileTab('player')} />
-      <MobileSidebar
-        visible={mobileTab === 'playlists'}
-        onClose={() => setMobileTab(view === 'home' ? 'home' : 'tracks')}
-      />
-      <MobileNav
-        activeTab={mobileTab}
-        onChange={handleTabChange}
-        hasTrack={!!currentTrack}
-      />
-    </>
-  );
+function tracksForPlaylist(playlistId: number, favIds: Set<number>): Track[] {
+  const rows =
+    playlistId === 1
+      ? getAllTracks()
+      : playlistId === -1
+        ? getFavoriteTracks()
+        : getPlaylistTracks(playlistId);
+  return rows.map((r) => toTrack(r, favIds));
 }
 
-export default function Page() {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ pl?: string; track?: string; t?: string }>;
+}) {
+  const sp = await searchParams;
+  const pl = Number(sp.pl) || 1;
+  const sharedTrackId = Number(sp.track) || 0;
+  const seekTime = Number(sp.t) || 0;
+
+  const favIds = getFavoriteIds();
+  const tracks = tracksForPlaylist(pl, favIds);
+
+  let currentTrack: Track | null = null;
+  if (sharedTrackId) {
+    currentTrack = tracks.find((t) => t.id === sharedTrackId) ?? null;
+    if (!currentTrack && pl !== 1) {
+      // Fall back to the full library in case the track left the playlist.
+      currentTrack =
+        getAllTracks()
+          .map((r) => toTrack(r, favIds))
+          .find((t) => t.id === sharedTrackId) ?? null;
+    }
+  }
+
+  const initialData: InitialAppData = {
+    tracks,
+    playlists: getAllPlaylists(),
+    favoriteIds: Array.from(favIds),
+    autoRules: getAutoRules(),
+    currentPlaylistId: pl,
+    currentTrack,
+    // A shared link always means "go straight to the track/playlist", not the dashboard.
+    view: sp.pl || sp.track ? 'library' : 'home',
+    pendingSeek: currentTrack && seekTime > 0 ? seekTime : null,
+  };
+
   return (
-    <AppStoreProvider>
+    <AppStoreProvider initialData={initialData}>
       <AppShell />
     </AppStoreProvider>
   );

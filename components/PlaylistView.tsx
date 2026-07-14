@@ -1,10 +1,10 @@
 'use client';
 
 import { useAppStore } from '../hooks/useAppStore';
-import UrlInput from './UrlInput';
-import TrackList from './TrackList';
-import SearchBar from './SearchBar';
 import { PlayIcon } from './icons';
+import SearchBar from './SearchBar';
+import TrackList from './TrackList';
+import UrlInput from './UrlInput';
 
 export default function PlaylistView() {
   const {
@@ -19,9 +19,12 @@ export default function PlaylistView() {
     error,
   } = useAppStore();
 
-  const currentPlaylist = currentPlaylistId === -1
-    ? { name: 'Favorites' }
-    : playlists.find((p) => p.id === currentPlaylistId) || { name: 'All Tracks' };
+  const currentPlaylist =
+    currentPlaylistId === -1
+      ? { name: 'Favorites' }
+      : playlists.find((p) => p.id === currentPlaylistId) || {
+          name: 'All Tracks',
+        };
 
   return (
     <div className="main">
@@ -44,11 +47,7 @@ export default function PlaylistView() {
         <SearchBar value={query} onChange={setQuery} />
       </div>
       <div className="main__body">
-        <UrlInput
-          onAdd={addTrackFromUrl}
-          loading={loading}
-          error={error}
-        />
+        <UrlInput onAdd={addTrackFromUrl} loading={loading} error={error} />
         <TrackList />
       </div>
     </div>

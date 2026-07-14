@@ -33,13 +33,16 @@ export default function AddPlaylistDialog({ onClose }: Props) {
           placeholder="Playlist name..."
           value={name}
           onChange={(e) => setName(e.target.value)}
-          autoFocus
         />
         <div className="modal__actions">
           <button type="button" className="btn" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" className="btn btn--primary" disabled={!name.trim()}>
+          <button
+            type="submit"
+            className="btn btn--primary"
+            disabled={!name.trim()}
+          >
             Create
           </button>
         </div>

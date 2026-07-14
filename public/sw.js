@@ -5,7 +5,10 @@ const PAGE_CACHE = `tikplay-pages-${VERSION}`;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(PAGE_CACHE).then((cache) => cache.add('/')).then(() => self.skipWaiting())
+    caches
+      .open(PAGE_CACHE)
+      .then((cache) => cache.add('/'))
+      .then(() => self.skipWaiting()),
   );
 });
 
@@ -17,10 +20,10 @@ self.addEventListener('activate', (event) => {
         Promise.all(
           keys
             .filter((key) => key !== STATIC_CACHE && key !== PAGE_CACHE)
-            .map((key) => caches.delete(key))
-        )
+            .map((key) => caches.delete(key)),
+        ),
       )
-      .then(() => self.clients.claim())
+      .then(() => self.clients.claim()),
   );
 });
 
@@ -44,7 +47,7 @@ self.addEventListener('fetch', (event) => {
           caches.open(PAGE_CACHE).then((cache) => cache.put('/', copy));
           return response;
         })
-        .catch(() => caches.match('/', { cacheName: PAGE_CACHE }))
+        .catch(() => caches.match('/', { cacheName: PAGE_CACHE })),
     );
     return;
   }
@@ -63,11 +66,13 @@ self.addEventListener('fetch', (event) => {
           fetch(request).then((response) => {
             if (response.ok) {
               const copy = response.clone();
-              caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy));
+              caches
+                .open(STATIC_CACHE)
+                .then((cache) => cache.put(request, copy));
             }
             return response;
-          })
-      )
+          }),
+      ),
     );
   }
 });

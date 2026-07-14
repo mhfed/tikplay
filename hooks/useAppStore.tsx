@@ -2,16 +2,30 @@
 
 import {
   createContext,
+  type ReactNode,
+  startTransition,
   useCallback,
   useContext,
   useEffect,
   useMemo,
+  useOptimistic,
   useState,
-  type ReactNode,
 } from 'react';
-import type { Track, Playlist, AutoRule, RepeatMode } from '../lib/types';
+import type { AutoRule, Playlist, RepeatMode, Track } from '../lib/types';
 
 export type AppView = 'home' | 'library';
+
+/** Seeded server-side (app/page.tsx) from the on-disk DB + `?pl=&track=&t=` — replaces the old mount-time client fetch. */
+export interface InitialAppData {
+  tracks: Track[];
+  playlists: Playlist[];
+  favoriteIds: number[];
+  autoRules: AutoRule[];
+  currentPlaylistId: number;
+  currentTrack: Track | null;
+  pendingSeek: number | null;
+  view: AppView;
+}
 
 interface AppState {
   tracks: Track[];
@@ -49,13 +63,17 @@ interface AppActions {
   setPlaying: (playing: boolean) => void;
   next: () => void;
   prev: () => void;
-  toggleFavorite: (trackId: number) => Promise<void>;
+  toggleFavorite: (trackId: number) => void;
   removeTrack: (trackId: number, playlistId?: number) => Promise<void>;
   reorderTracks: (trackIds: number[]) => Promise<void>;
   createPlaylist: (name: string) => Promise<void>;
   deletePlaylist: (id: number) => Promise<void>;
   renamePlaylist: (id: number, name: string) => Promise<void>;
-  createAutoRule: (playlistId: number, keyword: string, matchMode: string) => Promise<void>;
+  createAutoRule: (
+    playlistId: number,
+    keyword: string,
+    matchMode: string,
+  ) => Promise<void>;
   deleteAutoRule: (id: number) => Promise<void>;
   setVolume: (v: number) => void;
   setSpeed: (s: number) => void;
@@ -87,25 +105,50 @@ async function api<T = unknown>(path: string, opts?: RequestInit): Promise<T> {
   return res.json();
 }
 
-export function AppStoreProvider({ children }: { children: ReactNode }) {
-  const [tracks, setTracks] = useState<Track[]>([]);
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const [favorites, setFavorites] = useState<Set<number>>(new Set());
-  const [autoRules, setAutoRules] = useState<AutoRule[]>([]);
-  const [currentPlaylistId, setCurrentPlaylistId] = useState(1);
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
+export function AppStoreProvider({
+  children,
+  initialData,
+}: {
+  children: ReactNode;
+  initialData: InitialAppData;
+}) {
+  const [tracks, setTracks] = useState<Track[]>(initialData.tracks);
+  const [playlists, setPlaylists] = useState<Playlist[]>(initialData.playlists);
+  const [favorites, setFavorites] = useState<Set<number>>(
+    () => new Set(initialData.favoriteIds),
+  );
+  const [optimisticFavorites, setOptimisticFavorite] = useOptimistic(
+    favorites,
+    (state, trackId: number) => {
+      const next = new Set(state);
+      if (next.has(trackId)) next.delete(trackId);
+      else next.add(trackId);
+      return next;
+    },
+  );
+  const [autoRules, setAutoRules] = useState<AutoRule[]>(initialData.autoRules);
+  const [currentPlaylistId, setCurrentPlaylistId] = useState(
+    initialData.currentPlaylistId,
+  );
+  const [currentTrack, setCurrentTrack] = useState<Track | null>(
+    initialData.currentTrack,
+  );
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState<RepeatMode>('off');
   const [volume, setVolume] = useState(0.8);
   const [speed, setSpeed] = useState(1);
-  const [eqGains, setEqGains] = useState<number[]>([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+  const [eqGains, setEqGains] = useState<number[]>([
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  ]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pendingSeek, setPendingSeek] = useState<number | null>(null);
-  const [view, setView] = useState<AppView>('home');
+  const [pendingSeek, setPendingSeek] = useState<number | null>(
+    initialData.pendingSeek,
+  );
+  const [view, setView] = useState<AppView>(initialData.view);
   const [recentIds, setRecentIds] = useState<number[]>([]);
 
   const loadPlaylists = useCallback(async () => {
@@ -121,10 +164,14 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     } else if (playlistId === -1) {
       data = await api<{ tracks: Track[] }>('/api/favorites');
     } else {
-      data = await api<{ tracks: Track[] }>(`/api/playlists/${playlistId}/tracks`);
+      data = await api<{ tracks: Track[] }>(
+        `/api/playlists/${playlistId}/tracks`,
+      );
     }
     setTracks(data.tracks || []);
-    const favSet = new Set((data.tracks || []).filter((t) => t.isFavorite).map((t) => t.id));
+    const favSet = new Set(
+      (data.tracks || []).filter((t) => t.isFavorite).map((t) => t.id),
+    );
     setFavorites(favSet);
     return data.tracks || [];
   }, []);
@@ -135,33 +182,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loadAll = useCallback(async () => {
-    await Promise.all([loadPlaylists(), loadTracks(currentPlaylistId), loadAutoRules()]);
+    await Promise.all([
+      loadPlaylists(),
+      loadTracks(currentPlaylistId),
+      loadAutoRules(),
+    ]);
   }, [loadPlaylists, loadTracks, loadAutoRules, currentPlaylistId]);
-
-  // Initial load — restore playlist/track/time from a shared URL if present.
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const pl = Number(params.get('pl')) || 1;
-    const sharedTrackId = Number(params.get('track')) || 0;
-    const t = Number(params.get('t')) || 0;
-    setCurrentPlaylistId(pl);
-    (async () => {
-      const [, loaded] = await Promise.all([loadPlaylists(), loadTracks(pl), loadAutoRules()]);
-      if (!sharedTrackId) return;
-      let track = loaded.find((x) => x.id === sharedTrackId);
-      if (!track && pl !== 1) {
-        // Fall back to the full library in case the track left the playlist.
-        const all = await api<{ tracks: Track[] }>('/api/tracks');
-        track = (all.tracks || []).find((x) => x.id === sharedTrackId);
-      }
-      if (track) {
-        setCurrentTrack(track);
-        if (t > 0) setPendingSeek(t);
-      }
-      // A shared link always means "go straight to the track/playlist", not the dashboard.
-      if (params.has('pl') || params.has('track')) setView('library');
-    })();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Hydrate "recently played" from localStorage once, on mount (client-only —
   // reading it in a useState initializer would desync client/server render).
@@ -180,7 +206,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!currentTrack) return;
     setRecentIds((prev) => {
-      const next = [currentTrack.id, ...prev.filter((id) => id !== currentTrack.id)].slice(0, 12);
+      const next = [
+        currentTrack.id,
+        ...prev.filter((id) => id !== currentTrack.id),
+      ].slice(0, 12);
       try {
         window.localStorage.setItem('tikplay:recent', JSON.stringify(next));
       } catch {
@@ -200,7 +229,11 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     else params.delete('track');
     params.delete('t');
     const qs = params.toString();
-    window.history.replaceState(null, '', qs ? `?${qs}` : window.location.pathname);
+    window.history.replaceState(
+      null,
+      '',
+      qs ? `?${qs}` : window.location.pathname,
+    );
   }, [currentPlaylistId, currentTrack?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const selectPlaylist = useCallback(
@@ -226,13 +259,15 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       setError(null);
       try {
-        const res = await api<{ ok: boolean; error?: string; data?: Track; trackId?: number }>(
-          '/api/process',
-          {
-            method: 'POST',
-            body: JSON.stringify({ url }),
-          },
-        );
+        const res = await api<{
+          ok: boolean;
+          error?: string;
+          data?: Track;
+          trackId?: number;
+        }>('/api/process', {
+          method: 'POST',
+          body: JSON.stringify({ url }),
+        });
         if (!res.ok) {
           setError(res.error || 'Failed');
           return;
@@ -349,9 +384,13 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     next();
   }, [repeat, next]);
 
-  const toggleFavoriteAction = useCallback(
-    async (trackId: number) => {
-      await api('/api/favorites', { method: 'POST', body: JSON.stringify({ trackId }) });
+  const toggleFavoriteAction = useCallback((trackId: number) => {
+    startTransition(async () => {
+      setOptimisticFavorite(trackId);
+      await api('/api/favorites', {
+        method: 'POST',
+        body: JSON.stringify({ trackId }),
+      });
       setFavorites((prev) => {
         const next = new Set(prev);
         if (next.has(trackId)) next.delete(trackId);
@@ -359,17 +398,21 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         return next;
       });
       setTracks((prev) =>
-        prev.map((t) => (t.id === trackId ? { ...t, isFavorite: !t.isFavorite } : t)),
+        prev.map((t) =>
+          t.id === trackId ? { ...t, isFavorite: !t.isFavorite } : t,
+        ),
       );
-    },
-    [],
-  );
+    });
+  }, []);
 
   const removeTrack = useCallback(
     async (trackId: number, playlistId?: number) => {
       const pid = playlistId ?? currentPlaylistId;
       if (pid === 1) {
-        await api('/api/tracks', { method: 'DELETE', body: JSON.stringify({ id: trackId }) });
+        await api('/api/tracks', {
+          method: 'DELETE',
+          body: JSON.stringify({ id: trackId }),
+        });
       } else {
         await api(`/api/playlists/${pid}/tracks`, {
           method: 'DELETE',
@@ -396,7 +439,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const createPlaylistAction = useCallback(
     async (name: string) => {
-      await api('/api/playlists', { method: 'POST', body: JSON.stringify({ name }) });
+      await api('/api/playlists', {
+        method: 'POST',
+        body: JSON.stringify({ name }),
+      });
       await loadPlaylists();
     },
     [loadPlaylists],
@@ -404,7 +450,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const deletePlaylistAction = useCallback(
     async (id: number) => {
-      await api('/api/playlists', { method: 'DELETE', body: JSON.stringify({ id }) });
+      await api('/api/playlists', {
+        method: 'DELETE',
+        body: JSON.stringify({ id }),
+      });
       await loadPlaylists();
       if (currentPlaylistId === id) {
         setCurrentPlaylistId(1);
@@ -416,7 +465,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const renamePlaylistAction = useCallback(
     async (id: number, name: string) => {
-      await api('/api/playlists', { method: 'PUT', body: JSON.stringify({ id, name }) });
+      await api('/api/playlists', {
+        method: 'PUT',
+        body: JSON.stringify({ id, name }),
+      });
       await loadPlaylists();
     },
     [loadPlaylists],
@@ -435,7 +487,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const deleteAutoRuleAction = useCallback(
     async (id: number) => {
-      await api('/api/auto-rules', { method: 'DELETE', body: JSON.stringify({ id }) });
+      await api('/api/auto-rules', {
+        method: 'DELETE',
+        body: JSON.stringify({ id }),
+      });
       await loadAutoRules();
     },
     [loadAutoRules],
@@ -458,7 +513,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     if (!query.trim()) return tracks;
     const q = query.trim().toLowerCase();
     return tracks.filter(
-      (t) => t.title.toLowerCase().includes(q) || t.author.toLowerCase().includes(q),
+      (t) =>
+        t.title.toLowerCase().includes(q) || t.author.toLowerCase().includes(q),
     );
   }, [tracks, query]);
 
@@ -473,7 +529,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const store: AppStore = {
     tracks: filteredTracks,
     playlists,
-    favorites,
+    favorites: optimisticFavorites,
     autoRules,
     currentPlaylistId,
     currentTrack,
@@ -519,5 +575,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     goHome,
   };
 
-  return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
+  return (
+    <StoreContext.Provider value={store}>{children}</StoreContext.Provider>
+  );
 }

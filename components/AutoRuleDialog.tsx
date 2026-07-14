@@ -8,7 +8,8 @@ interface Props {
 }
 
 export default function AutoRuleDialog({ onClose }: Props) {
-  const { autoRules, playlists, createAutoRule, deleteAutoRule } = useAppStore();
+  const { autoRules, playlists, createAutoRule, deleteAutoRule } =
+    useAppStore();
   const [keyword, setKeyword] = useState('');
   const [playlistId, setPlaylistId] = useState<number>(0);
   const [matchMode, setMatchMode] = useState('contains');
@@ -24,7 +25,11 @@ export default function AutoRuleDialog({ onClose }: Props) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ minWidth: 440 }}>
+      <div
+        className="modal"
+        onClick={(e) => e.stopPropagation()}
+        style={{ minWidth: 440 }}
+      >
         <h2 className="modal__title">Auto Rules</h2>
         <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
           Tracks matching keywords will be auto-added to playlists.
@@ -36,9 +41,13 @@ export default function AutoRuleDialog({ onClose }: Props) {
               const pl = playlists.find((p) => p.id === rule.playlist_id);
               return (
                 <li key={rule.id} className="modal__rule-item">
-                  <span className="modal__rule-keyword">&quot;{rule.keyword}&quot;</span>
+                  <span className="modal__rule-keyword">
+                    &quot;{rule.keyword}&quot;
+                  </span>
                   <span className="modal__rule-arrow">&rarr;</span>
-                  <span className="modal__rule-playlist">{pl?.name || '?'}</span>
+                  <span className="modal__rule-playlist">
+                    {pl?.name || '?'}
+                  </span>
                   <button
                     className="modal__rule-delete"
                     onClick={() => deleteAutoRule(rule.id)}
@@ -52,7 +61,10 @@ export default function AutoRuleDialog({ onClose }: Props) {
           </ul>
         )}
 
-        <form onSubmit={handleAdd} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <form
+          onSubmit={handleAdd}
+          style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}
+        >
           <input
             className="modal__input"
             type="text"

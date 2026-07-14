@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { validateTikTokUrl, cacheKeyFromRaw } from '@/lib/tiktok/validate';
+import { type NextRequest, NextResponse } from 'next/server';
 import { FileCacheStore } from '@/lib/cache';
-import { MediaProcessor, TrackMeta } from '@/lib/media/processor';
-import { upsertTrack, applyAutoRules } from '@/lib/db/queries';
+import { applyAutoRules, upsertTrack } from '@/lib/db/queries';
+import { MediaProcessor, type TrackMeta } from '@/lib/media/processor';
+import { cacheKeyFromRaw, validateTikTokUrl } from '@/lib/tiktok/validate';
 
 // Long-running yt-dlp jobs must run on the Node.js runtime, never Edge.
 export const runtime = 'nodejs';
@@ -51,13 +51,21 @@ export async function POST(req: NextRequest) {
   const meta = cache.getMeta(key) as TrackMeta | null;
   if (cached && meta) {
     const dbTrack = persistTrack(url, key, meta);
-    return NextResponse.json({ ok: true, data: payload(key, meta), trackId: dbTrack.id });
+    return NextResponse.json({
+      ok: true,
+      data: payload(key, meta),
+      trackId: dbTrack.id,
+    });
   }
 
   try {
     const result = await processor.process(url);
     const dbTrack = persistTrack(url, result.audioKey, result.meta);
-    return NextResponse.json({ ok: true, data: payload(result.audioKey, result.meta), trackId: dbTrack.id });
+    return NextResponse.json({
+      ok: true,
+      data: payload(result.audioKey, result.meta),
+      trackId: dbTrack.id,
+    });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: (e as Error).message || 'Xử lý thất bại' },
