@@ -2,14 +2,17 @@
 
 import { useAppStore } from '../hooks/useAppStore';
 import Cover from './Cover';
-import { PlayIcon, PauseIcon, NextIcon } from './icons';
+import { NextIcon, PauseIcon, PlayIcon } from './icons';
 
 interface MiniPlayerProps {
   mobileTab?: string;
   onOpenPlayer?: () => void;
 }
 
-export default function MiniPlayer({ mobileTab, onOpenPlayer }: MiniPlayerProps) {
+export default function MiniPlayer({
+  mobileTab,
+  onOpenPlayer,
+}: MiniPlayerProps) {
   const { currentTrack, isPlaying, togglePlay, next } = useAppStore();
 
   if (!currentTrack) return null;
@@ -32,7 +35,10 @@ export default function MiniPlayer({ mobileTab, onOpenPlayer }: MiniPlayerProps)
         <div className="mini-player__title">{currentTrack.title}</div>
         <div className="mini-player__author">{currentTrack.author}</div>
       </div>
-      <div className="mini-player__controls" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="mini-player__controls"
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
           className="mini-player__btn mini-player__btn--play"
           onClick={togglePlay}
@@ -40,11 +46,7 @@ export default function MiniPlayer({ mobileTab, onOpenPlayer }: MiniPlayerProps)
         >
           {isPlaying ? <PauseIcon size={18} /> : <PlayIcon size={18} />}
         </button>
-        <button
-          className="mini-player__btn"
-          onClick={next}
-          aria-label="Next"
-        >
+        <button className="mini-player__btn" onClick={next} aria-label="Next">
           <NextIcon size={16} />
         </button>
       </div>

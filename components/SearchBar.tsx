@@ -1,6 +1,6 @@
 'use client';
 
-import { SearchIcon, CloseIcon } from './icons';
+import { CloseIcon, SearchIcon } from './icons';
 
 interface SearchBarProps {
   value: string;

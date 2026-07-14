@@ -40,10 +40,7 @@ export function useLocalStorage<T>(
     }
   }, [key, value, hydrated]);
 
-  const set = useCallback(
-    (v: T | ((prev: T) => T)) => setValue(v),
-    [],
-  );
+  const set = useCallback((v: T | ((prev: T) => T)) => setValue(v), []);
 
   return [value, set, hydrated] as const;
 }

@@ -1,5 +1,5 @@
-import type { DbTrack, Playlist, AutoRule } from '../types';
-import { getDb, saveDb, type DbTrackRow } from './index';
+import type { AutoRule, DbTrack, Playlist } from '../types';
+import { type DbTrackRow, getDb, saveDb } from './index';
 
 function toDbTrack(row: DbTrackRow): DbTrack {
   return row as DbTrack;
@@ -8,7 +8,10 @@ function toDbTrack(row: DbTrackRow): DbTrack {
 // ── TRACKS ──────────────────────────────────────────────
 
 export function getAllTracks(): DbTrack[] {
-  return getDb().tracks.slice().sort((a, b) => b.added_at - a.added_at).map(toDbTrack);
+  return getDb()
+    .tracks.slice()
+    .sort((a, b) => b.added_at - a.added_at)
+    .map(toDbTrack);
 }
 
 export function getTrack(id: number): DbTrack | undefined {
@@ -48,7 +51,11 @@ export function deleteTrack(id: number): void {
 export function searchTracks(q: string): DbTrack[] {
   const lower = q.toLowerCase();
   return getDb()
-    .tracks.filter((t) => t.title.toLowerCase().includes(lower) || t.author.toLowerCase().includes(lower))
+    .tracks.filter(
+      (t) =>
+        t.title.toLowerCase().includes(lower) ||
+        t.author.toLowerCase().includes(lower),
+    )
     .sort((a, b) => b.added_at - a.added_at)
     .map(toDbTrack);
 }
@@ -62,14 +69,20 @@ export function getAllPlaylists(): Playlist[] {
     .sort((a, b) => a.sort_order - b.sort_order || a.id - b.id)
     .map((p) => ({
       ...p,
-      trackCount: db.playlistTracks.filter((pt) => pt.playlist_id === p.id).length,
+      trackCount: db.playlistTracks.filter((pt) => pt.playlist_id === p.id)
+        .length,
     }));
 }
 
 export function createPlaylist(name: string): Playlist {
   const db = getDb();
   const maxOrder = db.playlists.reduce((m, p) => Math.max(m, p.sort_order), 0);
-  const row = { id: db.nextPlaylistId++, name, sort_order: maxOrder + 1, created_at: Date.now() };
+  const row = {
+    id: db.nextPlaylistId++,
+    name,
+    sort_order: maxOrder + 1,
+    created_at: Date.now(),
+  };
   db.playlists.push(row);
   saveDb();
   return { ...row, trackCount: 0 };
@@ -133,7 +146,10 @@ export function addTrackToPlaylist(playlistId: number, trackId: number): void {
   saveDb();
 }
 
-export function removeTrackFromPlaylist(playlistId: number, trackId: number): void {
+export function removeTrackFromPlaylist(
+  playlistId: number,
+  trackId: number,
+): void {
   const db = getDb();
   db.playlistTracks = db.playlistTracks.filter(
     (pt) => !(pt.playlist_id === playlistId && pt.track_id === trackId),
@@ -141,7 +157,10 @@ export function removeTrackFromPlaylist(playlistId: number, trackId: number): vo
   saveDb();
 }
 
-export function reorderPlaylistTracks(playlistId: number, trackIds: number[]): void {
+export function reorderPlaylistTracks(
+  playlistId: number,
+  trackIds: number[],
+): void {
   const db = getDb();
   trackIds.forEach((tid, i) => {
     const pt = db.playlistTracks.find(
@@ -189,7 +208,12 @@ export function createAutoRule(
   matchMode: string = 'contains',
 ): AutoRule {
   const db = getDb();
-  const rule = { id: db.nextRuleId++, playlist_id: playlistId, keyword, match_mode: matchMode };
+  const rule = {
+    id: db.nextRuleId++,
+    playlist_id: playlistId,
+    keyword,
+    match_mode: matchMode,
+  };
   db.autoRules.push(rule);
   saveDb();
   return rule as AutoRule;
@@ -201,7 +225,11 @@ export function deleteAutoRule(id: number): void {
   saveDb();
 }
 
-export function applyAutoRules(trackId: number, title: string, author: string): void {
+export function applyAutoRules(
+  trackId: number,
+  title: string,
+  author: string,
+): void {
   const rules = getAutoRules();
   const text = `${title} ${author}`.toLowerCase();
   for (const rule of rules) {

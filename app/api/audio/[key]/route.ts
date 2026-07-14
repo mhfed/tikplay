@@ -1,6 +1,6 @@
-import { NextRequest } from 'next/server';
-import { createReadStream, existsSync, statSync } from 'fs';
-import { join } from 'path';
+import { createReadStream, existsSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+import type { NextRequest } from 'next/server';
 import { getCacheDir } from '@/lib/cache';
 
 // Audio files live on disk and are streamed; Node runtime required.
@@ -11,8 +11,9 @@ const KEY_RE = /^[a-f0-9]{64}$/;
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { key: string } },
+  props: { params: Promise<{ key: string }> },
 ) {
+  const params = await props.params;
   const key = params.key;
 
   if (!KEY_RE.test(key)) {

@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 
 export interface DbData {
   tracks: DbTrackRow[];
@@ -44,11 +44,14 @@ export interface DbAutoRuleRow {
   match_mode: string;
 }
 
-const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'tikplay.json');
+const DB_PATH =
+  process.env.DB_PATH || path.join(process.cwd(), 'data', 'tikplay.json');
 
 const DEFAULT_DATA: DbData = {
   tracks: [],
-  playlists: [{ id: 1, name: 'All Tracks', sort_order: 0, created_at: Date.now() }],
+  playlists: [
+    { id: 1, name: 'All Tracks', sort_order: 0, created_at: Date.now() },
+  ],
   playlistTracks: [],
   favorites: [],
   autoRules: [],
@@ -83,7 +86,7 @@ export function saveDb(data?: DbData): void {
   cached = d;
   const dir = path.dirname(DB_PATH);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  const tmp = DB_PATH + '.tmp';
+  const tmp = `${DB_PATH}.tmp`;
   fs.writeFileSync(tmp, JSON.stringify(d, null, 2));
   fs.renameSync(tmp, DB_PATH);
 }

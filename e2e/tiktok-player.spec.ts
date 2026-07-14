@@ -1,7 +1,8 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 // The TikTok video the user wants to verify end-to-end.
-const TIKTOK_URL = 'https://www.tiktok.com/@longvumrcapcut01/video/7651599963360693512';
+const TIKTOK_URL =
+  'https://www.tiktok.com/@longvumrcapcut01/video/7651599963360693512';
 
 test('clone a TikTok URL and play the extracted audio', async ({ page }) => {
   await page.goto('/');

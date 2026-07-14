@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 
 /**
  * Hosts we consider "TikTok". We accept the bare host plus any subdomain under

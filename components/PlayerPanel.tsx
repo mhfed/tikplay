@@ -5,21 +5,24 @@ import { useAppStore } from '../hooks/useAppStore';
 import { useAudioEngine } from '../hooks/useAudioEngine';
 import Cover from './Cover';
 import Equalizer from './Equalizer';
-import SpeedControl from './SpeedControl';
 import {
-  PlayIcon,
-  PauseIcon,
-  PrevIcon,
+  CheckIcon,
+  ListMusicIcon,
   NextIcon,
-  VolumeIcon,
-  VolumeMuteIcon,
-  ShuffleIcon,
+  PauseIcon,
+  PlayIcon,
+  PrevIcon,
   RepeatIcon,
   RepeatOneIcon,
   ShareIcon,
-  CheckIcon,
+  ShuffleIcon,
   SlidersIcon,
+  VolumeIcon,
+  VolumeMuteIcon,
 } from './icons';
+import SpeedControl from './SpeedControl';
+
+type PanelTab = 'playing' | 'queue' | 'eq';
 
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
@@ -34,7 +37,9 @@ interface PlayerPanelProps {
 
 export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
   const {
+    tracks,
     currentTrack,
+    currentIndex,
     currentPlaylistId,
     isPlaying,
     repeat,
@@ -46,6 +51,7 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
     clearPendingSeek,
     togglePlay,
     setPlaying,
+    playTrack,
     next,
     prev,
     setVolume,
@@ -57,7 +63,9 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
   } = useAppStore();
 
   const [shareCopied, setShareCopied] = useState(false);
-  const [showExtras, setShowExtras] = useState(false);
+  const [activeTab, setActiveTab] = useState<PanelTab>('playing');
+  const showExtras = activeTab !== 'playing';
+  const upNext = currentIndex >= 0 ? tracks.slice(currentIndex + 1) : tracks;
 
   const engine = useAudioEngine({
     onEnded: () => {
@@ -145,8 +153,17 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
   }, [isPlaying, currentTrack]);
 
   useEffect(() => {
-    if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
-    if (!currentTrack || !Number.isFinite(engine.duration) || engine.duration <= 0) return;
+    if (
+      !('mediaSession' in navigator) ||
+      !navigator.mediaSession.setPositionState
+    )
+      return;
+    if (
+      !currentTrack ||
+      !Number.isFinite(engine.duration) ||
+      engine.duration <= 0
+    )
+      return;
     navigator.mediaSession.setPositionState({
       duration: engine.duration,
       playbackRate: speed,
@@ -164,15 +181,92 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
       }
     };
     document.addEventListener('visibilitychange', handleVisible);
-    return () => document.removeEventListener('visibilitychange', handleVisible);
+    return () =>
+      document.removeEventListener('visibilitychange', handleVisible);
   }, [isPlaying, currentTrack]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Global playback shortcuts. Skip while typing or when focus is on a
+  // button/link so native Space/Enter activation (e.g. dialog Cancel/Save)
+  // isn't hijacked — preventDefault on a keydown Space suppresses the
+  // browser's synthetic click for a focused button.
+  useEffect(() => {
+    const isInteractiveTarget = (el: EventTarget | null) => {
+      if (!(el instanceof HTMLElement)) return false;
+      return (
+        ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A'].includes(el.tagName) ||
+        el.isContentEditable
+      );
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isInteractiveTarget(e.target) || e.metaKey || e.ctrlKey || e.altKey)
+        return;
+
+      switch (e.key) {
+        case ' ':
+        case 'Spacebar':
+          e.preventDefault();
+          togglePlay();
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          if (e.shiftKey) next();
+          else if (currentTrack)
+            engine.seek(Math.min(engine.currentTime + 5, engine.duration || 0));
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          if (e.shiftKey) prev();
+          else if (currentTrack)
+            engine.seek(Math.max(engine.currentTime - 5, 0));
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          setVolume(Math.min(3, Math.round((volume + 0.1) * 100) / 100));
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          setVolume(Math.max(0, Math.round((volume - 0.1) * 100) / 100));
+          break;
+        case 'm':
+        case 'M':
+          engine.toggleMute(volume, setVolume);
+          break;
+        case 's':
+        case 'S':
+          setShuffle(!shuffle);
+          break;
+        case 'r':
+        case 'R':
+          cycleRepeat();
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    togglePlay,
+    next,
+    prev,
+    engine,
+    currentTrack,
+    volume,
+    setVolume,
+    shuffle,
+    setShuffle,
+    cycleRepeat,
+  ]);
 
   const shareTrack = async () => {
     if (!currentTrack) return;
     const params = new URLSearchParams();
     if (currentPlaylistId !== 1) params.set('pl', String(currentPlaylistId));
     params.set('track', String(currentTrack.id));
-    if (engine.currentTime > 1) params.set('t', String(Math.floor(engine.currentTime)));
+    if (engine.currentTime > 1)
+      params.set('t', String(Math.floor(engine.currentTime)));
     const url = `${window.location.origin}${window.location.pathname}?${params}`;
     // Native share sheet only on touch devices — on desktop, copying the link
     // is what people actually want.
@@ -198,27 +292,36 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
   // MiniPlayer lives outside this component; publish progress as a CSS var
   // so its bar tracks playback without lifting engine state into the store.
   useEffect(() => {
-    document.documentElement.style.setProperty('--mini-progress', `${progressPercent}%`);
+    document.documentElement.style.setProperty(
+      '--mini-progress',
+      `${progressPercent}%`,
+    );
   }, [progressPercent]);
 
   const panelClass = `player-panel${mobileTab === 'player' ? ' mobile-visible' : ''}`;
 
   return (
     <div className={panelClass}>
-      {/* Vinyl picture disc — cover art fills the whole disc */}
+      {/* Turntable disc — grooves are the primary surface and spin; the cover
+          label and spindle sit outside the rotating element so they stay readable */}
       <div className={`np__disc-wrap${isPlaying ? ' np--playing' : ''}`}>
+        <div className="np__disc-guide" aria-hidden />
         <div className="np__disc">
-          <Cover
-            src={currentTrack?.cover}
-            alt={currentTrack?.title ?? ''}
-            subtitle={currentTrack?.author}
-            className="np__art"
-          />
           <div className="np__grooves" aria-hidden />
         </div>
-        <div className="np__label" aria-hidden>
-          ♪
-        </div>
+        {currentTrack ? (
+          <Cover
+            src={currentTrack.cover}
+            alt={currentTrack.title}
+            subtitle={currentTrack.author}
+            className="np__label np__label--art"
+          />
+        ) : (
+          <div className="np__label" aria-hidden>
+            ♪
+          </div>
+        )}
+        <div className="np__spindle" aria-hidden />
         <div className="np__sheen" aria-hidden />
         <div className="np__glow" aria-hidden />
       </div>
@@ -256,26 +359,53 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
           className={`iconbtn${shuffle ? ' iconbtn--on' : ''}`}
           onClick={() => setShuffle(!shuffle)}
           aria-label="Shuffle"
-          title="Shuffle"
+          title="Shuffle (S)"
         >
           <ShuffleIcon size={16} />
         </button>
-        <button className="btn btn--icon" onClick={prev} disabled={!currentTrack} aria-label="Previous">
+        <button
+          className="btn btn--icon"
+          onClick={prev}
+          disabled={!currentTrack}
+          aria-label="Previous"
+          title="Previous (Shift+←)"
+        >
           <PrevIcon size={18} />
         </button>
-        <button className="btn btn--play" onClick={togglePlay} aria-label={isPlaying ? 'Pause' : 'Play'}>
+        <button
+          className="btn btn--play"
+          onClick={togglePlay}
+          aria-label={isPlaying ? 'Pause' : 'Play'}
+          title={`${isPlaying ? 'Pause' : 'Play'} (Space)`}
+        >
           {isPlaying ? <PauseIcon size={22} /> : <PlayIcon size={22} />}
         </button>
-        <button className="btn btn--icon" onClick={next} disabled={!currentTrack} aria-label="Next">
+        <button
+          className="btn btn--icon"
+          onClick={next}
+          disabled={!currentTrack}
+          aria-label="Next"
+          title="Next (Shift+→)"
+        >
           <NextIcon size={18} />
         </button>
         <button
           className={`iconbtn${repeat !== 'off' ? ' iconbtn--on' : ''}`}
           onClick={cycleRepeat}
-          aria-label={repeat === 'one' ? 'Repeat one' : repeat === 'all' ? 'Repeat all' : 'Repeat off'}
-          title={repeat === 'one' ? 'Repeat one' : repeat === 'all' ? 'Repeat all' : 'Repeat off'}
+          aria-label={
+            repeat === 'one'
+              ? 'Repeat one'
+              : repeat === 'all'
+                ? 'Repeat all'
+                : 'Repeat off'
+          }
+          title={`${repeat === 'one' ? 'Repeat one' : repeat === 'all' ? 'Repeat all' : 'Repeat off'} (R)`}
         >
-          {repeat === 'one' ? <RepeatOneIcon size={16} /> : <RepeatIcon size={16} />}
+          {repeat === 'one' ? (
+            <RepeatOneIcon size={16} />
+          ) : (
+            <RepeatIcon size={16} />
+          )}
         </button>
       </div>
 
@@ -304,6 +434,7 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
           className="np__vol-btn"
           onClick={() => engine.toggleMute(volume, setVolume)}
           aria-label={volume > 0 ? 'Mute' : 'Unmute'}
+          title={`${volume > 0 ? 'Mute' : 'Unmute'} (M)`}
         >
           {volume > 0 ? <VolumeIcon size={16} /> : <VolumeMuteIcon size={16} />}
         </button>
@@ -322,27 +453,88 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
         </span>
       </div>
 
-      {/* Speed + EQ — always visible on desktop, behind a toggle on mobile */}
-      <button
-        type="button"
-        className={`np__extras-toggle${showExtras ? ' is-on' : ''}`}
-        onClick={() => setShowExtras((v) => !v)}
-        aria-expanded={showExtras}
-      >
-        <SlidersIcon size={14} />
-        <span>Speed & EQ</span>
-      </button>
+      {/* Playing / Queue / Equalizer — segmented tab switches the panel below */}
+      <div className="np__tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'playing'}
+          className={`np__tab${activeTab === 'playing' ? ' is-active' : ''}`}
+          onClick={() => setActiveTab('playing')}
+        >
+          Playing
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'queue'}
+          className={`np__tab${activeTab === 'queue' ? ' is-active' : ''}`}
+          onClick={() => setActiveTab('queue')}
+        >
+          <ListMusicIcon size={13} />
+          Queue
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'eq'}
+          className={`np__tab${activeTab === 'eq' ? ' is-active' : ''}`}
+          onClick={() => setActiveTab('eq')}
+        >
+          <SlidersIcon size={13} />
+          Equalizer
+        </button>
+      </div>
       <div className={`np__extras${showExtras ? ' is-open' : ''}`}>
-        <SpeedControl speed={speed} onChange={setSpeed} />
-        <Equalizer
-          gains={eqGains}
-          onGainChange={(i, v) => {
-            const next = [...eqGains];
-            next[i] = v;
-            setEqGains(next);
-          }}
-          onPreset={setEqGains}
-        />
+        {activeTab === 'eq' && (
+          <>
+            <SpeedControl speed={speed} onChange={setSpeed} />
+            <Equalizer
+              gains={eqGains}
+              onGainChange={(i, v) => {
+                const next = [...eqGains];
+                next[i] = v;
+                setEqGains(next);
+              }}
+              onPreset={setEqGains}
+            />
+          </>
+        )}
+        {activeTab === 'queue' && (
+          <div className="np__queue">
+            {upNext.length === 0 ? (
+              <p className="np__queue-empty">
+                {shuffle
+                  ? 'Bài tiếp theo sẽ được chọn ngẫu nhiên.'
+                  : 'Đã hết danh sách phát.'}
+              </p>
+            ) : (
+              <ul className="np__queue-list">
+                {upNext.map((track, i) => (
+                  <li key={track.id}>
+                    <button
+                      type="button"
+                      className="np__queue-item"
+                      onClick={() => playTrack(track)}
+                    >
+                      <span className="np__queue-index">{i + 1}</span>
+                      <Cover
+                        src={track.cover}
+                        alt={track.title}
+                        subtitle={track.author}
+                        className="np__queue-cover"
+                      />
+                      <span className="np__queue-meta">
+                        <span className="np__queue-title">{track.title}</span>
+                        <span className="np__queue-author">{track.author}</span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -32,8 +32,18 @@ export default function UrlInput({ onAdd, loading, error }: UrlInputProps) {
         aria-label="TikTok URL"
         spellCheck={false}
       />
-      <button type="submit" className="btn btn--primary" disabled={loading || !value.trim()}>
-        {loading ? 'Loading...' : (<><PlusIcon size={14} /> Add</>)}
+      <button
+        type="submit"
+        className="btn btn--primary"
+        disabled={loading || !value.trim()}
+      >
+        {loading ? (
+          'Loading...'
+        ) : (
+          <>
+            <PlusIcon size={14} /> Add
+          </>
+        )}
       </button>
       {error && <p className="url-input__error">{error}</p>}
     </form>

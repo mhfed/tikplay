@@ -9,11 +9,15 @@ interface EqualizerProps {
   onPreset: (gains: number[]) => void;
 }
 
-export default function Equalizer({ gains, onGainChange, onPreset }: EqualizerProps) {
+export default function Equalizer({
+  gains,
+  onGainChange,
+  onPreset,
+}: EqualizerProps) {
   const [showPresets, setShowPresets] = useState(false);
   const [activePreset, setActivePreset] = useState('Flat');
 
-  const handlePreset = (preset: typeof EQ_PRESETS[number]) => {
+  const handlePreset = (preset: (typeof EQ_PRESETS)[number]) => {
     onPreset(preset.gains);
     setActivePreset(preset.name);
     setShowPresets(false);
@@ -54,7 +58,8 @@ export default function Equalizer({ gains, onGainChange, onPreset }: EqualizerPr
         {EQ_BANDS.map((freq, i) => (
           <div key={freq} className="eq__band">
             <span className="eq__band-value">
-              {gains[i] > 0 ? '+' : ''}{gains[i]}
+              {gains[i] > 0 ? '+' : ''}
+              {gains[i]}
             </span>
             <input
               type="range"

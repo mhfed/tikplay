@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>TikPlay - My Playlists</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&amp;family=Hanken+Grotesk:wght@400;600&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Theme Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-container": "#006a66",
+                    "inverse-primary": "#006a66",
+                    "secondary-fixed": "#ffdadb",
+                    "outline": "#849492",
+                    "secondary-fixed-dim": "#ffb2b7",
+                    "on-tertiary-container": "#7900fe",
+                    "error": "#ffb4ab",
+                    "surface-container-low": "#1c1b1b",
+                    "on-tertiary-fixed-variant": "#5c00c3",
+                    "surface-container-highest": "#353534",
+                    "surface-variant": "#353534",
+                    "surface-container-lowest": "#0e0e0e",
+                    "on-tertiary": "#40008c",
+                    "on-secondary-fixed-variant": "#92002a",
+                    "tertiary-fixed-dim": "#d4bbff",
+                    "tertiary-fixed": "#ebdcff",
+                    "inverse-on-surface": "#313030",
+                    "primary": "#cffffb",
+                    "on-primary-fixed-variant": "#00504d",
+                    "on-error-container": "#ffdad6",
+                    "on-secondary-fixed": "#40000d",
+                    "surface-tint": "#00ddd6",
+                    "on-tertiary-fixed": "#260059",
+                    "tertiary-container": "#e3d1ff",
+                    "surface": "#131313",
+                    "on-secondary-container": "#5b0017",
+                    "error-container": "#93000a",
+                    "background": "#131313",
+                    "on-surface-variant": "#b9cac8",
+                    "on-surface": "#e5e2e1",
+                    "primary-fixed-dim": "#00ddd6",
+                    "tertiary": "#fbf2ff",
+                    "surface-container": "#201f1f",
+                    "surface-bright": "#3a3939",
+                    "outline-variant": "#3a4a48",
+                    "surface-dim": "#131313",
+                    "on-primary-fixed": "#00201e",
+                    "on-primary": "#003735",
+                    "surface-container-high": "#2a2a2a",
+                    "secondary-container": "#ff516a",
+                    "secondary": "#ffb2b7",
+                    "on-background": "#e5e2e1",
+                    "on-error": "#690005",
+                    "primary-container": "#00f2ea",
+                    "on-secondary": "#67001b",
+                    "inverse-surface": "#e5e2e1",
+                    "primary-fixed": "#29fcf3"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "24px",
+                    "container-max": "1440px",
+                    "unit": "8px",
+                    "margin-mobile": "16px",
+                    "margin-desktop": "40px"
+            },
+            "fontFamily": {
+                    "headline-lg": ["Montserrat"],
+                    "headline-lg-mobile": ["Montserrat"],
+                    "display-lg": ["Montserrat"],
+                    "body-md": ["Hanken Grotesk"],
+                    "label-sm": ["JetBrains Mono"]
+            },
+            "fontSize": {
+                    "headline-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "800"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "800"}],
+                    "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "900"}],
+                    "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "1.0", "letterSpacing": "0.05em", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #0a0a0a;
+            color: #e5e2e1;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass-card {
+            background: rgba(22, 22, 22, 0.45);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .neon-border {
+            box-shadow: 0 0 15px rgba(0, 221, 214, 0.15);
+            border: 1px solid rgba(0, 221, 214, 0.3);
+        }
+        .neon-glow-primary {
+            box-shadow: 0 0 20px rgba(0, 221, 214, 0.4);
+        }
+        .pulse-visualizer {
+            background: linear-gradient(45deg, #00ddd6, #ff516a);
+            filter: blur(40px);
+            opacity: 0.15;
+            z-index: -1;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-body-md overflow-x-hidden min-h-screen pb-24">
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full z-50 bg-gradient-to-b from-black/80 to-transparent flex justify-between items-center px-margin-mobile py-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-fixed-dim hover:opacity-80 transition-opacity active:scale-95 transition-transform">search</span>
+</div>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-black tracking-tighter text-primary-fixed-dim drop-shadow-[0_0_10px_rgba(0,221,214,0.5)]">TikPlay</h1>
+<div class="w-10 h-10 rounded-full border-2 border-primary-fixed-dim overflow-hidden active:scale-95 transition-transform">
+<img class="w-full h-full object-cover" data-alt="A high-quality close-up portrait of a trendy Gen-Z music enthusiast with neon lighting reflecting on their face, set against a dark, nocturnal studio background with cool cyan and warm pink highlights. The style is professional, vibrant, and futuristic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAOmTWk_O35wbIoIpbLp72zeLTAoIvErjyzze2-ZUVlpJ6s5tmGz73Q5qKICn6dja_ppQUNIiYJclCxLlRwan6VL8NpvF6xsZnlYZzV18P3OFfEKjcCH-2QSfmXEdC_e91VAZz9QVcSNXarZxg7dh2uUpgYZDQrsN5TRu11HbFgADVGn0VonFZEKdy-3yE6wM6UfnA3O7bYi58flgfjWFB2qZWkPiBUCjR4ST7MWJc6mq4lJ8Mg_XGDRAMxWgVTeCTfLw9P28G9K08"/>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-24 px-margin-mobile relative">
+<!-- Background Atmospheric Glow -->
+<div class="fixed top-1/4 -right-20 w-64 h-64 pulse-visualizer rounded-full"></div>
+<div class="fixed bottom-1/4 -left-20 w-80 h-80 pulse-visualizer rounded-full bg-secondary-container opacity-10"></div>
+<!-- Create New Section -->
+<section class="mb-8">
+<button class="w-full py-5 rounded-xl flex items-center justify-center gap-3 bg-gradient-to-r from-primary-container/20 to-secondary-container/20 border-2 border-dashed border-outline-variant hover:border-primary-fixed-dim transition-all active:scale-95 group relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-r from-primary-fixed-dim/10 to-secondary-container/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<span class="material-symbols-outlined text-primary-fixed-dim text-3xl">add_circle</span>
+<span class="font-headline-lg-mobile text-primary-fixed-dim">Create New</span>
+</button>
+</section>
+<!-- Playlist Grid Header -->
+<div class="flex items-center justify-between mb-6">
+<h2 class="font-headline-lg-mobile text-on-surface">My Playlists</h2>
+<span class="font-label-sm text-on-surface-variant uppercase tracking-widest">12 Folders</span>
+</div>
+<!-- Two Column Grid -->
+<div class="grid grid-cols-2 gap-4">
+<!-- Playlist Card 1 -->
+<div class="glass-card rounded-xl overflow-hidden active:scale-95 transition-transform neon-border group">
+<div class="aspect-square relative overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Dynamic and vibrant digital art for a 'Late Night Beats' playlist, featuring a futuristic cityscape at night with glowing neon cyan skyscrapers and pink energy waves flowing through the streets. The mood is nocturnal, energetic, and electric, captured in a high-contrast cinematic style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCXDUiWGRzDhxPG_lg-moA-lZXFxlS2SbHz8qYjP1KHajFBYzlAMO5zXdLgwIqYFA5OfSLBcWcp2pghNmsMNXHsrJxh4CWSOHX5lj_akoM70Bj5ZOICHU8vLQoJmu5KaDa5TBWtMVtmxuJRa9MM-9iwrnfw4hQawcbxmq8d8zztBeui5Fsh-KoZhlDE4_sgb5Fcy9G6cCV7N8YOF0MkePc4OKJ7uvOJmJFXdXk9rx37pnEu8-j9ZgoBAAXy5cNXu7HNLr99L7xn_p0"/>
+<div class="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors"></div>
+<div class="absolute bottom-2 right-2 w-10 h-10 rounded-full bg-primary-fixed-dim flex items-center justify-center neon-glow-primary">
+<span class="material-symbols-outlined text-on-primary font-bold" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</div>
+</div>
+<div class="p-3">
+<h3 class="font-bold text-on-surface truncate">Late Night Beats</h3>
+<p class="font-label-sm text-on-surface-variant">42 Tracks</p>
+</div>
+</div>
+<!-- Playlist Card 2 -->
+<div class="glass-card rounded-xl overflow-hidden active:scale-95 transition-transform border border-white/5 group">
+<div class="aspect-square relative overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Vaporwave aesthetic playlist cover with pastel purple and teal clouds, a retro-futuristic sun setting behind digital mountains, and a 3D wireframe grid. The atmosphere is nostalgic yet modern, perfectly matching a chill lo-fi music vibe with soft glow effects." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5J1MjFkBG5lUPJuMqDsokFl2X1rmDpN64YTEsjdxp1t75qrCqTNq9g2e55Kaa-qgXFbdhPJCssQTKuF_Fw00tLfE0qh18A4hlclwARttNuBW1E259k6JIUwslek9X14dv22_9Pwj-ouBzKkNZugX-rNypLuqCKyWcbSSas7uh12xjB-yud1RsiR8gHUMuQvYYZ6IpUad5hPv8NhUcDxLbFteG7B9GSuP6ru14g4Xg5YXKNnbX0jHPH0Brb109scKh7PRNe55bjlc"/>
+<div class="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors"></div>
+</div>
+<div class="p-3">
+<h3 class="font-bold text-on-surface truncate">Lofi Dreams</h3>
+<p class="font-label-sm text-on-surface-variant">128 Tracks</p>
+</div>
+</div>
+<!-- Playlist Card 3 -->
+<div class="glass-card rounded-xl overflow-hidden active:scale-95 transition-transform border border-white/5 group">
+<div class="aspect-square relative overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Aggressive and high-energy workout playlist art featuring abstract splash of neon red and black paint, suggesting movement and intense rhythm. The visual style is bold, gritty, and urban, with a sense of power and drive, suitable for heavy bass music." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQUd9DKFBOaLwcpOfHTv-62GrJ1-NYRAoYDm81O2394XlEbG6mk2bcKsX0Nfa27ZD39zpivSCbXx_SLHAcIXYFBTCdldjIGbsaU4fjh42qw9R6yJ6_CsStDwMtpjyiEm_XO-ZQUxa4zpSsdR-oeWJlt1OIEOdfxBusYQMd2OHbfJd0EHLK1mWjrkupuAd5tg541fQGJ8oW7mr9JnFUBBbu_IR1_n-RdSahLwtGNtSL2a0mSpn51-TH8BRpJ6JJjaU4oBndpLPHJk0"/>
+<div class="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors"></div>
+</div>
+<div class="p-3">
+<h3 class="font-bold text-on-surface truncate">Bass Boosted</h3>
+<p class="font-label-sm text-on-surface-variant">24 Tracks</p>
+</div>
+</div>
+<!-- Playlist Card 4 -->
+<div class="glass-card rounded-xl overflow-hidden active:scale-95 transition-transform border border-white/5 group">
+<div class="aspect-square relative overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Minimalist and clean cover for a 'Study Flow' playlist, featuring a single glowing cyan circle on a deep matte black background with subtle geometric glass textures. The look is professional, focused, and high-end, evoking a state of deep concentration and modern tech elegance." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_8liAd3Gy70kVNOb9pjlwpuQkN40-Hw_JcYkKE81ismWb4BGio2hI26lg6PAvPp3r-DKvSd-Emjfu8x7Z96deHY30gtq6R9LrtgfQpXwWKvVDSOqCQAEjR_gZpCKotDZZKzju1WONnDiARjzKHS9r1uRGqi8IHZP6V1om_elD2HGOsvoNAyQ2AAPnBa73F7khUe5UkZUO7ziFU8DMTE5VlNTsfYqNozchwNqoGK_aucgL3f2YwcpWjpDemcAYwMAYUS35iDLHDxM"/>
+<div class="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors"></div>
+</div>
+<div class="p-3">
+<h3 class="font-bold text-on-surface truncate">Study Flow</h3>
+<p class="font-label-sm text-on-surface-variant">56 Tracks</p>
+</div>
+</div>
+<!-- Playlist Card 5 -->
+<div class="glass-card rounded-xl overflow-hidden active:scale-95 transition-transform border border-white/5 group">
+<div class="aspect-square relative overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Artistic playlist cover for 'Indie Vibes' featuring a surreal collage of vintage music equipment and blooming tropical flowers in a neon-drenched night forest. The aesthetic combines organic and digital elements with vibrant violet and emerald green lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAlZqQ7FHLggoPKQE-s4LiyHwd_jHWP0XXjKA8Ql_4GzKp3r-MzO1DnLreOOB8q8PkkFqJk0K-u6n-fPEnGesLGgTQnK81FoKopB1eND12QoJDHO8CrDfATX3mXX9yFxnQWg8oBtpM8Yzy2JwKivB39WIWYmLqQV0aVQmGrvqMD6cnGajU7Om6CeY1Ux9E_BKhk4Qdd8x1ttEXLff_VkOov_fnQDU-D1U3e_j8-FcDNdfIc67rJHiAjHZDqZyQ-g2CcHjEt2Bufo9Q"/>
+<div class="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors"></div>
+</div>
+<div class="p-3">
+<h3 class="font-bold text-on-surface truncate">Indie Vibes</h3>
+<p class="font-label-sm text-on-surface-variant">31 Tracks</p>
+</div>
+</div>
+<!-- Playlist Card 6 -->
+<div class="glass-card rounded-xl overflow-hidden active:scale-95 transition-transform border border-white/5 group">
+<div class="aspect-square relative overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Futuristic glitch art cover for 'Techno Core' with shattered glass textures and distorted neon lights in shades of electric blue and magenta. The design feels fast-paced, digital, and high-frequency, capturing the essence of modern electronic underground club culture." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBqqXj7CA3S5bORe7j9AaCJP9F1U3Jc3B-d2WtqRarqr56zurgyfioumiq2kbWQPKBGpBBFFDuDfs6oJA-eFDMsnzXXe6wrplLXs70aeT3IGuElkIEcSn-qrdk0SIw7ZHmXRiM6AaAkLps_mnX8hZFqk17yWdACzroTW0X033qCbqj0f6Wrs5JAFKoxEQor5KSvCbjpwBTFBoJ9sYCFYdgdmi2hhd7pRmav1-CJhvBXU5GXhx1vSUl4bL7DxQqRIQRL1rKNtudDUug"/>
+<div class="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors"></div>
+</div>
+<div class="p-3">
+<h3 class="font-bold text-on-surface truncate">Techno Core</h3>
+<p class="font-label-sm text-on-surface-variant">89 Tracks</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Nav Bar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 h-16 pb-safe bg-surface/45 backdrop-blur-xl border-t border-white/10 shadow-[0_-4px_20px_rgba(0,0,0,0.5)] rounded-t-xl">
+<!-- Home -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:text-primary-fixed transition-colors active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined">home</span>
+</button>
+<!-- Explore -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:text-primary-fixed transition-colors active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined">explore</span>
+</button>
+<!-- Library (Active) -->
+<button class="flex flex-col items-center justify-center text-primary-fixed-dim drop-shadow-[0_0_8px_rgba(0,221,214,0.8)] scale-110 hover:text-primary-fixed transition-colors active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">library_music</span>
+</button>
+<!-- Person -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:text-primary-fixed transition-colors active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined">person</span>
+</button>
+</nav>
+<!-- Floating Action Visualizer (Ambient Effect) -->
+<div class="fixed bottom-20 left-0 w-full h-1 flex items-end justify-center gap-1 px-4 opacity-40" id="ambient-visualizer">
+<div class="w-1 bg-primary-fixed-dim transition-all duration-300" style="height: 10%;"></div>
+<div class="w-1 bg-secondary-container transition-all duration-300" style="height: 40%;"></div>
+<div class="w-1 bg-primary-fixed-dim transition-all duration-300" style="height: 70%;"></div>
+<div class="w-1 bg-secondary-container transition-all duration-300" style="height: 30%;"></div>
+<div class="w-1 bg-primary-fixed-dim transition-all duration-300" style="height: 90%;"></div>
+<div class="w-1 bg-secondary-container transition-all duration-300" style="height: 20%;"></div>
+</div>
+<script>
+        // Simple Micro-interaction: Randomize visualizer bars
+        const bars = document.querySelectorAll('#ambient-visualizer div');
+        setInterval(() => {
+            bars.forEach(bar => {
+                const height = Math.floor(Math.random() * 100);
+                bar.style.height = `${height}%`;
+            });
+        }, 150);
+
+        // Ripple Effect on Create Button
+        const createBtn = document.querySelector('button.group');
+        createBtn.addEventListener('click', (e) => {
+            const ripple = document.createElement('div');
+            ripple.className = 'absolute bg-white/20 rounded-full animate-ping pointer-events-none';
+            ripple.style.width = '100px';
+            ripple.style.height = '100px';
+            ripple.style.left = `${e.offsetX - 50}px`;
+            ripple.style.top = `${e.offsetY - 50}px`;
+            createBtn.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 600);
+        });
+    </script>
+</body></html>

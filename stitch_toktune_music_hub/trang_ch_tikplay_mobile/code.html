@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TikPlay - Music Discovery</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&amp;family=Hanken+Grotesk:wght@400;500;600&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-container": "#006a66",
+                    "inverse-primary": "#006a66",
+                    "secondary-fixed": "#ffdadb",
+                    "outline": "#849492",
+                    "secondary-fixed-dim": "#ffb2b7",
+                    "on-tertiary-container": "#7900fe",
+                    "error": "#ffb4ab",
+                    "surface-container-low": "#1c1b1b",
+                    "on-tertiary-fixed-variant": "#5c00c3",
+                    "surface-container-highest": "#353534",
+                    "surface-variant": "#353534",
+                    "surface-container-lowest": "#0e0e0e",
+                    "on-tertiary": "#40008c",
+                    "on-secondary-fixed-variant": "#92002a",
+                    "tertiary-fixed-dim": "#d4bbff",
+                    "tertiary-fixed": "#ebdcff",
+                    "inverse-on-surface": "#313030",
+                    "primary": "#cffffb",
+                    "on-primary-fixed-variant": "#00504d",
+                    "on-error-container": "#ffdad6",
+                    "on-secondary-fixed": "#40000d",
+                    "surface-tint": "#00ddd6",
+                    "on-tertiary-fixed": "#260059",
+                    "tertiary-container": "#e3d1ff",
+                    "surface": "#131313",
+                    "on-secondary-container": "#5b0017",
+                    "error-container": "#93000a",
+                    "background": "#131313",
+                    "on-surface-variant": "#b9cac8",
+                    "on-surface": "#e5e2e1",
+                    "primary-fixed-dim": "#00ddd6",
+                    "tertiary": "#fbf2ff",
+                    "surface-container": "#201f1f",
+                    "surface-bright": "#3a3939",
+                    "outline-variant": "#3a4a48",
+                    "surface-dim": "#131313",
+                    "on-primary-fixed": "#00201e",
+                    "on-primary": "#003735",
+                    "surface-container-high": "#2a2a2a",
+                    "secondary-container": "#ff516a",
+                    "secondary": "#ffb2b7",
+                    "on-background": "#e5e2e1",
+                    "on-error": "#690005",
+                    "primary-container": "#00f2ea",
+                    "on-secondary": "#67001b",
+                    "inverse-surface": "#e5e2e1",
+                    "primary-fixed": "#29fcf3"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "24px",
+                    "container-max": "1440px",
+                    "unit": "8px",
+                    "margin-mobile": "16px",
+                    "margin-desktop": "40px"
+            },
+            "fontFamily": {
+                    "headline-lg": ["Montserrat"],
+                    "headline-lg-mobile": ["Montserrat"],
+                    "display-lg": ["Montserrat"],
+                    "body-md": ["Hanken Grotesk"],
+                    "label-sm": ["JetBrains Mono"]
+            },
+            "fontSize": {
+                    "headline-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "800"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "800"}],
+                    "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "900"}],
+                    "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "1.0", "letterSpacing": "0.05em", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #0a0a0a;
+            color: #e5e2e1;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .neon-glow-cyan {
+            box-shadow: 0 0 20px rgba(0, 221, 214, 0.4);
+        }
+
+        .neon-glow-pink {
+            box-shadow: 0 0 20px rgba(255, 81, 106, 0.4);
+        }
+
+        .glass-card {
+            background: rgba(22, 22, 22, 0.45);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .pulse-animation {
+            animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse-ring {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: .7; transform: scale(1.05); }
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Material Symbols Weighting */
+        .material-symbols-outlined {
+          font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-body-md selection:bg-primary-container selection:text-on-primary-container">
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full z-50 bg-gradient-to-b from-black/80 to-transparent flex justify-between items-center px-margin-mobile py-4">
+<div class="flex items-center gap-2 active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-primary-fixed-dim" data-icon="search">search</span>
+</div>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-black tracking-tighter text-primary-fixed-dim drop-shadow-[0_0_10px_rgba(0,221,214,0.5)]">
+            TikPlay
+        </h1>
+<div class="w-8 h-8 rounded-full border border-primary-fixed-dim/30 overflow-hidden active:scale-95 transition-transform">
+<img class="w-full h-full object-cover" data-alt="Close up portrait of a stylish Gen-Z music listener with futuristic neon makeup and jewelry, bathed in soft cyan and pink studio lights. The aesthetic is high-fashion and nocturnal, matching the dark obsidian theme of the TikPlay app. Background is a blurred urban nightscape." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2QNBj9B63MCVKyJI95iszqExClLaLMMe0VHUCBAyY6VoPwKzDT-som4DTstygEJ4MJLsqzkKqyMaO6zizgVt753XjTk48dCgI_ctPOVBDc0V3o3r31jYPBbxza4p8KA2eyRKMLlfzknFaw03iH89uByE6nDKo2J4GJ7s1JVSoytiyUP9xdgOXVQxqwJ-vsACQtsyVYN46pHBRGITfH5MKa6cVRA2uMN80r8SGyeOb8_7CATKgZOmyrZ5HuD3ozQLDr1wheQ__paE"/>
+</div>
+</header>
+<main class="pb-24 pt-16">
+<!-- Hero Banner: TikTok Track of the Week -->
+<section class="px-margin-mobile mt-4">
+<div class="relative w-full aspect-[4/5] rounded-3xl overflow-hidden glass-card group">
+<div class="absolute inset-0 z-0">
+<img class="w-full h-full object-cover" data-alt="A cinematic, high-energy image of a world-famous pop star performing on a futuristic stage. Vibrant streaks of cyan and pink laser lights cut through a dark, foggy arena. The artist is captured in a dynamic dance pose, surrounded by holographic music notes and floating digital particles. High contrast, electric atmosphere." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAi8iakmStRoHVPt4r6gTT7tSfFzK3lbQMERGgvUBnQ2YCX74PM53vnBhdRKPNFp0Ld1qSabnIeBh0H2UXOVB4gGOomwnpbmel5eZlEMiajmFeuHzemyii4122_T3QD5TzZLGD0qVT0vmGanevs7Z5LK49CxAMHCefuO1UWcqpj3kbHllt3-mp7zfVM-_NlLDLSqi6xp6wbb__H-GEyZfRFDsPyCTmKziG-ldGpUevA8S47k-_FaFjDvpubI__c6q9CWcq6RigSIz8"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
+</div>
+<div class="absolute bottom-0 left-0 w-full p-6 z-10">
+<span class="bg-secondary-container/90 text-on-secondary-fixed-variant px-3 py-1 rounded-full font-label-sm text-label-sm mb-3 inline-block uppercase tracking-widest">
+                        Track of the Week
+                    </span>
+<h2 class="font-display-lg text-[40px] leading-tight text-white mb-2 drop-shadow-lg">
+                        Neon Dreams
+                    </h2>
+<p class="text-on-surface-variant font-body-md mb-6 opacity-90">
+                        by CyberLuna feat. DJ Glitch
+                    </p>
+<button class="w-full py-4 rounded-2xl bg-gradient-to-r from-primary-fixed-dim to-secondary-container text-on-primary font-headline-lg-mobile flex items-center justify-center gap-3 active:scale-95 transition-all neon-glow-cyan">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+                        Play Now
+                    </button>
+</div>
+<!-- Pulse Visualizer Overlay -->
+<div class="absolute top-4 right-4 flex gap-1 h-8 items-end opacity-60">
+<div class="w-1 bg-primary-fixed-dim h-4 animate-[bounce_1s_infinite_0s]"></div>
+<div class="w-1 bg-secondary-container h-8 animate-[bounce_1s_infinite_0.2s]"></div>
+<div class="w-1 bg-primary-fixed-dim h-6 animate-[bounce_1s_infinite_0.4s]"></div>
+<div class="w-1 bg-secondary-container h-5 animate-[bounce_1s_infinite_0.6s]"></div>
+</div>
+</div>
+</section>
+<!-- Trending Now Horizontal Scroll -->
+<section class="mt-10">
+<div class="px-margin-mobile flex justify-between items-center mb-4">
+<h3 class="font-headline-lg-mobile text-headline-lg-mobile text-primary-fixed-dim">Trending Now</h3>
+<span class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-tighter opacity-60">View All</span>
+</div>
+<div class="flex overflow-x-auto gap-4 px-margin-mobile no-scrollbar">
+<!-- Song Card 1 -->
+<div class="flex-none w-40 active:scale-95 transition-transform">
+<div class="relative w-40 h-40 rounded-2xl overflow-hidden mb-3 group">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Album art for a lo-fi hip hop track featuring a stylized digital illustration of a cat sitting on a windowsill overlooking a neon-lit Tokyo street at night. Soft purple and blue color palette with a dreamy, nostalgic atmosphere." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAGFf56iRlza96uPbbm8fMrK-FNA7kITIGlogmlaM80sYNJoWEQ0UGSwz7dqdwIBpdadqJ8CR7M7zKPdBWe_M7NyM8AdcMGwCt3uHsuAleL5VmLdT8aoctfVuWm1fCcOUIYc-Ot0HnxWXdRwI-blEBu6AflVx0DMZpMT2IefCRQKkSou3hM3Q_1eAIzCCXCJMWHyGtYeLCv28HrWD5oylQSMjYW-lpyoYoPuQBs35jmTOJnFXtqUTMY0a9C8u7KMV_ppJ5oiFlmW4Y"/>
+<div class="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors"></div>
+<div class="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md w-8 h-8 rounded-full flex items-center justify-center border border-white/10">
+<span class="material-symbols-outlined text-[18px] text-primary-fixed-dim" style="font-variation-settings: 'FILL' 1;">play_circle</span>
+</div>
+</div>
+<p class="font-body-md text-white truncate font-semibold">Midnight City</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant truncate">The Outliers</p>
+</div>
+<!-- Song Card 2 -->
+<div class="flex-none w-40 active:scale-95 transition-transform">
+<div class="relative w-40 h-40 rounded-2xl overflow-hidden mb-3 group">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Modern pop album cover with a bold minimalist design. A single chrome sphere reflecting a spectrum of neon colors is centered against a pitch-black background. Sharp lighting, high-gloss finish, futuristic aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBz7BcQ9UwTwVdbTv3HipgNzuB_61vClcrjoXzzHi9dt2ekIhJBjBTkGwimSHKHLW6eqY7dwlPxnNq1gYVQCf2EyrJSAN0WtfYtV0KLtQXXRsX4r9eYIbL_qFDvpQRPH673f5bczUtwrCjiaKoNlUub2iM4NTHm63Tv5UZ8N1he_wmEXzjyaLDp0v4NJM-8vMG9y8xFRVKSj4jw7zo5c8Imh2r-nQkKMVmTHHw-twe4dqP7UBXJSN0eUJTOCnBiZwFIiwDIgL0DZLo"/>
+<div class="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors"></div>
+<div class="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md w-8 h-8 rounded-full flex items-center justify-center border border-white/10">
+<span class="material-symbols-outlined text-[18px] text-primary-fixed-dim" style="font-variation-settings: 'FILL' 1;">play_circle</span>
+</div>
+</div>
+<p class="font-body-md text-white truncate font-semibold">Echoes of You</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant truncate">Sasha Vane</p>
+</div>
+<!-- Song Card 3 -->
+<div class="flex-none w-40 active:scale-95 transition-transform">
+<div class="relative w-40 h-40 rounded-2xl overflow-hidden mb-3 group">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Vibrant electronic music cover featuring a glitch-art portrait of a cyborg face. The image is fractured into digital shards with intense pink and cyan glow radiating from the cracks. Energetic, noisy, and high-tech visual style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnrCoUm4tpB2TmPdnI3z8BiAe41omATvvK0dwUAX2shIKAeSeFRkJHDDol6oOgPgeycM8DY1K_puL2X4ajqmSPo0m5Hegjtst1Bi8Kzmul__pzpv_OVbAZQE-EdX3JEGvb-QX8mhNnLnLlW89XmLjVVNjWDtqCkh2vVYUccIrzPaYmN8DS_F3g7n4PInXTUpsFL7duo3EOSJCA2EG30DZWFs1DrSW8d9cwHNyamPx6tdMa7UcmNfgG8P37ty5c-ETOVL0FRDFexrk"/>
+<div class="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors"></div>
+<div class="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md w-8 h-8 rounded-full flex items-center justify-center border border-white/10">
+<span class="material-symbols-outlined text-[18px] text-primary-fixed-dim" style="font-variation-settings: 'FILL' 1;">play_circle</span>
+</div>
+</div>
+<p class="font-body-md text-white truncate font-semibold">Static Shock</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant truncate">System Overload</p>
+</div>
+</div>
+</section>
+<!-- Pulse Categories (Bento Grid Style) -->
+<section class="mt-12 px-margin-mobile">
+<h3 class="font-headline-lg-mobile text-headline-lg-mobile text-primary-fixed-dim mb-4">Your Pulse</h3>
+<div class="grid grid-cols-2 gap-3">
+<div class="glass-card h-32 rounded-3xl p-4 flex flex-col justify-between active:scale-95 transition-transform border-l-4 border-l-primary-fixed-dim">
+<span class="material-symbols-outlined text-primary-fixed-dim">favorite</span>
+<span class="font-headline-lg-mobile text-[18px] text-white">Liked Songs</span>
+</div>
+<div class="glass-card h-32 rounded-3xl p-4 flex flex-col justify-between active:scale-95 transition-transform border-l-4 border-l-secondary-container">
+<span class="material-symbols-outlined text-secondary-container">history</span>
+<span class="font-headline-lg-mobile text-[18px] text-white">Recently Played</span>
+</div>
+<div class="col-span-2 glass-card h-24 rounded-3xl p-4 flex items-center gap-4 active:scale-95 transition-transform">
+<div class="w-12 h-12 bg-on-tertiary-container/30 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary-fixed-dim">auto_awesome</span>
+</div>
+<div>
+<span class="font-headline-lg-mobile text-[18px] text-white block">Smart Mix</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Personalized for you</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 h-16 pb-safe bg-surface/45 backdrop-blur-xl border-t border-white/10 shadow-[0_-4px_20px_rgba(0,0,0,0.5)] rounded-t-xl">
+<div class="flex flex-col items-center justify-center text-primary-fixed-dim drop-shadow-[0_0_8px_rgba(0,221,214,0.8)] scale-110 active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:text-primary-fixed transition-colors active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined">explore</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:text-primary-fixed transition-colors active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined">library_music</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:text-primary-fixed transition-colors active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined">person</span>
+</div>
+</nav>
+<!-- Floating Now Playing (Contextual for Home) -->
+<div class="fixed bottom-20 left-4 right-4 h-14 glass-card rounded-2xl px-4 flex items-center gap-3 z-40 neon-glow-pink">
+<div class="w-10 h-10 rounded-lg overflow-hidden flex-none">
+<img class="w-full h-full object-cover" data-alt="Macro close-up of a vinyl record's grooves with shimmering iridescent reflections. The surface of the vinyl reflects a neon pink glow, creating a rhythmic and artistic texture that signifies active music playback." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBtI6I-_gZQNBhhu6ZnDhnyPPTpCXAl3W5mEJoGJ9iRJH3lItobf3qRPvEuEVDjPo-9Fkb2UFWXJEkkCo9i3QcEzD-v4lodFUImLHaX_YQ0qDQSITzTnOwPRNBzpN0sPBIKGl7rjadXvi3YbVwv3kxDnRzbQhhwaS7WhiYbjnRyQXKrChTEr_JTd6xC5tGL2hVR6HAxX7xPb2LMONu1gDcypKo_4Ly0Iaw8nOUBIT0WrEPLgu4gPhKxBWonasoZIE56zkZUOZrnvaQ"/>
+</div>
+<div class="flex-grow min-w-0">
+<p class="text-[14px] font-semibold text-white truncate">Neon Dreams</p>
+<p class="text-[12px] text-on-surface-variant truncate">CyberLuna</p>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-white active:scale-90 transition-transform">skip_next</span>
+<span class="material-symbols-outlined text-white active:scale-90 transition-transform" style="font-variation-settings: 'FILL' 1;">pause</span>
+</div>
+</div>
+<script>
+        // Micro-interactions and effects
+        document.querySelectorAll('button, .glass-card, nav div').forEach(el => {
+            el.addEventListener('touchstart', () => {
+                el.classList.add('opacity-70');
+            });
+            el.addEventListener('touchend', () => {
+                el.classList.remove('opacity-70');
+            });
+        });
+
+        // Simple scroll reveal effect for cards
+        const observerOptions = {
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('opacity-100', 'translate-y-0');
+                    entry.target.classList.remove('opacity-0', 'translate-y-4');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.flex-none, .glass-card').forEach(el => {
+            el.classList.add('transition-all', 'duration-700', 'opacity-0', 'translate-y-4');
+            observer.observe(el);
+        });
+    </script>
+</body></html>

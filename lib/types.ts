@@ -73,7 +73,9 @@ export interface EqPreset {
   gains: number[];
 }
 
-export const EQ_BANDS = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000] as const;
+export const EQ_BANDS = [
+  32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000,
+] as const;
 
 export const EQ_PRESETS: EqPreset[] = [
   { name: 'Flat', gains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },

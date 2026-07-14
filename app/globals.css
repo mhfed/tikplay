@@ -1,44 +1,51 @@
 /* ============================================================
-   TikPlay — Midnight Studio design tokens & base
-   Palette: warm dark + copper/gold accents.
-   Type: Outfit (display) / Plus Jakarta Sans (UI) / Space Mono (mono).
+   TikPlay — Neon Pulse design tokens & base
+   Palette: deep obsidian black + cyan/pink/violet neon accents.
+   Type: Montserrat (display) / Hanken Grotesk (UI) / JetBrains Mono (mono).
    ============================================================ */
 
 :root {
   /* Backgrounds */
-  --bg: #0b0b0c;
-  --bg-elevated: #111114;
-  --surface: #151518;
-  --surface-2: #1c1c21;
-  --surface-3: #242429;
+  --bg: #0a0a0a;
+  --bg-elevated: #131313;
+  --surface: #161616;
+  --surface-2: #201f1f;
+  --surface-3: #2a2a2a;
 
   /* Text */
-  --text: #f0ebe5;
-  --text-secondary: #d0cbc4;
-  --muted: #8e8a84;
-  --muted-2: #63605a;
+  --text: #e5e2e1;
+  --text-secondary: #b9cac8;
+  --muted: #849492;
+  --muted-2: #5c6664;
 
   /* Borders */
-  --border: #2c2c34;
-  --border-soft: #1f1f26;
+  --border: #3a4a48;
+  --border-soft: rgba(255, 255, 255, 0.08);
 
   /* Accents */
-  --accent: #d46a4a;
-  --accent-hover: #e07a5a;
-  --accent-muted: rgba(212, 106, 74, 0.12);
-  --accent-glow: rgba(212, 106, 74, 0.25);
-  --gold: #c9a06a;
-  --gold-muted: rgba(201, 160, 106, 0.12);
-  --teal: #4a8a8a;
-  --teal-muted: rgba(74, 138, 138, 0.12);
-  --wine: #8a3a5a;
-  --wine-muted: rgba(138, 58, 90, 0.12);
-  --danger: #c44;
+  --accent: #00ddd6;
+  --accent-hover: #29fcf3;
+  --accent-muted: rgba(0, 221, 214, 0.12);
+  --accent-glow: rgba(0, 221, 214, 0.35);
+  --secondary: #ff516a;
+  --secondary-muted: rgba(255, 81, 106, 0.14);
+  --secondary-glow: rgba(255, 81, 106, 0.35);
+  --tertiary: #7900fe;
+  --tertiary-light: #d4bbff;
+  --tertiary-muted: rgba(121, 0, 254, 0.14);
+  --gold: var(--tertiary-light);
+  --wine: var(--secondary);
+  --danger: #ff5449;
+
+  /* Glass surfaces */
+  --glass-bg: rgba(22, 22, 22, 0.45);
+  --glass-blur: blur(20px);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.06);
 
   /* Sizing */
-  --radius: 14px;
-  --radius-sm: 10px;
-  --radius-xs: 6px;
+  --radius: 1rem;
+  --radius-sm: 0.75rem;
+  --radius-xs: 0.5rem;
   --sidebar-w: 240px;
   --player-w: 360px;
   --header-h: 64px;
@@ -48,14 +55,27 @@
   --bottom-stack: calc(var(--nav-h) + env(safe-area-inset-bottom));
 
   /* Shadows */
-  --shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.35);
-  --shadow-glow: 0 0 24px var(--accent-glow);
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 32px var(--accent-glow);
+  --shadow-glow-pink: 0 0 32px var(--secondary-glow);
 
   /* Fonts (populated by next/font variables) */
-  --font-display: var(--font-outfit, 'Outfit', ui-sans-serif, system-ui, sans-serif);
-  --font-ui: var(--font-jakarta, 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif);
-  --font-mono: var(--font-space-mono, 'Space Mono', ui-monospace, monospace);
+  --font-display: var(
+    --font-montserrat,
+    "Montserrat",
+    ui-sans-serif,
+    system-ui,
+    sans-serif
+  );
+  --font-ui: var(
+    --font-hanken,
+    "Hanken Grotesk",
+    ui-sans-serif,
+    system-ui,
+    sans-serif
+  );
+  --font-mono: var(--font-jetbrains, "JetBrains Mono", ui-monospace, monospace);
 }
 
 * {

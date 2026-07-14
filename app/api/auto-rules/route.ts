@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getAutoRules, createAutoRule, deleteAutoRule } from '@/lib/db/queries';
+import { type NextRequest, NextResponse } from 'next/server';
+import { createAutoRule, deleteAutoRule, getAutoRules } from '@/lib/db/queries';
 
 export async function GET() {
   return NextResponse.json({ ok: true, rules: getAutoRules() });

@@ -1,14 +1,7 @@
-import { execFile } from 'child_process';
-import { join } from 'path';
-import {
-  cacheKeyFromRaw,
-  validateTikTokUrl,
-} from '../tiktok/validate';
-import {
-  FileCacheStore,
-  getCacheDir,
-  ensureCacheDir,
-} from '../cache';
+import { execFile } from 'node:child_process';
+import { join } from 'node:path';
+import { ensureCacheDir, FileCacheStore, getCacheDir } from '../cache';
+import { cacheKeyFromRaw, validateTikTokUrl } from '../tiktok/validate';
 
 export interface TrackMeta {
   title: string;
@@ -70,9 +63,7 @@ export class MediaProcessor {
 
     await this.execYtDlp([
       '-f',
-      'download', // TikTok only ships the real audio track inside the combined
-      // "download" format (high-res variants are video-only), so we grab that
-      // and let ffmpeg extract the audio. Watermark is irrelevant for audio.
+      'bestaudio*/best',
       '--extract-audio',
       '--audio-format',
       'm4a',
@@ -82,7 +73,7 @@ export class MediaProcessor {
       // level: -9 LUFS integrated, -1 dBTP ceiling. Applied in the same
       // ffmpeg pass that extracts the audio.
       '--postprocessor-args',
-      'ExtractAudio:-af loudnorm=I=-9:TP=-1:LRA=11',
+      'ExtractAudio:-c:a aac -af loudnorm=I=-9:TP=-1:LRA=11',
       url,
       '-o',
       outputTemplate,
@@ -104,8 +95,7 @@ export class MediaProcessor {
       throw new Error('Không thể đọc metadata từ TikTok');
     }
 
-    const str = (v: unknown): string =>
-      typeof v === 'string' ? v : '';
+    const str = (v: unknown): string => (typeof v === 'string' ? v : '');
 
     return {
       title: str(json.title) || 'Không rõ tiêu đề',

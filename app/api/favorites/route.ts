@@ -1,11 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { toggleFavorite, getFavoriteTracks, getFavoriteIds } from '@/lib/db/queries';
+import { type NextRequest, NextResponse } from 'next/server';
+import {
+  getFavoriteIds,
+  getFavoriteTracks,
+  toggleFavorite,
+} from '@/lib/db/queries';
 import { toTrack } from '@/lib/types';
 
 export async function GET() {
   const rows = getFavoriteTracks();
   const favIds = getFavoriteIds();
-  return NextResponse.json({ ok: true, tracks: rows.map((r) => toTrack(r, favIds)) });
+  return NextResponse.json({
+    ok: true,
+    tracks: rows.map((r) => toTrack(r, favIds)),
+  });
 }
 
 export async function POST(req: NextRequest) {

@@ -11,7 +11,11 @@ interface HistoryProps {
 }
 
 /** Read-only, click-to-play list of previously played tracks. */
-export default function History({ tracks, currentTrackUrl, onPlay }: HistoryProps) {
+export default function History({
+  tracks,
+  currentTrackUrl,
+  onPlay,
+}: HistoryProps) {
   return (
     <div className="panel">
       <div className="panel__header">
@@ -28,14 +32,21 @@ export default function History({ tracks, currentTrackUrl, onPlay }: HistoryProp
           {tracks.map((track) => {
             const active = track.url === currentTrackUrl;
             return (
-              <li key={track.url} className={`track-item${active ? ' track-item--active' : ''}`}>
+              <li
+                key={track.url}
+                className={`track-item${active ? ' track-item--active' : ''}`}
+              >
                 <Cover
                   src={track.cover}
                   alt={track.title}
                   subtitle={track.author}
                   className="track-item__cover"
                 />
-                <button className="track-item__meta" onClick={() => onPlay(track)} title="Play">
+                <button
+                  className="track-item__meta"
+                  onClick={() => onPlay(track)}
+                  title="Play"
+                >
                   <span className="track-item__title">{track.title}</span>
                   <span className="track-item__author">{track.author}</span>
                 </button>

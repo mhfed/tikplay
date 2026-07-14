@@ -1,8 +1,8 @@
 'use client';
 
-import type { Track, RepeatMode } from '../lib/types';
+import type { RepeatMode, Track } from '../lib/types';
 import Cover from './Cover';
-import { ShuffleIcon, RepeatIcon, RepeatOneIcon, ListMusicIcon } from './icons';
+import { ListMusicIcon, RepeatIcon, RepeatOneIcon, ShuffleIcon } from './icons';
 
 interface PlaylistProps {
   tracks: Track[];
@@ -57,7 +57,11 @@ export default function Playlist({
             aria-label={REPEAT_LABEL[repeat]}
             title={REPEAT_LABEL[repeat]}
           >
-            {repeat === 'one' ? <RepeatOneIcon size={18} /> : <RepeatIcon size={18} />}
+            {repeat === 'one' ? (
+              <RepeatOneIcon size={18} />
+            ) : (
+              <RepeatIcon size={18} />
+            )}
           </button>
         </div>
       </div>
@@ -69,18 +73,27 @@ export default function Playlist({
           {tracks.map((track) => {
             const active = track.url === currentTrackUrl;
             return (
-              <li key={track.url} className={`track-item${active ? ' track-item--active' : ''}`}>
+              <li
+                key={track.url}
+                className={`track-item${active ? ' track-item--active' : ''}`}
+              >
                 <Cover
                   src={track.cover}
                   alt={track.title}
                   subtitle={track.author}
                   className="track-item__cover"
                 />
-                <button className="track-item__meta" onClick={() => onPlay(track)} title="Play">
+                <button
+                  className="track-item__meta"
+                  onClick={() => onPlay(track)}
+                  title="Play"
+                >
                   <span className="track-item__title">{track.title}</span>
                   <span className="track-item__author">{track.author}</span>
                 </button>
-                {active && isPlaying && <span className="track-item__badge">▶</span>}
+                {active && isPlaying && (
+                  <span className="track-item__badge">▶</span>
+                )}
                 <button
                   className="track-item__remove"
                   onClick={() => onRemove(track)}

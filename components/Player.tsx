@@ -1,9 +1,16 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { Track, RepeatMode } from '../lib/types';
+import type { RepeatMode, Track } from '../lib/types';
 import Cover from './Cover';
-import { PlayIcon, PauseIcon, PrevIcon, NextIcon, VolumeIcon, VolumeMuteIcon } from './icons';
+import {
+  NextIcon,
+  PauseIcon,
+  PlayIcon,
+  PrevIcon,
+  VolumeIcon,
+  VolumeMuteIcon,
+} from './icons';
 
 interface PlayerProps {
   currentTrack: Track | null;
