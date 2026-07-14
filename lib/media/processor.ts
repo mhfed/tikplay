@@ -82,7 +82,7 @@ export class MediaProcessor {
       // level: -9 LUFS integrated, -1 dBTP ceiling. Applied in the same
       // ffmpeg pass that extracts the audio.
       '--postprocessor-args',
-      'ExtractAudio:-af loudnorm=I=-9:TP=-1:LRA=11',
+      'ExtractAudio:-c:a aac -af loudnorm=I=-9:TP=-1:LRA=11',
       url,
       '-o',
       outputTemplate,
