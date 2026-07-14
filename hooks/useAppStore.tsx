@@ -218,6 +218,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     setCurrentTrack(track);
     setCurrentIndex(0); // will be updated
     setIsPlaying(true);
+    const el = document.getElementById('global-audio') as HTMLAudioElement;
+    if (el) el.play().catch(() => {});
   }, []);
 
   const playAll = useCallback(() => {
@@ -225,6 +227,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       setCurrentTrack(tracks[0]);
       setCurrentIndex(0);
       setIsPlaying(true);
+      const el = document.getElementById('global-audio') as HTMLAudioElement;
+      if (el) el.play().catch(() => {});
     }
   }, [tracks]);
 
@@ -233,13 +237,28 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       setCurrentTrack(tracks[0]);
       setCurrentIndex(0);
       setIsPlaying(true);
+      const el = document.getElementById('global-audio') as HTMLAudioElement;
+      if (el) el.play().catch(() => {});
       return;
     }
-    setIsPlaying((p) => !p);
+    setIsPlaying((p) => {
+      const nextPlay = !p;
+      const el = document.getElementById('global-audio') as HTMLAudioElement;
+      if (el) {
+        if (nextPlay) el.play().catch(() => {});
+        else el.pause();
+      }
+      return nextPlay;
+    });
   }, [currentTrack, tracks]);
 
   const setPlaying = useCallback((playing: boolean) => {
     setIsPlaying(playing);
+    const el = document.getElementById('global-audio') as HTMLAudioElement;
+    if (el) {
+      if (playing) el.play().catch(() => {});
+      else el.pause();
+    }
   }, []);
 
   const pickRandom = useCallback((): number => {
@@ -251,6 +270,11 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const next = useCallback(() => {
     if (tracks.length === 0) return;
+    
+    // Re-bless the audio element immediately
+    const el = document.getElementById('global-audio') as HTMLAudioElement;
+    if (el) el.play().catch(() => {});
+    
     if (shuffle) {
       const idx = pickRandom();
       setCurrentTrack(tracks[idx]);
@@ -276,6 +300,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
 
   const prev = useCallback(() => {
     if (tracks.length === 0) return;
+    
+    const el = document.getElementById('global-audio') as HTMLAudioElement;
+    if (el) el.play().catch(() => {});
+    
     if (shuffle) {
       const idx = pickRandom();
       setCurrentTrack(tracks[idx]);

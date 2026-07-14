@@ -28,6 +28,7 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
   const getOrCreateAudio = useCallback(() => {
     if (!audioRef.current) {
       const el = new Audio();
+      el.id = 'global-audio';
       el.crossOrigin = 'anonymous';
       el.preload = 'metadata';
       audioRef.current = el;
@@ -181,6 +182,18 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
   useEffect(() => {
     const audio = getOrCreateAudio();
 
+    // Global interaction listener to unlock AudioContext right away
+    const unlock = () => {
+      ensureAudioGraph();
+      if (ctxRef.current?.state === 'suspended') {
+        ctxRef.current.resume().catch(() => {});
+      }
+      // Re-add to catch subsequent touches if the first one failed (e.g., didn't have user gesture)
+    };
+    
+    document.addEventListener('touchstart', unlock, { once: true, passive: true });
+    document.addEventListener('click', unlock, { once: true, passive: true });
+
     const handleTimeUpdate = () => {
       // Watchdog: media events keep firing in the background even when the
       // context got suspended, so this is the one hook that can revive audio
@@ -220,8 +233,10 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
       audio.removeEventListener('play', resumeContext);
       document.removeEventListener('visibilitychange', handleVisible);
       window.removeEventListener('pageshow', handleVisible);
+      document.removeEventListener('touchstart', unlock);
+      document.removeEventListener('click', unlock);
     };
-  }, [getOrCreateAudio, resumeContext]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [getOrCreateAudio, resumeContext, ensureAudioGraph]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     loadTrack,

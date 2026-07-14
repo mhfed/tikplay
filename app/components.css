@@ -1043,19 +1043,22 @@ input[type='range']::-moz-range-thumb {
 .mini-player {
   display: none;
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: var(--bottom-stack);
+  left: 12px;
+  right: 12px;
+  bottom: calc(var(--bottom-stack) + 12px);
   z-index: 30;
   height: var(--mini-h);
   align-items: center;
   gap: 12px;
   padding: 0 16px;
   background: var(--surface);
-  border-top: 1px solid var(--border-soft);
-  transform: translateY(100%);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(150%);
   transition: transform 0.25s cubic-bezier(0.22, 0.61, 0.36, 1);
   cursor: pointer;
+  overflow: hidden;
 }
 
 .mini-player.is-visible {
@@ -1364,9 +1367,9 @@ input[type='range']::-moz-range-thumb {
     background: transparent;
     color: var(--muted);
     cursor: pointer;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
-    padding: 4px;
+    padding: 6px 4px;
     border-radius: var(--radius-sm);
     transition: color 0.12s ease;
   }
@@ -1385,6 +1388,8 @@ input[type='range']::-moz-range-thumb {
     display: flex;
     align-items: center;
     justify-content: center;
+    transform: scale(1.15);
+    margin-bottom: 2px;
   }
 
   .app {
@@ -1401,7 +1406,7 @@ input[type='range']::-moz-range-thumb {
   /* Reserve room for the floating MiniPlayer so the last rows of the
      list are never hidden behind it */
   .main__body {
-    padding-bottom: calc(var(--mini-h) + 24px);
+    padding-bottom: calc(var(--mini-h) + 36px);
   }
 
   /* Player panel: hidden by default on mobile, shown when tab active */
@@ -1445,22 +1450,26 @@ input[type='range']::-moz-range-thumb {
 
   /* Finger-sized transport controls */
   .player-panel.mobile-visible .btn--play {
-    width: 68px;
-    height: 68px;
+    width: 76px;
+    height: 76px;
+  }
+  .player-panel.mobile-visible .btn--play svg {
+    width: 28px;
+    height: 28px;
   }
 
   .player-panel.mobile-visible .btn--icon {
+    width: 54px;
+    height: 54px;
+  }
+
+  .player-panel.mobile-visible .iconbtn {
     width: 48px;
     height: 48px;
   }
 
-  .player-panel.mobile-visible .iconbtn {
-    width: 44px;
-    height: 44px;
-  }
-
   .player-panel.mobile-visible .np__controls {
-    gap: 16px;
+    gap: 20px;
   }
 
   /* Speed + EQ collapse behind a pill toggle on mobile */
@@ -1664,7 +1673,7 @@ input[type='range']::-moz-range-thumb {
   }
 
   .track-row {
-    gap: 6px;
+    gap: 10px;
   }
 
   .track-row__drag {
@@ -1700,12 +1709,12 @@ input[type='range']::-moz-range-thumb {
   }
 
   .main__body {
-    padding: 12px 16px calc(var(--mini-h) + 24px);
+    padding: 12px 16px calc(var(--mini-h) + 40px);
   }
 
   .track-row {
-    padding: 8px 6px;
-    gap: 8px;
+    padding: 12px 8px;
+    gap: 12px;
   }
 
   .track-row__drag {
@@ -1713,16 +1722,16 @@ input[type='range']::-moz-range-thumb {
   }
 
   .track-row__cover {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
   }
 
   .track-row__title {
-    font-size: 13px;
+    font-size: 15px;
   }
 
   .track-row__author {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .track-row__remove {
