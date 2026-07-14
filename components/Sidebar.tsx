@@ -21,7 +21,10 @@ export default function Sidebar() {
         <div className="sidebar__logo">
           <MusicIcon size={18} />
         </div>
-        <span className="sidebar__name">TikPlay</span>
+        <div className="sidebar__brand-text">
+          <span className="sidebar__name">TikPlay</span>
+          <span className="sidebar__tagline">Vibe with TikTok</span>
+        </div>
       </div>
 
       <div className="sidebar__section">Library</div>

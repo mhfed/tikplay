@@ -1,24 +1,25 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
-import { Outfit, Plus_Jakarta_Sans, Space_Mono } from 'next/font/google';
+import { Montserrat, Hanken_Grotesk, JetBrains_Mono } from 'next/font/google';
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 
-const outfit = Outfit({
+const montserrat = Montserrat({
+  weight: ['700', '800', '900'],
   subsets: ['latin'],
-  variable: '--font-outfit',
+  variable: '--font-montserrat',
   display: 'swap',
 });
 
-const jakarta = Plus_Jakarta_Sans({
+const hanken = Hanken_Grotesk({
   subsets: ['latin'],
-  variable: '--font-jakarta',
+  variable: '--font-hanken',
   display: 'swap',
 });
 
-const mono = Space_Mono({
-  weight: ['400', '700'],
+const mono = JetBrains_Mono({
+  weight: ['400', '500', '700'],
   subsets: ['latin'],
-  variable: '--font-space-mono',
+  variable: '--font-jetbrains',
   display: 'swap',
 });
 
@@ -45,7 +46,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
-  themeColor: '#0b0b0c',
+  themeColor: '#0a0a0a',
 };
 
 export default function RootLayout({
@@ -54,7 +55,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="vi" className={`${outfit.variable} ${jakarta.variable} ${mono.variable}`}>
+    <html lang="vi" className={`${montserrat.variable} ${hanken.variable} ${mono.variable}`}>
       <body>
         <ServiceWorkerRegister />
         {children}

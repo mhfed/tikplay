@@ -205,20 +205,26 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
 
   return (
     <div className={panelClass}>
-      {/* Vinyl picture disc — cover art fills the whole disc */}
+      {/* Turntable disc — grooves are the primary surface and spin; the cover
+          label and spindle sit outside the rotating element so they stay readable */}
       <div className={`np__disc-wrap${isPlaying ? ' np--playing' : ''}`}>
+        <div className="np__disc-guide" aria-hidden />
         <div className="np__disc">
-          <Cover
-            src={currentTrack?.cover}
-            alt={currentTrack?.title ?? ''}
-            subtitle={currentTrack?.author}
-            className="np__art"
-          />
           <div className="np__grooves" aria-hidden />
         </div>
-        <div className="np__label" aria-hidden>
-          ♪
-        </div>
+        {currentTrack ? (
+          <Cover
+            src={currentTrack.cover}
+            alt={currentTrack.title}
+            subtitle={currentTrack.author}
+            className="np__label np__label--art"
+          />
+        ) : (
+          <div className="np__label" aria-hidden>
+            ♪
+          </div>
+        )}
+        <div className="np__spindle" aria-hidden />
         <div className="np__sheen" aria-hidden />
         <div className="np__glow" aria-hidden />
       </div>
@@ -322,16 +328,28 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
         </span>
       </div>
 
-      {/* Speed + EQ — always visible on desktop, behind a toggle on mobile */}
-      <button
-        type="button"
-        className={`np__extras-toggle${showExtras ? ' is-on' : ''}`}
-        onClick={() => setShowExtras((v) => !v)}
-        aria-expanded={showExtras}
-      >
-        <SlidersIcon size={14} />
-        <span>Speed & EQ</span>
-      </button>
+      {/* Playing / Equalizer — segmented tab switches Speed + EQ in and out */}
+      <div className="np__tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={!showExtras}
+          className={`np__tab${!showExtras ? ' is-active' : ''}`}
+          onClick={() => setShowExtras(false)}
+        >
+          Playing
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={showExtras}
+          className={`np__tab${showExtras ? ' is-active' : ''}`}
+          onClick={() => setShowExtras(true)}
+        >
+          <SlidersIcon size={13} />
+          Equalizer
+        </button>
+      </div>
       <div className={`np__extras${showExtras ? ' is-open' : ''}`}>
         <SpeedControl speed={speed} onChange={setSpeed} />
         <Equalizer

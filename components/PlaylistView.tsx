@@ -26,7 +26,16 @@ export default function PlaylistView() {
   return (
     <div className="main">
       <div className="main__header">
-        <h1 className="main__title">{currentPlaylist.name}</h1>
+        <div className="main__heading">
+          <h1 className="main__title">{currentPlaylist.name}</h1>
+          <p className="main__subtitle">
+            {currentPlaylistId === 1
+              ? 'Nhạc đã tải về của bạn'
+              : currentPlaylistId === -1
+                ? 'Những bài bạn đã thích'
+                : `${tracks.length} bài hát`}
+          </p>
+        </div>
         {tracks.length > 0 && (
           <button className="main__play-all" onClick={playAll}>
             <PlayIcon size={14} /> Play All
