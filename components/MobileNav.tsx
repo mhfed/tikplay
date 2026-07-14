@@ -2,7 +2,7 @@
 
 import { ListMusicIcon, MusicIcon } from './icons';
 
-export type MobileTab = 'tracks' | 'player' | 'playlists';
+export type MobileTab = 'home' | 'tracks' | 'player' | 'playlists';
 
 interface MobileNavProps {
   activeTab: MobileTab;
@@ -13,6 +13,13 @@ interface MobileNavProps {
 export default function MobileNav({ activeTab, onChange, hasTrack }: MobileNavProps) {
   return (
     <nav className="mobile-nav">
+      <button
+        className={`mobile-nav__tab${activeTab === 'home' ? ' is-active' : ''}`}
+        onClick={() => onChange('home')}
+      >
+        <span className="mobile-nav__icon"><HomeIcon /></span>
+        <span>Home</span>
+      </button>
       <button
         className={`mobile-nav__tab${activeTab === 'tracks' ? ' is-active' : ''}`}
         onClick={() => onChange('tracks')}
@@ -36,6 +43,15 @@ export default function MobileNav({ activeTab, onChange, hasTrack }: MobileNavPr
         <span>Playlists</span>
       </button>
     </nav>
+  );
+}
+
+function HomeIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 11.5 12 4l9 7.5" />
+      <path d="M5.5 10v9.5a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1V16a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3.5a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1V10" />
+    </svg>
   );
 }
 

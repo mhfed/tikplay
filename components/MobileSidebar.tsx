@@ -12,7 +12,7 @@ interface MobileSidebarProps {
 }
 
 export default function MobileSidebar({ visible, onClose }: MobileSidebarProps) {
-  const { playlists, currentPlaylistId, selectPlaylist } = useAppStore();
+  const { playlists, currentPlaylistId, view, selectPlaylist } = useAppStore();
   const [showAddPlaylist, setShowAddPlaylist] = useState(false);
   const [showAutoRules, setShowAutoRules] = useState(false);
 
@@ -39,7 +39,7 @@ export default function MobileSidebar({ visible, onClose }: MobileSidebarProps) 
         <ul className="mobile-sidebar__list">
           <li>
             <button
-              className={`mobile-sidebar__item${currentPlaylistId === 1 ? ' is-active' : ''}`}
+              className={`mobile-sidebar__item${view === 'library' && currentPlaylistId === 1 ? ' is-active' : ''}`}
               onClick={() => handleSelect(1)}
             >
               <ListMusicIcon size={18} />
@@ -48,7 +48,7 @@ export default function MobileSidebar({ visible, onClose }: MobileSidebarProps) 
           </li>
           <li>
             <button
-              className={`mobile-sidebar__item${currentPlaylistId === -1 ? ' is-active' : ''}`}
+              className={`mobile-sidebar__item${view === 'library' && currentPlaylistId === -1 ? ' is-active' : ''}`}
               onClick={() => handleSelect(-1)}
             >
               <HeartIcon />
@@ -64,7 +64,7 @@ export default function MobileSidebar({ visible, onClose }: MobileSidebarProps) 
             .map((p) => (
               <li key={p.id}>
                 <button
-                  className={`mobile-sidebar__item${currentPlaylistId === p.id ? ' is-active' : ''}`}
+                  className={`mobile-sidebar__item${view === 'library' && currentPlaylistId === p.id ? ' is-active' : ''}`}
                   onClick={() => handleSelect(p.id)}
                 >
                   <ClockIcon size={18} />

@@ -10,7 +10,9 @@ export default function Sidebar() {
   const {
     playlists,
     currentPlaylistId,
+    view,
     selectPlaylist,
+    goHome,
   } = useAppStore();
   const [showAddPlaylist, setShowAddPlaylist] = useState(false);
   const [showAutoRules, setShowAutoRules] = useState(false);
@@ -31,7 +33,16 @@ export default function Sidebar() {
       <ul className="sidebar__list">
         <li>
           <button
-            className={`sidebar__item${currentPlaylistId === 1 ? ' is-active' : ''}`}
+            className={`sidebar__item${view === 'home' ? ' is-active' : ''}`}
+            onClick={goHome}
+          >
+            <span className="sidebar__item-icon"><HomeIcon /></span>
+            Home
+          </button>
+        </li>
+        <li>
+          <button
+            className={`sidebar__item${view === 'library' && currentPlaylistId === 1 ? ' is-active' : ''}`}
             onClick={() => selectPlaylist(1)}
           >
             <span className="sidebar__item-icon"><ListMusicIcon size={16} /></span>
@@ -40,7 +51,7 @@ export default function Sidebar() {
         </li>
         <li>
           <button
-            className={`sidebar__item${currentPlaylistId === -1 ? ' is-active' : ''}`}
+            className={`sidebar__item${view === 'library' && currentPlaylistId === -1 ? ' is-active' : ''}`}
             onClick={() => selectPlaylist(-1)}
           >
             <span className="sidebar__item-icon"><HeartIcon /></span>
@@ -56,7 +67,7 @@ export default function Sidebar() {
           .map((p) => (
             <li key={p.id}>
               <button
-                className={`sidebar__item${currentPlaylistId === p.id ? ' is-active' : ''}`}
+                className={`sidebar__item${view === 'library' && currentPlaylistId === p.id ? ' is-active' : ''}`}
                 onClick={() => selectPlaylist(p.id)}
               >
                 <span className="sidebar__item-icon"><ClockIcon size={16} /></span>
@@ -81,6 +92,15 @@ export default function Sidebar() {
       {showAddPlaylist && <AddPlaylistDialog onClose={() => setShowAddPlaylist(false)} />}
       {showAutoRules && <AutoRuleDialog onClose={() => setShowAutoRules(false)} />}
     </aside>
+  );
+}
+
+function HomeIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 11.5 12 4l9 7.5" />
+      <path d="M5.5 10v9.5a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1V16a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3.5a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1V10" />
+    </svg>
   );
 }
 

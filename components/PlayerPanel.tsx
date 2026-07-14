@@ -19,7 +19,10 @@ import {
   ShareIcon,
   CheckIcon,
   SlidersIcon,
+  ListMusicIcon,
 } from './icons';
+
+type PanelTab = 'playing' | 'queue' | 'eq';
 
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
@@ -34,7 +37,9 @@ interface PlayerPanelProps {
 
 export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
   const {
+    tracks,
     currentTrack,
+    currentIndex,
     currentPlaylistId,
     isPlaying,
     repeat,
@@ -46,6 +51,7 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
     clearPendingSeek,
     togglePlay,
     setPlaying,
+    playTrack,
     next,
     prev,
     setVolume,
@@ -57,7 +63,9 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
   } = useAppStore();
 
   const [shareCopied, setShareCopied] = useState(false);
-  const [showExtras, setShowExtras] = useState(false);
+  const [activeTab, setActiveTab] = useState<PanelTab>('playing');
+  const showExtras = activeTab !== 'playing';
+  const upNext = currentIndex >= 0 ? tracks.slice(currentIndex + 1) : tracks;
 
   const engine = useAudioEngine({
     onEnded: () => {
@@ -328,39 +336,86 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
         </span>
       </div>
 
-      {/* Playing / Equalizer — segmented tab switches Speed + EQ in and out */}
+      {/* Playing / Queue / Equalizer — segmented tab switches the panel below */}
       <div className="np__tabs" role="tablist">
         <button
           type="button"
           role="tab"
-          aria-selected={!showExtras}
-          className={`np__tab${!showExtras ? ' is-active' : ''}`}
-          onClick={() => setShowExtras(false)}
+          aria-selected={activeTab === 'playing'}
+          className={`np__tab${activeTab === 'playing' ? ' is-active' : ''}`}
+          onClick={() => setActiveTab('playing')}
         >
           Playing
         </button>
         <button
           type="button"
           role="tab"
-          aria-selected={showExtras}
-          className={`np__tab${showExtras ? ' is-active' : ''}`}
-          onClick={() => setShowExtras(true)}
+          aria-selected={activeTab === 'queue'}
+          className={`np__tab${activeTab === 'queue' ? ' is-active' : ''}`}
+          onClick={() => setActiveTab('queue')}
+        >
+          <ListMusicIcon size={13} />
+          Queue
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'eq'}
+          className={`np__tab${activeTab === 'eq' ? ' is-active' : ''}`}
+          onClick={() => setActiveTab('eq')}
         >
           <SlidersIcon size={13} />
           Equalizer
         </button>
       </div>
       <div className={`np__extras${showExtras ? ' is-open' : ''}`}>
-        <SpeedControl speed={speed} onChange={setSpeed} />
-        <Equalizer
-          gains={eqGains}
-          onGainChange={(i, v) => {
-            const next = [...eqGains];
-            next[i] = v;
-            setEqGains(next);
-          }}
-          onPreset={setEqGains}
-        />
+        {activeTab === 'eq' && (
+          <>
+            <SpeedControl speed={speed} onChange={setSpeed} />
+            <Equalizer
+              gains={eqGains}
+              onGainChange={(i, v) => {
+                const next = [...eqGains];
+                next[i] = v;
+                setEqGains(next);
+              }}
+              onPreset={setEqGains}
+            />
+          </>
+        )}
+        {activeTab === 'queue' && (
+          <div className="np__queue">
+            {upNext.length === 0 ? (
+              <p className="np__queue-empty">
+                {shuffle ? 'Bài tiếp theo sẽ được chọn ngẫu nhiên.' : 'Đã hết danh sách phát.'}
+              </p>
+            ) : (
+              <ul className="np__queue-list">
+                {upNext.map((track, i) => (
+                  <li key={track.id}>
+                    <button
+                      type="button"
+                      className="np__queue-item"
+                      onClick={() => playTrack(track)}
+                    >
+                      <span className="np__queue-index">{i + 1}</span>
+                      <Cover
+                        src={track.cover}
+                        alt={track.title}
+                        subtitle={track.author}
+                        className="np__queue-cover"
+                      />
+                      <span className="np__queue-meta">
+                        <span className="np__queue-title">{track.title}</span>
+                        <span className="np__queue-author">{track.author}</span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

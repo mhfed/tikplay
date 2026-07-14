@@ -11,6 +11,8 @@ import {
 } from 'react';
 import type { Track, Playlist, AutoRule, RepeatMode } from '../lib/types';
 
+export type AppView = 'home' | 'library';
+
 interface AppState {
   tracks: Track[];
   playlists: Playlist[];
@@ -30,6 +32,10 @@ interface AppState {
   error: string | null;
   /** Seek position (seconds) restored from a shared URL, consumed once by the player. */
   pendingSeek: number | null;
+  /** Desktop content area / mobile default tab: the Discover dashboard vs. a playlist's track list. */
+  view: AppView;
+  /** Most recently played tracks (newest first), persisted to localStorage — powers the Home "Continue" row. */
+  recentlyPlayed: Track[];
 }
 
 interface AppActions {
@@ -59,6 +65,8 @@ interface AppActions {
   setQuery: (q: string) => void;
   onEnded: () => void;
   clearPendingSeek: () => void;
+  setView: (v: AppView) => void;
+  goHome: () => void;
 }
 
 type AppStore = AppState & AppActions;
@@ -97,6 +105,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingSeek, setPendingSeek] = useState<number | null>(null);
+  const [view, setView] = useState<AppView>('home');
+  const [recentIds, setRecentIds] = useState<number[]>([]);
 
   const loadPlaylists = useCallback(async () => {
     const data = await api<{ playlists: Playlist[] }>('/api/playlists');
@@ -148,8 +158,37 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         setCurrentTrack(track);
         if (t > 0) setPendingSeek(t);
       }
+      // A shared link always means "go straight to the track/playlist", not the dashboard.
+      if (params.has('pl') || params.has('track')) setView('library');
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Hydrate "recently played" from localStorage once, on mount (client-only —
+  // reading it in a useState initializer would desync client/server render).
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem('tikplay:recent');
+      if (raw) setRecentIds(JSON.parse(raw));
+    } catch {
+      // Corrupt/blocked storage — just start empty.
+    }
+  }, []);
+
+  // Track playback for the Home "Continue listening" row. Keyed off the track
+  // actually starting to play, not the playAll/next click, so scrubbing
+  // through the queue only records what was really heard.
+  useEffect(() => {
+    if (!currentTrack) return;
+    setRecentIds((prev) => {
+      const next = [currentTrack.id, ...prev.filter((id) => id !== currentTrack.id)].slice(0, 12);
+      try {
+        window.localStorage.setItem('tikplay:recent', JSON.stringify(next));
+      } catch {
+        // Ignore storage errors (private mode, quota, ...).
+      }
+      return next;
+    });
+  }, [currentTrack?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep the URL in sync with what's selected/playing so the address bar is
   // always shareable. `t` only appears in links built by the Share button.
@@ -167,10 +206,20 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const selectPlaylist = useCallback(
     (id: number) => {
       setCurrentPlaylistId(id);
+      setView('library');
       loadTracks(id, query);
     },
     [loadTracks, query],
   );
+
+  // Home always reflects the full library, regardless of whatever playlist
+  // was last browsed — so switching to it re-scopes `tracks`/`favorites` to
+  // "All Tracks" rather than leaving them narrowed to the last playlist.
+  const goHome = useCallback(() => {
+    setCurrentPlaylistId(1);
+    setView('home');
+    loadTracks(1, query);
+  }, [loadTracks, query]);
 
   const addTrackFromUrl = useCallback(
     async (url: string) => {
@@ -413,6 +462,14 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     );
   }, [tracks, query]);
 
+  // Only resolves ids against tracks already loaded into memory (typically the
+  // full library, since that's what loads by default) — good enough for a
+  // "continue listening" hint without a dedicated history endpoint.
+  const recentlyPlayed = useMemo(() => {
+    const byId = new Map(tracks.map((t) => [t.id, t]));
+    return recentIds.map((id) => byId.get(id)).filter((t): t is Track => !!t);
+  }, [recentIds, tracks]);
+
   const store: AppStore = {
     tracks: filteredTracks,
     playlists,
@@ -431,6 +488,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     loading,
     error,
     pendingSeek,
+    view,
+    recentlyPlayed,
     loadAll,
     selectPlaylist,
     addTrackFromUrl,
@@ -456,6 +515,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     setQuery,
     onEnded,
     clearPendingSeek,
+    setView,
+    goHome,
   };
 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
