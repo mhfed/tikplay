@@ -298,13 +298,19 @@ export function AppStoreProvider({
     [currentPlaylistId, query, loadTracks, loadPlaylists],
   );
 
-  const playTrack = useCallback((track: Track) => {
-    setCurrentTrack(track);
-    setCurrentIndex(0); // will be updated
-    setIsPlaying(true);
-    const el = document.getElementById('global-audio') as HTMLAudioElement;
-    if (el) el.play().catch(() => {});
-  }, []);
+  const playTrack = useCallback(
+    (track: Track) => {
+      setCurrentTrack(track);
+      // Set the real position immediately so the queue ("up next") and
+      // next/prev are correct on the first render — not a frame later once the
+      // sync effect catches up. Falls back to -1 (→ full list) if not found.
+      setCurrentIndex(tracks.findIndex((t) => t.id === track.id));
+      setIsPlaying(true);
+      const el = document.getElementById('global-audio') as HTMLAudioElement;
+      if (el) el.play().catch(() => {});
+    },
+    [tracks],
+  );
 
   const playAll = useCallback(() => {
     if (tracks.length > 0) {
