@@ -185,21 +185,29 @@ export default function PlayerPanel({ mobileTab }: PlayerPanelProps) {
       document.removeEventListener('visibilitychange', handleVisible);
   }, [isPlaying, currentTrack]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Global playback shortcuts. Skip while typing or when focus is on a
-  // button/link so native Space/Enter activation (e.g. dialog Cancel/Save)
-  // isn't hijacked — preventDefault on a keydown Space suppresses the
-  // browser's synthetic click for a focused button.
+  // Global playback shortcuts. Only text-entry elements (INPUT/TEXTAREA/SELECT/
+  // contentEditable) suppress the shortcuts so typing isn't hijacked. BUTTON/A are
+  // intentionally NOT skipped: when a player control is focused, Space must still
+  // toggle play/pause — preventDefault() on keydown suppresses the browser's
+  // synthetic click on the focused button so it doesn't also fire. While a modal
+  // dialog is open, defer to native activation (dialog Cancel/Close buttons).
   useEffect(() => {
-    const isInteractiveTarget = (el: EventTarget | null) => {
+    const isTextEntryTarget = (el: EventTarget | null) => {
       if (!(el instanceof HTMLElement)) return false;
       return (
-        ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A'].includes(el.tagName) ||
+        ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) ||
         el.isContentEditable
       );
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isInteractiveTarget(e.target) || e.metaKey || e.ctrlKey || e.altKey)
+      if (
+        isTextEntryTarget(e.target) ||
+        e.metaKey ||
+        e.ctrlKey ||
+        e.altKey ||
+        document.querySelector('.modal-backdrop')
+      )
         return;
 
       switch (e.key) {

@@ -118,16 +118,57 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
     [getOrCreateAudio],
   );
 
+  // Recover from a network/decode error: if the element dies mid-playback
+  // (common when the network drops while the app is backgrounded — the
+  // element fires `error` and refuses to play until src is reloaded), reload
+  // src and resume from the last position. Only retries when the store still
+  // intends to play (wantsPlayingRef true), so a user-initiated pause isn't
+  // overridden.
+  const wantsPlayingRef = useRef(false);
+  const recoveringRef = useRef(false);
+  const recover = useCallback(() => {
+    const audio = audioRef.current;
+    const url = lastUrlRef.current;
+    if (!audio || !url) return;
+    if (recoveringRef.current || !wantsPlayingRef.current) return;
+    recoveringRef.current = true;
+    const resumeAt = audio.currentTime || 0;
+    // Force a fresh load by clearing src first, then re-arming it.
+    audio.removeAttribute('src');
+    audio.load();
+    const reload = () => {
+      audio.src = url;
+      // Seek back to where we were once metadata is back, then play.
+      const onReady = () => {
+        if (resumeAt > 0 && Number.isFinite(audio.duration) && resumeAt < audio.duration) {
+          audio.currentTime = resumeAt;
+        }
+        audio.play().catch(() => {});
+        recoveringRef.current = false;
+        audio.removeEventListener('canplay', onReady);
+      };
+      audio.addEventListener('canplay', onReady, { once: true });
+    };
+    reload();
+  }, []);
+
   const play = useCallback(async () => {
     const audio = getOrCreateAudio();
     ensureAudioGraph();
     if (ctxRef.current?.state === 'suspended') {
       await ctxRef.current.resume();
     }
+    wantsPlayingRef.current = true;
+    // If the element previously errored, clear that state so play() works.
+    if (audio.error) {
+      recover();
+      return;
+    }
     await audio.play().catch(() => {});
-  }, [getOrCreateAudio, ensureAudioGraph]);
+  }, [getOrCreateAudio, ensureAudioGraph, recover]);
 
   const pause = useCallback(() => {
+    wantsPlayingRef.current = false;
     audioRef.current?.pause();
   }, []);
 
@@ -224,14 +265,30 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
       setDuration(audio.duration || 0);
     };
 
+    // Element errored (network drop while backgrounded, decode failure, etc).
+    // Try to recover once, then give up so we don't spin on a dead URL.
+    const handleError = () => {
+      recover();
+    };
+
     const handleVisible = () => {
-      if (document.visibilityState === 'visible') resumeContext();
+      if (document.visibilityState === 'visible') {
+        resumeContext();
+        // Coming back to the page: if we still want to play but the element
+        // died or is paused (OS paused it during the interruption), revive it.
+        const el = audioRef.current;
+        if (wantsPlayingRef.current && el && (el.paused || el.error)) {
+          if (el.error) recover();
+          else el.play().catch(() => {});
+        }
+      }
     };
 
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('ended', handleEnded);
     audio.addEventListener('canplay', handleCanPlay);
     audio.addEventListener('loadedmetadata', handleCanPlay);
+    audio.addEventListener('error', handleError);
     audio.addEventListener('play', resumeContext);
     document.addEventListener('visibilitychange', handleVisible);
     window.addEventListener('pageshow', handleVisible);
@@ -241,13 +298,14 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('canplay', handleCanPlay);
       audio.removeEventListener('loadedmetadata', handleCanPlay);
+      audio.removeEventListener('error', handleError);
       audio.removeEventListener('play', resumeContext);
       document.removeEventListener('visibilitychange', handleVisible);
       window.removeEventListener('pageshow', handleVisible);
       document.removeEventListener('touchstart', unlock);
       document.removeEventListener('click', unlock);
     };
-  }, [getOrCreateAudio, resumeContext, ensureAudioGraph]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [getOrCreateAudio, resumeContext, ensureAudioGraph, recover]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     loadTrack,
