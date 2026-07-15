@@ -36,8 +36,6 @@ jobs:
     name: Fly deploy
     needs: check
     runs-on: ubuntu-latest
-    # Chỉ deploy khi có token; nếu thiếu thì job bị skip thay vì fail mù.
-    if: ${{ secrets.FLY_API_TOKEN != '' }}
     environment:
       name: production
       url: https://craw-music.fly.dev
