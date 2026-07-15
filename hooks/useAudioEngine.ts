@@ -24,6 +24,10 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isReady, setIsReady] = useState(false);
+  // Fraction of `duration` that the browser has buffered (0–1). Read from
+  // audio.buffered on the `progress` event only — not on every `timeupdate` —
+  // so the seek bar's "loaded" layer doesn't thrash while playing.
+  const [buffered, setBuffered] = useState(0);
 
   const getOrCreateAudio = useCallback(() => {
     if (!audioRef.current) {
@@ -113,6 +117,7 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
       audio.src = audioUrl;
       setCurrentTime(0);
       setDuration(0);
+      setBuffered(0);
       setIsReady(false);
     },
     [getOrCreateAudio],
@@ -140,7 +145,11 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
       audio.src = url;
       // Seek back to where we were once metadata is back, then play.
       const onReady = () => {
-        if (resumeAt > 0 && Number.isFinite(audio.duration) && resumeAt < audio.duration) {
+        if (
+          resumeAt > 0 &&
+          Number.isFinite(audio.duration) &&
+          resumeAt < audio.duration
+        ) {
           audio.currentTime = resumeAt;
         }
         audio.play().catch(() => {});
@@ -265,6 +274,19 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
       setDuration(audio.duration || 0);
     };
 
+    // Buffered amount changed (network chunk arrived). Take the furthest
+    // buffered end and express it as a fraction of the duration.
+    const handleProgress = () => {
+      const ranges = audio.buffered;
+      const dur = audio.duration || 0;
+      if (!ranges.length || !dur) {
+        setBuffered(0);
+        return;
+      }
+      const end = ranges.end(ranges.length - 1);
+      setBuffered(dur > 0 ? Math.min(1, end / dur) : 0);
+    };
+
     // Element errored (network drop while backgrounded, decode failure, etc).
     // Try to recover once, then give up so we don't spin on a dead URL.
     const handleError = () => {
@@ -288,6 +310,7 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
     audio.addEventListener('ended', handleEnded);
     audio.addEventListener('canplay', handleCanPlay);
     audio.addEventListener('loadedmetadata', handleCanPlay);
+    audio.addEventListener('progress', handleProgress);
     audio.addEventListener('error', handleError);
     audio.addEventListener('play', resumeContext);
     document.addEventListener('visibilitychange', handleVisible);
@@ -298,6 +321,7 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('canplay', handleCanPlay);
       audio.removeEventListener('loadedmetadata', handleCanPlay);
+      audio.removeEventListener('progress', handleProgress);
       audio.removeEventListener('error', handleError);
       audio.removeEventListener('play', resumeContext);
       document.removeEventListener('visibilitychange', handleVisible);
@@ -321,6 +345,7 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
     currentTime,
     duration,
     isReady,
+    buffered,
     audioRef,
   };
 }

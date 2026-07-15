@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import { withViewTransition } from '../lib/viewTransition';
 import Home from './Home';
@@ -13,6 +13,9 @@ import Sidebar from './Sidebar';
 
 export default function AppShell() {
   const [mobileTab, setMobileTab] = useState<MobileTab>('home');
+  // Remember the last browsing tab so the player sheet can slide back to it
+  // (swipe-down / Esc / backdrop tap) rather than always landing on Home.
+  const lastContentTab = useRef<MobileTab>('home');
   const { currentTrack, view, goHome, setView } = useAppStore();
 
   // A shared link (?pl=&track=) flips the store straight to 'library' on
@@ -28,6 +31,7 @@ export default function AppShell() {
   };
 
   const isContentTab = mobileTab === 'tracks' || mobileTab === 'home';
+  if (isContentTab) lastContentTab.current = mobileTab;
 
   return (
     <>
@@ -40,7 +44,10 @@ export default function AppShell() {
             <PlaylistView />
           )}
         </div>
-        <PlayerPanel mobileTab={mobileTab} />
+        <PlayerPanel
+          mobileTab={mobileTab}
+          onClosePlayer={() => setMobileTab(lastContentTab.current)}
+        />
       </div>
       <MiniPlayer
         mobileTab={mobileTab}
@@ -48,7 +55,7 @@ export default function AppShell() {
       />
       <MobileSidebar
         visible={mobileTab === 'playlists'}
-        onClose={() => setMobileTab(view === 'home' ? 'home' : 'tracks')}
+        onClose={() => setMobileTab(lastContentTab.current)}
       />
       <MobileNav
         activeTab={mobileTab}

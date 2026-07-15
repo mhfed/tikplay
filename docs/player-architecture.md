@@ -1,6 +1,6 @@
 # Player architecture (quick reference)
 
-Tech stack: Next.js 14 App Router + React 18 + TypeScript, functional components/hooks, custom context store (no Redux/Zustand), no keyboard-shortcut library.
+Tech stack: Next.js 16 App Router + React 19 + TypeScript, functional components/hooks, custom context store (no Redux/Zustand), no keyboard-shortcut library.
 
 ## Where things live
 

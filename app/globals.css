@@ -76,6 +76,12 @@
     sans-serif
   );
   --font-mono: var(--font-jetbrains, "JetBrains Mono", ui-monospace, monospace);
+
+  /* Player UX polish tokens */
+  --loaded-track: rgba(255, 255, 255, 0.18);
+  --boost-tint: rgba(212, 187, 255, 0.22);
+  --scrub-tip-bg: rgba(8, 8, 10, 0.92);
+  --sheet-bg: var(--glass-bg);
 }
 
 * {

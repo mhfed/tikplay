@@ -2,7 +2,7 @@
 
 import { useAppStore } from '../hooks/useAppStore';
 import Cover from './Cover';
-import { NextIcon, PauseIcon, PlayIcon } from './icons';
+import { ChevronUpIcon, NextIcon, PauseIcon, PlayIcon } from './icons';
 
 interface MiniPlayerProps {
   mobileTab?: string;
@@ -25,6 +25,7 @@ export default function MiniPlayer({
       <div className="mini-player__progress" aria-hidden>
         <div className="mini-player__progress-fill" />
       </div>
+      <ChevronUpIcon size={16} className="mini-player__chevron" aria-hidden />
       <Cover
         src={currentTrack.cover}
         alt={currentTrack.title}
@@ -35,6 +36,14 @@ export default function MiniPlayer({
         <div className="mini-player__title">{currentTrack.title}</div>
         <div className="mini-player__author">{currentTrack.author}</div>
       </div>
+      <span
+        className={`eq-dots eq-dots--mini${isPlaying ? ' is-playing' : ''}`}
+        aria-hidden
+      >
+        <span />
+        <span />
+        <span />
+      </span>
       <div
         className="mini-player__controls"
         onClick={(e) => e.stopPropagation()}

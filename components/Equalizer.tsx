@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { EQ_BANDS, EQ_PRESETS } from '../lib/types';
 
 interface EqualizerProps {
@@ -16,6 +16,29 @@ export default function Equalizer({
 }: EqualizerProps) {
   const [showPresets, setShowPresets] = useState(false);
   const [activePreset, setActivePreset] = useState('Flat');
+  const presetsRef = useRef<HTMLDivElement>(null);
+
+  // Close the preset dropdown on any outside pointer-down (and on Escape).
+  useEffect(() => {
+    if (!showPresets) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (
+        presetsRef.current &&
+        !presetsRef.current.contains(e.target as Node)
+      ) {
+        setShowPresets(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowPresets(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown, true);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown, true);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [showPresets]);
 
   const handlePreset = (preset: (typeof EQ_PRESETS)[number]) => {
     onPreset(preset.gains);
@@ -32,18 +55,22 @@ export default function Equalizer({
     <div className="eq">
       <div className="eq__header">
         <span className="eq__title">Equalizer</span>
-        <div className="eq__presets">
+        <div className="eq__presets" ref={presetsRef}>
           <button
             className="eq__preset-btn"
+            aria-haspopup="listbox"
+            aria-expanded={showPresets}
             onClick={() => setShowPresets(!showPresets)}
           >
             {activePreset} ▾
           </button>
           {showPresets && (
-            <div className="eq__preset-dropdown">
+            <div className="eq__preset-dropdown" role="listbox">
               {EQ_PRESETS.map((p) => (
                 <button
                   key={p.name}
+                  role="option"
+                  aria-selected={p.name === activePreset}
                   className={`eq__preset-option${p.name === activePreset ? ' is-active' : ''}`}
                   onClick={() => handlePreset(p)}
                 >
