@@ -156,25 +156,45 @@ export class MediaProcessor {
     };
   }
 
-  /** Promise wrapper around execFile for yt-dlp. */
-  private execYtDlp(args: string[]): Promise<string> {
-    return new Promise((resolve, reject) => {
-      execFile(
-        this.ytdlpPath,
-        args,
-        { maxBuffer: 50 * 1024 * 1024 },
-        (err, stdout, stderr) => {
-          if (err) {
-            reject(
-              new Error(
-                `yt-dlp thất bại: ${(stderr || err.message).slice(0, 500)}`,
-              ),
-            );
-            return;
-          }
-          resolve(stdout);
-        },
-      );
-    });
+  /**
+   * TikTok intermittently serves an anti-bot page with no
+   * `__UNIVERSAL_DATA_FOR_REHYDRATION__` blob (more so without curl_cffi
+   * impersonation), and its CDN throws transient 5xx / timeouts. These are
+   * flaky, not fatal — a retry with a fresh request usually succeeds. Genuine
+   * errors (bad URL, private/deleted video) don't match and fail fast.
+   */
+  private static isTransient(msg: string): boolean {
+    return /rehydration|Unable to extract|Requested format is not available|Unable to download webpage|HTTP Error 5\d\d|timed out|Connection reset|Read timed out/i.test(
+      msg,
+    );
+  }
+
+  /**
+   * Promise wrapper around execFile for yt-dlp, retrying transient TikTok
+   * failures a few times with a short backoff.
+   */
+  private execYtDlp(args: string[], attempts = 3): Promise<string> {
+    const attempt = (n: number): Promise<string> =>
+      new Promise<string>((resolve, reject) => {
+        execFile(
+          this.ytdlpPath,
+          args,
+          { maxBuffer: 50 * 1024 * 1024 },
+          (err, stdout, stderr) => {
+            if (err) {
+              const msg = stderr || err.message;
+              if (n < attempts && MediaProcessor.isTransient(msg)) {
+                // Linear backoff (400ms, 800ms, …) between tries.
+                setTimeout(() => resolve(attempt(n + 1)), 400 * n);
+                return;
+              }
+              reject(new Error(`yt-dlp thất bại: ${msg.slice(0, 500)}`));
+              return;
+            }
+            resolve(stdout);
+          },
+        );
+      });
+    return attempt(1);
   }
 }
