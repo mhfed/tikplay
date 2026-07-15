@@ -772,18 +772,23 @@
   z-index: 2;
 }
 
-/* Square "sticker" label — real cover art glued onto the vinyl */
+/* Round vinyl label — real cover art fills the record's center, edge to edge
+   (keeps the circular .np__label shape rather than clipping it to a square) */
 .np__label--art {
-  border-radius: var(--radius-sm);
-  border-color: rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  border-color: rgba(255, 255, 255, 0.16);
   background: var(--surface-2);
   overflow: hidden;
-  display: flex;
-  padding: 10px;
+  padding: 0;
+  object-fit: cover;
+  box-shadow:
+    0 4px 18px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 0 14px rgba(0, 0, 0, 0.28);
 }
 
 .np__label--art .cover__title {
-  font-size: 13px;
+  font-size: 12px;
   -webkit-line-clamp: 3;
 }
 
