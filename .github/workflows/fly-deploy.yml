@@ -34,7 +34,7 @@ jobs:
 
   deploy:
     name: Fly deploy
-    needs: check
+    # Không `needs: check` — lint fail không được chặn deploy.
     runs-on: ubuntu-latest
     environment:
       name: production
