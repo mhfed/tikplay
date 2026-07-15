@@ -434,13 +434,13 @@ export default function PlayerPanel({
             angle jump) when the track changes. */}
         <div className={`np__disc-wrap${isPlaying ? ' np--playing' : ''}`}>
           <div className="np__disc-guide" aria-hidden />
-          <div className="np__disc" key={currentTrack?.id}>
+          <div className="np__disc" key={`disc-${currentTrack?.id}`}>
             <div className="np__grooves" aria-hidden />
             <div className="np__sheen" aria-hidden />
           </div>
           {currentTrack ? (
             <Cover
-              key={currentTrack.id}
+              key={`art-${currentTrack.id}`}
               src={currentTrack.cover}
               alt={currentTrack.title}
               subtitle={currentTrack.author}
