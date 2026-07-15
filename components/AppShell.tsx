@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import { withViewTransition } from '../lib/viewTransition';
 import Home from './Home';
-import MiniPlayer from './MiniPlayer';
 import MobileNav, { type MobileTab } from './MobileNav';
 import MobileSidebar from './MobileSidebar';
 import PlayerPanel from './PlayerPanel';
@@ -47,12 +46,9 @@ export default function AppShell() {
         <PlayerPanel
           mobileTab={mobileTab}
           onClosePlayer={() => setMobileTab(lastContentTab.current)}
+          onOpenPlayer={() => setMobileTab('player')}
         />
       </div>
-      <MiniPlayer
-        mobileTab={mobileTab}
-        onOpenPlayer={() => setMobileTab('player')}
-      />
       <MobileSidebar
         visible={mobileTab === 'playlists'}
         onClose={() => setMobileTab(lastContentTab.current)}

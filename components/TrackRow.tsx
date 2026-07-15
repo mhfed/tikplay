@@ -41,14 +41,37 @@ export default function TrackRow({
     transition,
   };
 
+  // The whole row is the play surface; nested controls (drag/fav/remove) stop
+  // propagation so they don't also trigger playback.
+  const stop =
+    (fn?: () => void) => (e: React.MouseEvent | React.PointerEvent) => {
+      e.stopPropagation();
+      fn?.();
+    };
+
   return (
     <li
       ref={setNodeRef}
       style={style}
       className={`track-row${isActive ? ' track-row--active' : ''}${isDragging ? ' track-row--dragging' : ''}`}
+      onClick={onPlay}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onPlay();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`Phát ${track.title}`}
     >
       {isDraggable && (
-        <span className="track-row__drag" {...attributes} {...listeners}>
+        <span
+          className="track-row__drag"
+          onClick={stop()}
+          {...attributes}
+          {...listeners}
+        >
           <GripIcon size={14} />
         </span>
       )}
@@ -58,26 +81,28 @@ export default function TrackRow({
         subtitle={track.author}
         className="track-row__cover"
       />
-      <button className="track-row__info" onClick={onPlay}>
+      <div className="track-row__info">
         <span className="track-row__title">{track.title}</span>
         <span className="track-row__author">{track.author}</span>
-      </button>
+      </div>
       {isActive && (
         <span className="track-row__badge">
           {isPlaying ? <PauseIcon size={12} /> : <PlayIcon size={12} />}
         </span>
       )}
       <button
+        type="button"
         className={`track-row__fav${isFavorite ? ' is-fav' : ''}`}
-        onClick={onFavorite}
+        onClick={stop(onFavorite)}
         aria-label={isFavorite ? 'Bỏ yêu thích' : 'Yêu thích'}
         title={isFavorite ? 'Bỏ yêu thích' : 'Yêu thích'}
       >
         {isFavorite ? '♥' : '♡'}
       </button>
       <button
+        type="button"
         className="track-row__remove"
-        onClick={onRemove}
+        onClick={stop(onRemove)}
         aria-label="Xóa"
         title="Xóa"
       >

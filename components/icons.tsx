@@ -130,6 +130,19 @@ export function VolumeIcon({ size = 24, ...rest }: IconProps) {
   );
 }
 
+export function VolumeLowIcon({ size = 24, ...rest }: IconProps) {
+  return (
+    <svg {...stroke(size)} aria-hidden {...rest}>
+      <path
+        d="M4 9.5v5a1 1 0 0 0 1.5.86L10 13.2V10.8L5.5 8.64A1 1 0 0 0 4 9.5Z"
+        fill="currentColor"
+        stroke="none"
+      />
+      <path d="M14.5 9a4 4 0 0 1 0 6" />
+    </svg>
+  );
+}
+
 export function VolumeMuteIcon({ size = 24, ...rest }: IconProps) {
   return (
     <svg {...stroke(size)} aria-hidden {...rest}>

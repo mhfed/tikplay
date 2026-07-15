@@ -19,11 +19,12 @@ import {
   SlidersIcon,
   SpinnerIcon,
   VolumeIcon,
+  VolumeLowIcon,
   VolumeMuteIcon,
 } from './icons';
 import SpeedControl from './SpeedControl';
 
-type PanelTab = 'playing' | 'queue' | 'eq';
+type PopoverPanel = 'queue' | 'eq' | null;
 
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
@@ -35,6 +36,7 @@ function formatTime(seconds: number): string {
 interface PlayerPanelProps {
   mobileTab?: string;
   onClosePlayer?: () => void;
+  onOpenPlayer?: () => void;
 }
 
 // Distance (px) the sheet must be dragged down before it dismisses.
@@ -46,6 +48,7 @@ const SHEET_CLOSE_MS = 280;
 export default function PlayerPanel({
   mobileTab,
   onClosePlayer,
+  onOpenPlayer,
 }: PlayerPanelProps) {
   const {
     tracks,
@@ -74,8 +77,8 @@ export default function PlayerPanel({
   } = useAppStore();
 
   const [shareCopied, setShareCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<PanelTab>('playing');
-  const showExtras = activeTab !== 'playing';
+  const [openPanel, setOpenPanel] = useState<PopoverPanel>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
   const upNext = currentIndex >= 0 ? tracks.slice(currentIndex + 1) : tracks;
 
   // ── Scrub-preview seeking ──────────────────────────────
@@ -92,6 +95,18 @@ export default function PlayerPanel({
   const [dragOffset, setDragOffset] = useState(0);
   const [closing, setClosing] = useState(false);
   const dragStartY = useRef(0);
+
+  // Scroll-wheel volume: a native, non-passive listener (React's onWheel is
+  // passive, so preventDefault there can't stop the page from scrolling).
+  const volTrackRef = useRef<HTMLDivElement>(null);
+  const volumeRef = useRef(volume);
+  volumeRef.current = volume;
+
+  // Volume bar is collapsed to just the icon; it reveals on hover (CSS) or,
+  // on touch, when tapped open. `volOpen` drives only the touch path.
+  const volGroupRef = useRef<HTMLDivElement>(null);
+  const [volOpen, setVolOpen] = useState(false);
+  const pointerTypeRef = useRef<string>('mouse');
 
   const engine = useAudioEngine({
     onEnded: () => {
@@ -124,6 +139,47 @@ export default function PlayerPanel({
   useEffect(() => {
     engine.setVolume(volume);
   }, [volume]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Scroll-wheel over the volume track nudges volume in 5% steps (0–300%).
+  useEffect(() => {
+    const el = volTrackRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.05 : -0.05;
+      const next = Math.max(
+        0,
+        Math.min(3, Math.round((volumeRef.current + delta) * 100) / 100),
+      );
+      setVolume(next);
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [setVolume]);
+
+  // Touch: collapse the volume bar again when tapping anywhere outside it.
+  useEffect(() => {
+    if (!volOpen) return;
+    const onDown = (e: PointerEvent) => {
+      if (!volGroupRef.current?.contains(e.target as Node)) setVolOpen(false);
+    };
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, [volOpen]);
+
+  // Close the queue/EQ popover when clicking outside it (but not when clicking
+  // the toggle button that owns it — that button handles its own toggle).
+  useEffect(() => {
+    if (!openPanel) return;
+    const onDown = (e: PointerEvent) => {
+      const target = e.target as HTMLElement;
+      if (popoverRef.current?.contains(target)) return;
+      if (target.closest?.('.pb__toggle')) return;
+      setOpenPanel(null);
+    };
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, [openPanel]);
 
   // Speed sync
   useEffect(() => {
@@ -334,21 +390,14 @@ export default function PlayerPanel({
     engine.duration > 0 ? Math.min(displayedTime, engine.duration) : 0;
   const bufferedPercent = engine.buffered * 100;
   const volPercent = (volume / 3) * 100;
+  const isBoosted = volume > 1;
+  const isMuted = volume === 0;
 
   const commitScrub = () => {
     if (!isScrubbing) return;
     engine.seek(previewTime);
     setIsScrubbing(false);
   };
-
-  // MiniPlayer lives outside this component; publish progress as a CSS var
-  // so its bar tracks playback without lifting engine state into the store.
-  useEffect(() => {
-    document.documentElement.style.setProperty(
-      '--mini-progress',
-      `${progressPercent}%`,
-    );
-  }, [progressPercent]);
 
   const requestClose = useCallback(() => {
     if (!isMobileVisible) {
@@ -391,7 +440,14 @@ export default function PlayerPanel({
       ? { transform: `translateY(${dragOffset}px)`, transition: 'none' }
       : undefined;
 
-  const panelClass = `player-panel${isMobileVisible ? ' mobile-visible' : ''}`;
+  const panelClass = `player-bar${isMobileVisible ? ' mobile-visible' : ''}${currentTrack ? ' has-track' : ''}`;
+
+  // On mobile the compact bar is tappable to expand into the full sheet; on
+  // desktop there's no sheet, so tapping the identity area does nothing.
+  const expandOnMobile = () => {
+    if (isMobileVisible) return;
+    if (window.matchMedia('(max-width: 1024px)').matches) onOpenPlayer?.();
+  };
 
   // Esc closes the mobile sheet.
   useEffect(() => {
@@ -428,336 +484,368 @@ export default function PlayerPanel({
           </div>
         )}
 
-        {/* Turntable disc — grooves are the primary surface and spin; the cover
-            label and spindle sit outside the rotating element so they stay readable.
-            Keying the disc on track id restarts np-spin cleanly (no accumulated
-            angle jump) when the track changes. */}
-        <div className={`np__disc-wrap${isPlaying ? ' np--playing' : ''}`}>
-          <div className="np__disc-guide" aria-hidden />
-          <div className="np__disc" key={`disc-${currentTrack?.id}`}>
-            <div className="np__grooves" aria-hidden />
-            <div className="np__sheen" aria-hidden />
-          </div>
+        {/* Compact-bar progress line — a thin fill along the top of the bar,
+            visible only in the collapsed (mobile) state via CSS. */}
+        <div className="pb__mini-progress" aria-hidden>
+          <span style={{ width: `${progressPercent}%` }} />
+        </div>
+
+        {/* LEFT — track identity. On mobile the whole zone expands the sheet. */}
+        <button
+          type="button"
+          className="pb__identity"
+          onClick={expandOnMobile}
+          aria-label={currentTrack ? 'Mở trình phát' : undefined}
+        >
           {currentTrack ? (
             <Cover
               key={`art-${currentTrack.id}`}
               src={currentTrack.cover}
               alt={currentTrack.title}
               subtitle={currentTrack.author}
-              className="np__label np__label--art"
+              className="pb__cover"
             />
           ) : (
-            <div className="np__label" key="empty" aria-hidden>
+            <span className="pb__cover pb__cover--empty" aria-hidden>
               ♪
-            </div>
+            </span>
           )}
-          {isLoading && <div className="np__shimmer" aria-hidden />}
-          <div className="np__spindle" aria-hidden />
-          <div className="np__glow" aria-hidden />
-        </div>
-
-        {/* Meta */}
-        <div className="np__meta">
-          {currentTrack ? (
-            <div className="np__meta-body" key={currentTrack.id}>
-              <div className="np__meta-head">
-                <span className="np__title" title={currentTrack.title}>
+          <span className="pb__meta">
+            {currentTrack ? (
+              <>
+                <span className="pb__title" title={currentTrack.title}>
                   {currentTrack.title}
                 </span>
-                <button
-                  type="button"
-                  className={`np__share${shareCopied ? ' is-copied' : ''}`}
-                  onClick={shareTrack}
-                  aria-label="Chia sẻ bài hát"
-                  title={shareCopied ? 'Đã copy link!' : 'Chia sẻ bài hát'}
-                >
-                  {shareCopied ? (
-                    <CheckIcon size={14} />
-                  ) : (
-                    <ShareIcon size={14} />
-                  )}
-                </button>
-              </div>
-              <span className="np__author">{currentTrack.author}</span>
-            </div>
-          ) : (
-            <div className="np__meta-body">
-              <span className="np__title">No track playing</span>
-              <span className="np__author">Paste a TikTok URL to start</span>
-            </div>
-          )}
-        </div>
-
-        {/* Controls */}
-        <div className="np__controls">
-          <button
-            className={`iconbtn${shuffle ? ' iconbtn--on' : ''}${pulseShuffle ? ' iconbtn--pulse' : ''}`}
-            onClick={() => {
-              setShuffle(!shuffle);
-              setPulseShuffle(true);
-            }}
-            onAnimationEnd={() => setPulseShuffle(false)}
-            aria-label="Shuffle"
-            title="Shuffle (S)"
-          >
-            <ShuffleIcon size={16} />
-          </button>
-          <button
-            className="btn btn--icon"
-            onClick={prev}
-            disabled={!currentTrack}
-            aria-label="Previous"
-            title="Previous (Shift+←)"
-          >
-            <PrevIcon size={18} />
-          </button>
-          <button
-            className="btn btn--play"
-            onClick={togglePlay}
-            aria-label={isLoading ? 'Loading' : isPlaying ? 'Pause' : 'Play'}
-            title={`${isLoading ? 'Loading' : isPlaying ? 'Pause' : 'Play'} (Space)`}
-          >
-            {isLoading ? (
-              <SpinnerIcon className="np__spin" size={22} />
+                <span className="pb__author">{currentTrack.author}</span>
+              </>
             ) : (
-              <span
-                className="np__play-icon"
-                key={isPlaying ? 'pause' : 'play'}
-              >
-                {isPlaying ? <PauseIcon size={22} /> : <PlayIcon size={22} />}
-              </span>
-            )}
-          </button>
-          <button
-            className="btn btn--icon"
-            onClick={next}
-            disabled={!currentTrack}
-            aria-label="Next"
-            title="Next (Shift+→)"
-          >
-            <NextIcon size={18} />
-          </button>
-          <button
-            className={`iconbtn${repeat !== 'off' ? ' iconbtn--on' : ''}${pulseRepeat ? ' iconbtn--pulse' : ''}`}
-            onClick={() => {
-              cycleRepeat();
-              setPulseRepeat(true);
-            }}
-            onAnimationEnd={() => setPulseRepeat(false)}
-            aria-label={
-              repeat === 'one'
-                ? 'Repeat one'
-                : repeat === 'all'
-                  ? 'Repeat all'
-                  : 'Repeat off'
-            }
-            title={`${repeat === 'one' ? 'Repeat one' : repeat === 'all' ? 'Repeat all' : 'Repeat off'} (R)`}
-          >
-            {repeat === 'one' ? (
-              <RepeatOneIcon size={16} />
-            ) : (
-              <RepeatIcon size={16} />
-            )}
-          </button>
-        </div>
-
-        {/* Progress */}
-        <div className="np__progress">
-          <span className="np__time">{formatTime(engine.currentTime)}</span>
-          <div className="np__seek-wrap">
-            <input
-              type="range"
-              className="np__seek"
-              min={0}
-              max={engine.duration || 0}
-              step={0.1}
-              value={seekValue}
-              onPointerDown={() => {
-                if (engine.duration > 0) {
-                  setIsScrubbing(true);
-                  setPreviewTime(displayedTime);
-                }
-              }}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (isScrubbing) setPreviewTime(v);
-                else engine.seek(v);
-              }}
-              onPointerUp={commitScrub}
-              onPointerCancel={commitScrub}
-              disabled={!currentTrack || engine.duration <= 0}
-              aria-label="Seek"
-              style={
-                {
-                  '--progress': `${displayedPercent}%`,
-                  '--buffered': `${bufferedPercent}%`,
-                } as React.CSSProperties
-              }
-            />
-            {isScrubbing && (
-              <div
-                className="np__seek-tip"
-                style={{ left: `${displayedPercent}%` }}
-              >
-                {formatTime(previewTime)}
-              </div>
-            )}
-          </div>
-          <span className="np__time">{formatTime(engine.duration)}</span>
-        </div>
-
-        {/* Volume */}
-        <div className="np__volume">
-          <button
-            type="button"
-            className="np__vol-btn"
-            onClick={() => engine.toggleMute(volume, setVolume)}
-            aria-label={volume > 0 ? 'Mute' : 'Unmute'}
-            title={`${volume > 0 ? 'Mute' : 'Unmute'} (M)`}
-          >
-            {volume > 0 ? (
-              <VolumeIcon size={16} />
-            ) : (
-              <VolumeMuteIcon size={16} />
-            )}
-          </button>
-          <input
-            type="range"
-            className="np__vol-range"
-            min={0}
-            max={3}
-            step={0.05}
-            value={volume}
-            onChange={(e) => setVolume(Number(e.target.value))}
-            aria-label="Volume"
-            style={{ '--vol': `${volPercent}%` } as React.CSSProperties}
-          />
-          <span className={`np__vol-value${volume > 1 ? ' is-boosted' : ''}`}>
-            {Math.round(volume * 100)}%
-          </span>
-        </div>
-
-        {/* Playing / Queue / Equalizer — segmented tab switches the panel below */}
-        <div className="np__tabs" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'playing'}
-            className={`np__tab${activeTab === 'playing' ? ' is-active' : ''}`}
-            onClick={() => setActiveTab('playing')}
-          >
-            Playing
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'queue'}
-            className={`np__tab${activeTab === 'queue' ? ' is-active' : ''}`}
-            onClick={() => setActiveTab('queue')}
-          >
-            <ListMusicIcon size={13} />
-            Queue
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'eq'}
-            className={`np__tab${activeTab === 'eq' ? ' is-active' : ''}`}
-            onClick={() => setActiveTab('eq')}
-          >
-            <SlidersIcon size={13} />
-            Equalizer
-          </button>
-        </div>
-        <div className={`np__extras${showExtras ? ' is-open' : ''}`}>
-          <div className="np__extras-content" key={activeTab}>
-            {activeTab === 'eq' && (
               <>
-                <SpeedControl speed={speed} onChange={setSpeed} />
-                <Equalizer
-                  gains={eqGains}
-                  onGainChange={(i, v) => {
-                    const next = [...eqGains];
-                    next[i] = v;
-                    setEqGains(next);
-                  }}
-                  onPreset={setEqGains}
-                />
+                <span className="pb__title">No track playing</span>
+                <span className="pb__author">Paste a TikTok URL to start</span>
               </>
             )}
-            {activeTab === 'queue' && (
-              <div className="np__queue">
-                {currentTrack && (
-                  <div className="np__queue-now" aria-current="true">
-                    <span
-                      className="np__queue-index np__queue-index--now"
-                      aria-hidden
-                    >
-                      ♪
-                    </span>
-                    <Cover
-                      src={currentTrack.cover}
-                      alt={currentTrack.title}
-                      subtitle={currentTrack.author}
-                      className="np__queue-cover"
-                    />
-                    <span className="np__queue-meta">
-                      <span className="np__queue-title">
-                        {currentTrack.title}
-                      </span>
-                      <span className="np__queue-author">
-                        {currentTrack.author}
-                      </span>
-                    </span>
-                    <span
-                      className={`eq-dots eq-dots--queue${isPlaying ? ' is-playing' : ''}`}
-                      aria-hidden
-                    >
-                      <span />
-                      <span />
-                      <span />
-                    </span>
-                  </div>
-                )}
-                {upNext.length === 0 ? (
-                  <p className="np__queue-empty">
-                    {shuffle
-                      ? 'Bài tiếp theo sẽ được chọn ngẫu nhiên.'
-                      : 'Đã hết danh sách phát.'}
-                  </p>
-                ) : (
-                  <ul className="np__queue-list">
-                    {upNext.map((track, i) => (
-                      <li key={track.id}>
-                        <button
-                          type="button"
-                          className="np__queue-item"
-                          onClick={() => playTrack(track)}
-                        >
-                          <span className="np__queue-index">{i + 1}</span>
-                          <Cover
-                            src={track.cover}
-                            alt={track.title}
-                            subtitle={track.author}
-                            className="np__queue-cover"
-                          />
-                          <span className="np__queue-meta">
-                            <span className="np__queue-title">
-                              {track.title}
-                            </span>
-                            <span className="np__queue-author">
-                              {track.author}
-                            </span>
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
+          </span>
+        </button>
+        {currentTrack && (
+          <button
+            type="button"
+            className={`pb__share${shareCopied ? ' is-copied' : ''}`}
+            onClick={shareTrack}
+            aria-label="Chia sẻ bài hát"
+            title={shareCopied ? 'Đã copy link!' : 'Chia sẻ bài hát'}
+          >
+            {shareCopied ? <CheckIcon size={16} /> : <ShareIcon size={16} />}
+          </button>
+        )}
+
+        {/* CENTER — transport + progress */}
+        <div className="pb__center">
+          {/* Controls */}
+          <div className="np__controls">
+            <button
+              className={`iconbtn pb__ctrl pb__ctrl--shuffle${shuffle ? ' iconbtn--on' : ''}${pulseShuffle ? ' iconbtn--pulse' : ''}`}
+              onClick={() => {
+                setShuffle(!shuffle);
+                setPulseShuffle(true);
+              }}
+              onAnimationEnd={() => setPulseShuffle(false)}
+              aria-label="Shuffle"
+              title="Shuffle (S)"
+            >
+              <ShuffleIcon size={16} />
+            </button>
+            <button
+              className="btn btn--icon pb__ctrl pb__ctrl--prev"
+              onClick={prev}
+              disabled={!currentTrack}
+              aria-label="Previous"
+              title="Previous (Shift+←)"
+            >
+              <PrevIcon size={18} />
+            </button>
+            <button
+              className="btn btn--play pb__ctrl pb__ctrl--play"
+              onClick={togglePlay}
+              aria-label={isLoading ? 'Loading' : isPlaying ? 'Pause' : 'Play'}
+              title={`${isLoading ? 'Loading' : isPlaying ? 'Pause' : 'Play'} (Space)`}
+            >
+              {isLoading ? (
+                <SpinnerIcon className="np__spin" size={22} />
+              ) : (
+                <span
+                  className="np__play-icon"
+                  key={isPlaying ? 'pause' : 'play'}
+                >
+                  {isPlaying ? <PauseIcon size={22} /> : <PlayIcon size={22} />}
+                </span>
+              )}
+            </button>
+            <button
+              className="btn btn--icon pb__ctrl pb__ctrl--next"
+              onClick={next}
+              disabled={!currentTrack}
+              aria-label="Next"
+              title="Next (Shift+→)"
+            >
+              <NextIcon size={18} />
+            </button>
+            <button
+              className={`iconbtn pb__ctrl pb__ctrl--repeat${repeat !== 'off' ? ' iconbtn--on' : ''}${pulseRepeat ? ' iconbtn--pulse' : ''}`}
+              onClick={() => {
+                cycleRepeat();
+                setPulseRepeat(true);
+              }}
+              onAnimationEnd={() => setPulseRepeat(false)}
+              aria-label={
+                repeat === 'one'
+                  ? 'Repeat one'
+                  : repeat === 'all'
+                    ? 'Repeat all'
+                    : 'Repeat off'
+              }
+              title={`${repeat === 'one' ? 'Repeat one' : repeat === 'all' ? 'Repeat all' : 'Repeat off'} (R)`}
+            >
+              {repeat === 'one' ? (
+                <RepeatOneIcon size={16} />
+              ) : (
+                <RepeatIcon size={16} />
+              )}
+            </button>
+          </div>
+
+          {/* Progress */}
+          <div className="np__progress">
+            <span className="np__time">{formatTime(engine.currentTime)}</span>
+            <div className="np__seek-wrap">
+              <input
+                type="range"
+                className="np__seek"
+                min={0}
+                max={engine.duration || 0}
+                step={0.1}
+                value={seekValue}
+                onPointerDown={() => {
+                  if (engine.duration > 0) {
+                    setIsScrubbing(true);
+                    setPreviewTime(displayedTime);
+                  }
+                }}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (isScrubbing) setPreviewTime(v);
+                  else engine.seek(v);
+                }}
+                onPointerUp={commitScrub}
+                onPointerCancel={commitScrub}
+                disabled={!currentTrack || engine.duration <= 0}
+                aria-label="Seek"
+                style={
+                  {
+                    '--progress': `${displayedPercent}%`,
+                    '--buffered': `${bufferedPercent}%`,
+                  } as React.CSSProperties
+                }
+              />
+              {isScrubbing && (
+                <div
+                  className="np__seek-tip"
+                  style={{ left: `${displayedPercent}%` }}
+                >
+                  {formatTime(previewTime)}
+                </div>
+              )}
+            </div>
+            <span className="np__time">{formatTime(engine.duration)}</span>
           </div>
         </div>
+        {/* /CENTER */}
+
+        {/* RIGHT — queue / equalizer / volume */}
+        <div className="pb__right">
+          <button
+            type="button"
+            className={`iconbtn pb__toggle${openPanel === 'queue' ? ' iconbtn--on' : ''}`}
+            onClick={() =>
+              setOpenPanel((p) => (p === 'queue' ? null : 'queue'))
+            }
+            aria-label="Hàng chờ"
+            title="Hàng chờ"
+          >
+            <ListMusicIcon size={18} />
+          </button>
+          <button
+            type="button"
+            className={`iconbtn pb__toggle${openPanel === 'eq' ? ' iconbtn--on' : ''}`}
+            onClick={() => setOpenPanel((p) => (p === 'eq' ? null : 'eq'))}
+            aria-label="Equalizer"
+            title="Equalizer"
+          >
+            <SlidersIcon size={18} />
+          </button>
+
+          {/* Volume — collapsed to the icon; bar reveals on hover / tap */}
+          <div
+            ref={volGroupRef}
+            className={`np__volume${isBoosted ? ' is-boosted' : ''}${volOpen ? ' is-open' : ''}`}
+          >
+            <button
+              type="button"
+              className="np__vol-btn"
+              onPointerDown={(e) => {
+                pointerTypeRef.current = e.pointerType;
+              }}
+              onClick={() => {
+                // Touch: first tap reveals the bar, a second tap (while open) mutes.
+                if (pointerTypeRef.current === 'touch' && !volOpen) {
+                  setVolOpen(true);
+                  return;
+                }
+                engine.toggleMute(volume, setVolume);
+              }}
+              aria-label={isMuted ? 'Unmute' : 'Mute'}
+              title={`${isMuted ? 'Unmute' : 'Mute'} (M)`}
+            >
+              {isMuted ? (
+                <VolumeMuteIcon size={16} />
+              ) : volume <= 0.5 ? (
+                <VolumeLowIcon size={16} />
+              ) : (
+                <VolumeIcon size={16} />
+              )}
+            </button>
+            <div className="np__vol-track" ref={volTrackRef}>
+              <input
+                type="range"
+                className="np__vol-range"
+                min={0}
+                max={3}
+                step={0.05}
+                value={volume}
+                onChange={(e) => setVolume(Number(e.target.value))}
+                onDoubleClick={() => setVolume(1)}
+                aria-label="Volume"
+                aria-valuetext={`${Math.round(volume * 100)}%`}
+                title="Double-click for 100% · scroll to adjust"
+                style={{ '--vol': `${volPercent}%` } as React.CSSProperties}
+              />
+              {/* 100% detent — marks the end of the normal range / start of boost */}
+              <span className="np__vol-detent" aria-hidden />
+            </div>
+            <span className={`np__vol-value${isBoosted ? ' is-boosted' : ''}`}>
+              {Math.round(volume * 100)}%
+            </span>
+          </div>
+        </div>
+        {/* /RIGHT */}
+
+        {/* Popover — Queue or Equalizer, anchored above the right zone */}
+        {openPanel && (
+          <div
+            ref={popoverRef}
+            className={`pb__popover pb__popover--${openPanel}`}
+          >
+            <div className="pb__popover-head">
+              <span className="pb__popover-title">
+                {openPanel === 'queue' ? 'Hàng chờ' : 'Equalizer & tốc độ'}
+              </span>
+              <button
+                type="button"
+                className="pb__popover-close"
+                onClick={() => setOpenPanel(null)}
+                aria-label="Đóng"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="pb__popover-body">
+              {openPanel === 'eq' && (
+                <>
+                  <SpeedControl speed={speed} onChange={setSpeed} />
+                  <Equalizer
+                    gains={eqGains}
+                    onGainChange={(i, v) => {
+                      const next = [...eqGains];
+                      next[i] = v;
+                      setEqGains(next);
+                    }}
+                    onPreset={setEqGains}
+                  />
+                </>
+              )}
+              {openPanel === 'queue' && (
+                <div className="np__queue">
+                  {currentTrack && (
+                    <div className="np__queue-now" aria-current="true">
+                      <span
+                        className="np__queue-index np__queue-index--now"
+                        aria-hidden
+                      >
+                        ♪
+                      </span>
+                      <Cover
+                        src={currentTrack.cover}
+                        alt={currentTrack.title}
+                        subtitle={currentTrack.author}
+                        className="np__queue-cover"
+                      />
+                      <span className="np__queue-meta">
+                        <span className="np__queue-title">
+                          {currentTrack.title}
+                        </span>
+                        <span className="np__queue-author">
+                          {currentTrack.author}
+                        </span>
+                      </span>
+                      <span
+                        className={`eq-dots eq-dots--queue${isPlaying ? ' is-playing' : ''}`}
+                        aria-hidden
+                      >
+                        <span />
+                        <span />
+                        <span />
+                      </span>
+                    </div>
+                  )}
+                  {upNext.length === 0 ? (
+                    <p className="np__queue-empty">
+                      {shuffle
+                        ? 'Bài tiếp theo sẽ được chọn ngẫu nhiên.'
+                        : 'Đã hết danh sách phát.'}
+                    </p>
+                  ) : (
+                    <ul className="np__queue-list">
+                      {upNext.map((track, i) => (
+                        <li key={track.id}>
+                          <button
+                            type="button"
+                            className="np__queue-item"
+                            onClick={() => playTrack(track)}
+                          >
+                            <span className="np__queue-index">{i + 1}</span>
+                            <Cover
+                              src={track.cover}
+                              alt={track.title}
+                              subtitle={track.author}
+                              className="np__queue-cover"
+                            />
+                            <span className="np__queue-meta">
+                              <span className="np__queue-title">
+                                {track.title}
+                              </span>
+                              <span className="np__queue-author">
+                                {track.author}
+                              </span>
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

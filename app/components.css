@@ -8,6 +8,9 @@
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
+  /* Reserve the strip the fixed player bar occupies so the sidebar/content
+     never sit underneath it (desktop). Mobile overrides this below. */
+  padding-bottom: var(--player-bar-h);
 }
 
 /* ── Sidebar ──────────────────────────────────────────── */
@@ -482,7 +485,7 @@
   background: transparent;
   border: 1px solid transparent;
   border-left: 2px solid transparent;
-  cursor: default;
+  cursor: pointer;
   transition:
     background 0.1s ease,
     border-color 0.15s ease;
@@ -676,19 +679,235 @@
 }
 
 /* ── Player panel (right sidebar) ─────────────────────── */
-.player-panel {
-  width: var(--player-w);
-  flex-shrink: 0;
+/* ── Unified fixed-bottom player bar ──────────────────── */
+.player-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 45;
+  height: var(--player-bar-h);
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 24px 20px;
+  gap: 14px;
+  padding: 0 20px;
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  border-left: var(--glass-border);
+  border-top: var(--glass-border);
+}
+
+/* LEFT — track identity (cover + title/author). Reset the <button> chrome. */
+.pb__identity {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: inherit;
+  text-align: left;
+  cursor: default;
+}
+
+.pb__cover {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  object-fit: cover;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+}
+
+.pb__cover--empty {
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.pb__meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pb__title {
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pb__author {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pb__share {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.pb__share:hover {
+  color: var(--text);
+  border-color: currentColor;
+}
+
+.pb__share.is-copied {
+  color: var(--accent);
+  border-color: currentColor;
+}
+
+/* CENTER — transport + progress */
+.pb__center {
+  flex: 0 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: min(46vw, 560px);
+}
+
+.pb__center .np__controls {
+  gap: 18px;
+}
+
+.pb__center .np__progress {
+  width: 100%;
+}
+
+/* RIGHT — queue / equalizer / volume */
+.pb__right {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* The volume group carries width:100% from its old vertical-panel home; in the
+   horizontal bar it must only be as wide as its (collapsible) contents. */
+.pb__right .np__volume {
+  width: auto;
+}
+
+/* Compact-bar top progress line — hidden on desktop (real seek bar shows). */
+.pb__mini-progress {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.pb__mini-progress > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+/* Popover — Queue / Equalizer, anchored above the bar's right edge */
+.pb__popover {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: 16px;
+  width: min(360px, calc(100vw - 32px));
+  max-height: min(60vh, 460px);
+  display: flex;
+  flex-direction: column;
+  background: rgba(18, 18, 22, 0.97);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  z-index: 50;
+  animation: pb-pop 0.16s ease;
+}
+
+.pb__popover--eq {
+  width: min(420px, calc(100vw - 32px));
+}
+
+@keyframes pb-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.pb__popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: var(--glass-border);
+}
+
+.pb__popover-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.pb__popover-close {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+
+.pb__popover-close:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.pb__popover-body {
+  padding: 12px 14px;
   overflow-y: auto;
+}
+
+/* Swipe-to-dismiss grip — only meaningful on the mobile sheet; hidden on the
+   desktop bar (where the drag handle has no role). */
+.np__sheet-handle {
+  display: none;
 }
 
 /* ── Now playing — turntable vinyl disc ───────────────── */
@@ -949,8 +1168,8 @@
 .np__volume {
   display: flex;
   align-items: center;
-  gap: 8px;
-  width: 100%;
+  gap: 0; /* spacing handled by the collapsible parts' margin so the */
+  width: 100%; /* collapsed state is a flush, lone icon */
 }
 
 .np__vol-btn {
@@ -961,12 +1180,21 @@
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  padding: 2px;
-  transition: color 0.12s ease;
+  padding: 6px;
+  border-radius: 999px;
+  transition:
+    color 0.12s ease,
+    background 0.12s ease;
 }
 
 .np__vol-btn:hover {
   color: var(--text);
+  background: var(--surface-3);
+}
+
+/* Keep the boost state legible even while the bar is collapsed */
+.np__volume.is-boosted .np__vol-btn {
+  color: var(--gold);
 }
 
 /* ── Range inputs ─────────────────────────────────────── */
@@ -992,18 +1220,82 @@ input[type="range"] {
   );
 }
 
+/* Collapsible slider: hidden by default, revealed on hover / focus / tap.
+   No overflow:hidden — that would clip the thumb; opacity does the hiding. */
+.np__vol-track {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  max-width: 0;
+  margin-left: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    max-width 0.24s ease,
+    margin-left 0.24s ease,
+    opacity 0.16s ease;
+}
+
 .np__vol-range {
   width: 100%;
-  flex: 1;
+}
+
+.np__volume:hover .np__vol-track,
+.np__volume:focus-within .np__vol-track,
+.np__volume.is-open .np__vol-track {
+  max-width: 100%;
+  margin-left: 8px;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Detent marking the 100% point (⅓ of the 0–300% track) */
+.np__vol-detent {
+  position: absolute;
+  left: 33.333%;
+  top: 50%;
+  width: 2px;
+  height: 10px;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: var(--muted-2);
+  pointer-events: none;
+  opacity: 0.7;
+  transition:
+    background 0.12s ease,
+    opacity 0.12s ease;
+}
+
+/* Once in the boost zone, the detent glows to mark the crossover */
+.np__volume.is-boosted .np__vol-detent {
+  background: var(--boost-tint);
+  opacity: 1;
 }
 
 .np__vol-value {
   flex: 0 0 auto;
-  min-width: 38px;
+  max-width: 0;
+  margin-left: 0;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
   text-align: right;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
+  transition:
+    max-width 0.24s ease,
+    margin-left 0.24s ease,
+    opacity 0.16s ease;
+}
+
+.np__volume:hover .np__vol-value,
+.np__volume:focus-within .np__vol-value,
+.np__volume.is-open .np__vol-value {
+  max-width: 46px;
+  margin-left: 8px;
+  opacity: 1;
 }
 
 .np__vol-value.is-boosted {
@@ -1029,6 +1321,27 @@ input[type="range"]::-moz-range-thumb {
   background: var(--text);
   border: 2px solid var(--accent);
   cursor: pointer;
+}
+
+/* Volume thumb: grow on hover/drag, and shift to the boost colour above 100% */
+.np__vol-range::-webkit-slider-thumb {
+  transition:
+    transform 0.12s ease,
+    border-color 0.12s ease;
+}
+.np__vol-track:hover .np__vol-range::-webkit-slider-thumb,
+.np__vol-range:active::-webkit-slider-thumb {
+  transform: scale(1.25);
+}
+.np__volume.is-boosted .np__vol-range::-webkit-slider-thumb {
+  border-color: var(--gold);
+}
+.np__vol-track:hover .np__vol-range::-moz-range-thumb,
+.np__vol-range:active::-moz-range-thumb {
+  transform: scale(1.25);
+}
+.np__volume.is-boosted .np__vol-range::-moz-range-thumb {
+  border-color: var(--gold);
 }
 
 /* ── Equalizer ────────────────────────────────────────── */
@@ -1072,29 +1385,31 @@ input[type="range"]::-moz-range-thumb {
   gap: 4px;
   justify-content: space-between;
   align-items: flex-end;
-  height: 100px;
-  padding: 0 2px;
+  padding: 8px 2px 0;
 }
 
 .eq__band {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   flex: 1;
 }
 
-.eq__band-slider {
+/* `input.` prefix is required: the global `input[type="range"]` reset has
+   specificity (0,1,1), which outranks a bare `.eq__band-slider` (0,1,0) and
+   would otherwise force these vertical faders down to the 4px track height. */
+input.eq__band-slider {
   writing-mode: vertical-lr;
   direction: rtl;
-  width: 4px;
-  height: 72px;
+  width: 6px;
+  height: 96px;
   background: var(--surface-3);
 }
 
-.eq__band-slider::-webkit-slider-thumb {
-  width: 10px;
-  height: 10px;
+input.eq__band-slider::-webkit-slider-thumb {
+  width: 12px;
+  height: 12px;
 }
 
 .eq__band-label {
@@ -2040,10 +2355,6 @@ input[type="range"]::-moz-range-thumb {
     display: none;
   }
 
-  .mini-player {
-    display: flex;
-  }
-
   .mobile-nav {
     display: flex;
     position: fixed;
@@ -2115,73 +2426,168 @@ input[type="range"]::-moz-range-thumb {
     min-height: calc(var(--header-h) + env(safe-area-inset-top));
   }
 
-  /* Reserve room for the floating MiniPlayer so the last rows of the
-     list are never hidden behind it */
+  /* Reserve room for the fixed player bar (which floats above the nav) so
+     the last rows of the list are never hidden behind it */
   .main__body {
-    padding-bottom: calc(var(--mini-h) + 36px);
+    padding-bottom: calc(var(--player-bar-h-mobile) + 36px);
   }
 
-  /* Player panel: hidden by default on mobile, shown when tab active */
-  .player-panel {
+  /* ── Player bar: compact form (sits above the nav) ─────── */
+  .player-bar {
+    bottom: var(--bottom-stack);
+    height: var(--player-bar-h-mobile);
+    gap: 10px;
+    padding: 0 12px;
+  }
+
+  /* Nothing playing → no bar on mobile (keeps the screen uncluttered) */
+  .player-bar:not(.has-track):not(.mobile-visible) {
     display: none;
   }
 
-  .player-panel.mobile-visible {
-    display: flex;
+  .pb__mini-progress {
+    display: block;
+  }
+
+  .player-bar .pb__cover {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* The compact bar shows only identity + play/next; the rest lives in the
+     expanded sheet. Tapping the identity opens that sheet. */
+  .player-bar:not(.mobile-visible) .pb__identity {
+    cursor: pointer;
+  }
+
+  .player-bar:not(.mobile-visible) .pb__share,
+  .player-bar:not(.mobile-visible) .pb__right,
+  .player-bar:not(.mobile-visible) .pb__ctrl--shuffle,
+  .player-bar:not(.mobile-visible) .pb__ctrl--prev,
+  .player-bar:not(.mobile-visible) .pb__ctrl--repeat,
+  .player-bar:not(.mobile-visible) .np__progress {
+    display: none;
+  }
+
+  .player-bar:not(.mobile-visible) .pb__center {
+    flex: 0 0 auto;
+    flex-direction: row;
+    width: auto;
+    gap: 6px;
+  }
+
+  .player-bar:not(.mobile-visible) .np__controls {
+    gap: 6px;
+  }
+
+  /* ── Player bar: expanded now-playing sheet ────────────── */
+  .player-bar.mobile-visible {
     position: fixed;
     inset: 0;
     bottom: var(--bottom-stack);
+    height: auto;
     width: 100%;
     z-index: 35;
-    border-left: none;
-    padding: calc(16px + env(safe-area-inset-top)) 24px 16px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 22px;
+    padding: calc(28px + env(safe-area-inset-top)) 24px
+      calc(var(--bottom-stack) + 28px);
+    border-top: none;
     overflow-y: auto;
-    gap: 14px;
   }
 
-  /* Children keep their natural height; the panel scrolls instead of
-     flex-shrink squashing the disc out of its aspect ratio */
-  .player-panel.mobile-visible > * {
-    flex-shrink: 0;
-  }
-
-  /* Grow-able spacers vertically center the player when it fits the
-     screen, and collapse to zero (top-aligned scroll) when it doesn't */
-  .player-panel.mobile-visible::before,
-  .player-panel.mobile-visible::after {
+  /* Grow-able spacers vertically center the content when it fits, and
+     collapse to zero (top-aligned scroll) when it doesn't */
+  .player-bar.mobile-visible::before,
+  .player-bar.mobile-visible::after {
     content: "";
     flex: 1 1 0;
     min-height: 0;
   }
 
-  /* Disc sized against the viewport height so it can never clip */
-  .player-panel.mobile-visible .np__disc-wrap {
-    width: min(68vw, 36vh, 320px);
-    width: min(68vw, 36dvh, 320px);
+  .player-bar.mobile-visible > * {
+    flex-shrink: 0;
+  }
+
+  .player-bar.mobile-visible .pb__mini-progress {
+    display: none;
+  }
+
+  .player-bar.mobile-visible .pb__identity {
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: 18px;
+    text-align: center;
+    cursor: default;
+  }
+
+  .player-bar.mobile-visible .pb__cover {
+    width: min(66vw, 38dvh, 320px);
+    height: min(66vw, 38dvh, 320px);
+    border-radius: 18px;
+  }
+
+  .player-bar.mobile-visible .pb__meta {
+    align-items: center;
+    text-align: center;
+  }
+
+  .player-bar.mobile-visible .pb__title {
+    white-space: normal;
+    font-size: 20px;
+  }
+
+  .player-bar.mobile-visible .pb__author {
+    font-size: 14px;
+  }
+
+  .player-bar.mobile-visible .pb__center {
+    width: 100%;
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .player-bar.mobile-visible .np__controls {
+    gap: 20px;
+  }
+
+  .player-bar.mobile-visible .pb__right {
+    flex: 0 0 auto;
+    width: 100%;
+    justify-content: center;
+    gap: 16px;
   }
 
   /* Finger-sized transport controls */
-  .player-panel.mobile-visible .btn--play {
+  .player-bar.mobile-visible .btn--play {
     width: 76px;
     height: 76px;
   }
-  .player-panel.mobile-visible .btn--play svg {
+  .player-bar.mobile-visible .btn--play svg {
     width: 28px;
     height: 28px;
   }
-
-  .player-panel.mobile-visible .btn--icon {
+  .player-bar.mobile-visible .btn--icon {
     width: 54px;
     height: 54px;
   }
-
-  .player-panel.mobile-visible .iconbtn {
+  .player-bar.mobile-visible .iconbtn {
     width: 48px;
     height: 48px;
   }
 
-  .player-panel.mobile-visible .np__controls {
-    gap: 20px;
+  /* Queue/EQ popover becomes a bottom sheet on mobile */
+  .pb__popover {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: var(--bottom-stack);
+    width: 100%;
+    max-width: 100%;
+    max-height: 72vh;
+    border-radius: var(--radius) var(--radius) 0 0;
   }
 
   /* Hide main content when on player/playlists tab */
@@ -2444,16 +2850,13 @@ input[type="range"]::-moz-range-thumb {
   }
 
   /* Mobile player adjustments */
-  .player-panel.mobile-visible {
-    padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
+  .player-bar.mobile-visible {
+    padding: calc(16px + env(safe-area-inset-top)) 16px
+      calc(var(--bottom-stack) + 20px);
   }
 
-  .eq__bands {
-    height: 80px;
-  }
-
-  .eq__band-slider {
-    height: 56px;
+  input.eq__band-slider {
+    height: 72px;
   }
 
   /* Modal adjustments for mobile */
@@ -2469,12 +2872,6 @@ input[type="range"]::-moz-range-thumb {
    Preserves the Neon Pulse language; everything below layers on
    top of the existing player architecture.
    ============================================================ */
-
-/* ── Panel geometry tweaks ─────────────────────────────── */
-.player-panel {
-  position: relative;
-  gap: 14px;
-}
 
 /* ── Focus-visible rings (a11y) ─────────────────────────── */
 .btn--play:focus-visible,
@@ -2925,7 +3322,7 @@ input[type="range"]::-moz-range-thumb {
     visibility: visible;
   }
 
-  .np__sheet-handle {
+  .player-bar.mobile-visible .np__sheet-handle {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2947,7 +3344,7 @@ input[type="range"]::-moz-range-thumb {
   }
 
   /* Bottom sheet that slides up instead of a full-screen toggle */
-  .player-panel.mobile-visible {
+  .player-bar.mobile-visible {
     top: auto;
     bottom: 0;
     left: 0;
@@ -2960,7 +3357,7 @@ input[type="range"]::-moz-range-thumb {
   }
 
   @starting-style {
-    .player-panel.mobile-visible {
+    .player-bar.mobile-visible {
       transform: translateY(100%);
     }
   }

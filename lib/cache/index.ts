@@ -64,7 +64,9 @@ const EXT_COVER_MIME: Record<string, string> = Object.fromEntries(
 );
 
 function coverExt(contentType: string): string {
-  return COVER_MIME_EXT[contentType.split(';')[0].trim().toLowerCase()] || 'jpg';
+  return (
+    COVER_MIME_EXT[contentType.split(';')[0].trim().toLowerCase()] || 'jpg'
+  );
 }
 
 export class FileCacheStore implements CacheStore {

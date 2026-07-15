@@ -15,7 +15,7 @@ export default function Equalizer({
   onPreset,
 }: EqualizerProps) {
   const [showPresets, setShowPresets] = useState(false);
-  const [activePreset, setActivePreset] = useState('Flat');
+  const [activePreset, setActivePreset] = useState('Bass Boost');
   const presetsRef = useRef<HTMLDivElement>(null);
 
   // Close the preset dropdown on any outside pointer-down (and on Escape).

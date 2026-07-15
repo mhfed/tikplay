@@ -51,6 +51,9 @@
   --header-h: 64px;
   --mini-h: 64px;
   --nav-h: 56px;
+  /* Unified fixed-bottom player bar */
+  --player-bar-h: 88px;
+  --player-bar-h-mobile: 64px;
   /* Total height of the fixed bottom stack (nav + home indicator) */
   --bottom-stack: calc(var(--nav-h) + env(safe-area-inset-bottom));
 

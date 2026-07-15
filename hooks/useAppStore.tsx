@@ -11,7 +11,12 @@ import {
   useOptimistic,
   useState,
 } from 'react';
+import { EQ_PRESETS } from '../lib/types';
 import type { AutoRule, Playlist, RepeatMode, Track } from '../lib/types';
+
+// Default EQ curve for new sessions — Bass Boost rather than Flat.
+const DEFAULT_EQ_GAINS =
+  EQ_PRESETS.find((p) => p.name === 'Bass Boost')?.gains ?? EQ_PRESETS[0].gains;
 
 export type AppView = 'home' | 'library';
 
@@ -139,9 +144,7 @@ export function AppStoreProvider({
   const [repeat, setRepeat] = useState<RepeatMode>('off');
   const [volume, setVolume] = useState(0.8);
   const [speed, setSpeed] = useState(1);
-  const [eqGains, setEqGains] = useState<number[]>([
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  ]);
+  const [eqGains, setEqGains] = useState<number[]>([...DEFAULT_EQ_GAINS]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
