@@ -1,0 +1,57 @@
+# Deploy craw-music (TikPlay) lên Fly.io qua GitHub Actions.
+#
+# Cần set secret FLY_API_TOKEN trong GitHub:
+#   Settings → Secrets and variables → Actions → New repository secret
+#   Lấy token: `fly tokens deploy -a craw-music` (hoặc `flyctl auth token`).
+
+name: Fly Deploy
+
+on:
+  push:
+    branches: [master]
+  # Nút "Run workflow" trong UI — có thể chọn branch bất kỳ.
+  workflow_dispatch:
+
+# Tránh 2 deploy đè nhau khi push liên tục.
+concurrency:
+  group: fly-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Lint (Biome)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+
+  deploy:
+    name: Fly deploy
+    needs: check
+    runs-on: ubuntu-latest
+    # Chỉ deploy khi có token; nếu thiếu thì job bị skip thay vì fail mù.
+    if: ${{ secrets.FLY_API_TOKEN != '' }}
+    environment:
+      name: production
+      url: https://craw-music.fly.dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+        with:
+          version: "0.3.85"
+
+      - name: Deploy
+        # Build trên remote builder của Fly → runner GH không cần DinD.
+        # Rolling để tránh downtime (app đang auto_stop_machines + volume craw_cache).
+        run: flyctl deploy --app craw-music --remote-only --strategy=rolling
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
