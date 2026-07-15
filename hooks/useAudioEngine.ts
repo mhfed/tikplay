@@ -15,6 +15,8 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
   const filtersRef = useRef<BiquadFilterNode[]>([]);
   const gainRef = useRef<GainNode | null>(null);
   const limiterRef = useRef<DynamicsCompressorNode | null>(null);
+  // Tap for the spectrum analyzer — read-only, sits at the end of the chain.
+  const analyserRef = useRef<AnalyserNode | null>(null);
   const connectedRef = useRef(false);
   const lastUrlRef = useRef<string | null>(null);
   const lastVolumeRef = useRef(0.8);
@@ -96,7 +98,16 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
     limiter.release.value = 0.25;
     limiterRef.current = limiter;
 
-    // Chain: source → filters → gain (boost) → limiter → destination
+    // Spectrum analyzer tap. fftSize 256 → 128 frequency bins, enough for a
+    // clean bar visualization; smoothing damps per-frame jitter. It's a
+    // pass-through node (doesn't alter the signal) placed last so it sees the
+    // final post-EQ/limiter output.
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.8;
+    analyserRef.current = analyser;
+
+    // Chain: source → filters → gain (boost) → limiter → analyser → destination
     let prev: AudioNode = source;
     for (const f of filters) {
       prev.connect(f);
@@ -104,7 +115,8 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
     }
     prev.connect(gain);
     gain.connect(limiter);
-    limiter.connect(ctx.destination);
+    limiter.connect(analyser);
+    analyser.connect(ctx.destination);
 
     connectedRef.current = true;
   }, [getOrCreateAudio]);
@@ -347,5 +359,6 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
     isReady,
     buffered,
     audioRef,
+    analyserRef,
   };
 }

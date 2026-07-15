@@ -22,6 +22,7 @@ import {
   VolumeLowIcon,
   VolumeMuteIcon,
 } from './icons';
+import SpectrumAnalyzer from './SpectrumAnalyzer';
 import SpeedControl from './SpeedControl';
 
 type PopoverPanel = 'queue' | 'eq' | null;
@@ -538,6 +539,16 @@ export default function PlayerPanel({
           </button>
         )}
 
+        {/* Spectrum analyzer — mobile sheet centerpiece (between the shrunk
+            cover and the transport controls). Hidden on desktop via CSS. */}
+        {currentTrack && (
+          <SpectrumAnalyzer
+            analyserRef={engine.analyserRef}
+            isPlaying={isPlaying}
+            className="pb__spectrum pb__spectrum--mobile"
+          />
+        )}
+
         {/* CENTER — transport + progress */}
         <div className="pb__center">
           {/* Controls */}
@@ -662,6 +673,15 @@ export default function PlayerPanel({
 
         {/* RIGHT — queue / equalizer / volume */}
         <div className="pb__right">
+          {/* Spectrum analyzer — compact desktop strip. Hidden on mobile. */}
+          {currentTrack && (
+            <SpectrumAnalyzer
+              analyserRef={engine.analyserRef}
+              isPlaying={isPlaying}
+              barCount={24}
+              className="pb__spectrum pb__spectrum--desktop"
+            />
+          )}
           <button
             type="button"
             className={`iconbtn pb__toggle${openPanel === 'queue' ? ' iconbtn--on' : ''}`}

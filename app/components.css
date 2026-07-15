@@ -812,6 +812,28 @@
   width: auto;
 }
 
+/* ── Spectrum analyzer ─────────────────────────────────── */
+/* Two instances live in the DOM (desktop strip inside .pb__right, mobile
+   centerpiece before .pb__center); each breakpoint shows exactly one and the
+   hidden canvas (clientWidth 0) skips painting. */
+.pb__spectrum {
+  display: block;
+  opacity: 0.9;
+}
+
+/* Desktop: a compact strip that sits left of the queue/EQ/volume group. */
+.pb__spectrum--desktop {
+  width: 132px;
+  height: 40px;
+  flex-shrink: 0;
+  margin-right: 2px;
+}
+
+/* Mobile instance is off until the expanded sheet turns it on. */
+.pb__spectrum--mobile {
+  display: none;
+}
+
 /* Compact-bar top progress line — hidden on desktop (real seek bar shows). */
 .pb__mini-progress {
   display: none;
@@ -2522,15 +2544,30 @@ input.eq__band-slider::-webkit-slider-thumb {
     cursor: default;
   }
 
+  /* Shrunk in the sheet to make room for the spectrum centerpiece below it. */
   .player-bar.mobile-visible .pb__cover {
-    width: min(66vw, 38dvh, 320px);
-    height: min(66vw, 38dvh, 320px);
+    width: min(46vw, 26dvh, 220px);
+    height: min(46vw, 26dvh, 220px);
     border-radius: 18px;
   }
 
   .player-bar.mobile-visible .pb__meta {
     align-items: center;
     text-align: center;
+  }
+
+  /* Desktop strip has no place in either the compact bar or the sheet. */
+  .pb__spectrum--desktop {
+    display: none;
+  }
+
+  /* Mobile centerpiece: full-width bars between the cover and the controls,
+     shown only in the expanded sheet (not the compact bar). */
+  .player-bar.mobile-visible .pb__spectrum--mobile {
+    display: block;
+    width: min(72vw, 360px);
+    height: 72px;
+    margin: 0 auto;
   }
 
   .player-bar.mobile-visible .pb__title {
