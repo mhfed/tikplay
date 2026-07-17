@@ -25,25 +25,31 @@ export default function AddPlaylistDialog({ onClose }: Props) {
         className="modal"
         onClick={(e) => e.stopPropagation()}
         onSubmit={handleSubmit}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-playlist-title"
       >
-        <h2 className="modal__title">New Playlist</h2>
+        <h2 className="modal__title" id="add-playlist-title">
+          Tạo danh sách phát
+        </h2>
         <input
           className="modal__input"
           type="text"
-          placeholder="Playlist name..."
+          placeholder="Tên danh sách phát..."
           value={name}
           onChange={(e) => setName(e.target.value)}
+          aria-label="Tên danh sách phát"
         />
         <div className="modal__actions">
           <button type="button" className="btn" onClick={onClose}>
-            Cancel
+            Hủy
           </button>
           <button
             type="submit"
             className="btn btn--primary"
             disabled={!name.trim()}
           >
-            Create
+            Tạo mới
           </button>
         </div>
       </form>

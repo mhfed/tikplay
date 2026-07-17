@@ -54,9 +54,10 @@ export default function Equalizer({
   return (
     <div className="eq">
       <div className="eq__header">
-        <span className="eq__title">Equalizer</span>
+        <span className="eq__title">Bộ cân bằng</span>
         <div className="eq__presets" ref={presetsRef}>
           <button
+            type="button"
             className="eq__preset-btn"
             aria-haspopup="listbox"
             aria-expanded={showPresets}
@@ -68,6 +69,7 @@ export default function Equalizer({
             <div className="eq__preset-dropdown" role="listbox">
               {EQ_PRESETS.map((p) => (
                 <button
+                  type="button"
                   key={p.name}
                   role="option"
                   aria-selected={p.name === activePreset}
@@ -97,7 +99,7 @@ export default function Equalizer({
               value={gains[i]}
               onChange={(e) => {
                 onGainChange(i, Number(e.target.value));
-                setActivePreset('Custom');
+                setActivePreset('Tùy chỉnh');
               }}
               aria-label={`${formatHz(freq)} Hz`}
             />

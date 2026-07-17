@@ -259,7 +259,7 @@ export function getAllCategories(): MusicCategory[] {
     count: countMap.get(c.slug) || 0,
   })).concat(
     countMap.has('others')
-      ? [{ slug: 'others', name: 'Others', count: countMap.get('others')! }]
+      ? [{ slug: 'others', name: 'Khác', count: countMap.get('others')! }]
       : [],
   );
 }

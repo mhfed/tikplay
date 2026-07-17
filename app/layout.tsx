@@ -1,5 +1,6 @@
 // biome-ignore-all lint/security/noDangerouslySetInnerHtml: JSON-LD is serialized from a static object owned by the app.
 import './globals.css';
+import './components.css';
 import type { Metadata, Viewport } from 'next';
 import { Hanken_Grotesk, JetBrains_Mono, Montserrat } from 'next/font/google';
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';

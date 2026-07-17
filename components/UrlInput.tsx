@@ -7,9 +7,15 @@ interface UrlInputProps {
   onAdd: (url: string) => void;
   loading: boolean;
   error: string | null;
+  compact?: boolean;
 }
 
-export default function UrlInput({ onAdd, loading, error }: UrlInputProps) {
+export default function UrlInput({
+  onAdd,
+  loading,
+  error,
+  compact = false,
+}: UrlInputProps) {
   const [value, setValue] = useState('');
 
   const submit = (e: React.FormEvent) => {
@@ -21,15 +27,24 @@ export default function UrlInput({ onAdd, loading, error }: UrlInputProps) {
   };
 
   return (
-    <form className="url-input" onSubmit={submit}>
+    <form
+      className={`url-input${compact ? ' url-input--compact' : ''}`}
+      onSubmit={submit}
+      aria-label="Thêm bài hát từ TikTok"
+    >
       <input
         type="text"
         className="url-input__field"
-        placeholder="Paste a TikTok video URL..."
+        placeholder="Dán liên kết video TikTok..."
         value={value}
         onChange={(e) => setValue(e.target.value)}
         disabled={loading}
-        aria-label="TikTok URL"
+        aria-label="Liên kết video TikTok"
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? 'tiktok-url-error' : undefined}
+        inputMode="url"
+        autoComplete="url"
+        autoCapitalize="none"
         spellCheck={false}
       />
       <button
@@ -38,14 +53,18 @@ export default function UrlInput({ onAdd, loading, error }: UrlInputProps) {
         disabled={loading || !value.trim()}
       >
         {loading ? (
-          'Loading...'
+          'Đang tải...'
         ) : (
           <>
-            <PlusIcon size={14} /> Add
+            <PlusIcon size={14} /> Thêm
           </>
         )}
       </button>
-      {error && <p className="url-input__error">{error}</p>}
+      {error && (
+        <p id="tiktok-url-error" className="url-input__error" role="alert">
+          {error}
+        </p>
+      )}
     </form>
   );
 }

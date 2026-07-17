@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
+import { CloseIcon } from './icons';
 
 interface Props {
   onClose: () => void;
@@ -29,10 +30,15 @@ export default function AutoRuleDialog({ onClose }: Props) {
         className="modal"
         onClick={(e) => e.stopPropagation()}
         style={{ minWidth: 440 }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auto-rule-title"
       >
-        <h2 className="modal__title">Auto Rules</h2>
+        <h2 className="modal__title" id="auto-rule-title">
+          Quy tắc tự động
+        </h2>
         <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>
-          Tracks matching keywords will be auto-added to playlists.
+          Bài hát khớp từ khóa sẽ tự động được thêm vào danh sách phát.
         </p>
 
         {autoRules.length > 0 && (
@@ -49,11 +55,13 @@ export default function AutoRuleDialog({ onClose }: Props) {
                     {pl?.name || '?'}
                   </span>
                   <button
+                    type="button"
                     className="modal__rule-delete"
                     onClick={() => deleteAutoRule(rule.id)}
-                    title="Delete rule"
+                    aria-label={`Xóa quy tắc ${rule.keyword}`}
+                    title="Xóa quy tắc"
                   >
-                    &times;
+                    <CloseIcon size={14} />
                   </button>
                 </li>
               );
@@ -68,19 +76,21 @@ export default function AutoRuleDialog({ onClose }: Props) {
           <input
             className="modal__input"
             type="text"
-            placeholder="Keyword (e.g. chill, remix)"
+            placeholder="Từ khóa (ví dụ: chill, remix)"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             style={{ flex: '1 1 140px', marginBottom: 0 }}
+            aria-label="Từ khóa"
           />
           <select
             className="modal__input"
             value={playlistId}
             onChange={(e) => setPlaylistId(Number(e.target.value))}
             style={{ flex: '1 1 140px', marginBottom: 0 }}
+            aria-label="Danh sách phát đích"
           >
             <option value={0} disabled>
-              Select playlist...
+              Chọn danh sách phát...
             </option>
             {userPlaylists.map((p) => (
               <option key={p.id} value={p.id}>
@@ -93,9 +103,10 @@ export default function AutoRuleDialog({ onClose }: Props) {
             value={matchMode}
             onChange={(e) => setMatchMode(e.target.value)}
             style={{ flex: '0 0 120px', marginBottom: 0 }}
+            aria-label="Kiểu khớp từ khóa"
           >
-            <option value="contains">Contains</option>
-            <option value="starts_with">Starts with</option>
+            <option value="contains">Có chứa</option>
+            <option value="starts_with">Bắt đầu bằng</option>
           </select>
           <button
             type="submit"
@@ -103,13 +114,13 @@ export default function AutoRuleDialog({ onClose }: Props) {
             disabled={!keyword.trim() || !playlistId}
             style={{ flex: '0 0 auto' }}
           >
-            Add Rule
+            Thêm quy tắc
           </button>
         </form>
 
         <div className="modal__actions" style={{ marginTop: 16 }}>
           <button type="button" className="btn" onClick={onClose}>
-            Close
+            Đóng
           </button>
         </div>
       </div>

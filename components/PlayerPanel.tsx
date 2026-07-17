@@ -5,9 +5,9 @@ import { useAppStore } from '../hooks/useAppStore';
 import { useAudioEngine } from '../hooks/useAudioEngine';
 import Cover from './Cover';
 import Equalizer from './Equalizer';
-import TrackTrimmer from './TrackTrimmer';
 import {
   CheckIcon,
+  CloseIcon,
   ListMusicIcon,
   NextIcon,
   PauseIcon,
@@ -25,6 +25,7 @@ import {
 } from './icons';
 import SpectrumAnalyzer from './SpectrumAnalyzer';
 import SpeedControl from './SpeedControl';
+import TrackTrimmer from './TrackTrimmer';
 
 type PopoverPanel = 'queue' | 'eq' | null;
 
@@ -45,7 +46,7 @@ interface PlayerPanelProps {
 const SHEET_CLOSE_THRESHOLD = 100;
 // Matches the mobile sheet slide transition so the local close animation
 // lines up with the CSS one.
-const SHEET_CLOSE_MS = 280;
+const SHEET_CLOSE_MS = 320;
 
 export default function PlayerPanel({
   mobileTab,
@@ -93,6 +94,7 @@ export default function PlayerPanel({
 
   // ── Mobile sheet drag / close ──────────────────────────
   const isMobileVisible = mobileTab === 'player';
+  const isMobileObscured = mobileTab === 'playlists';
   const [dragging, setDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [closing, setClosing] = useState(false);
@@ -430,7 +432,7 @@ export default function PlayerPanel({
       ? { transform: `translateY(${dragOffset}px)`, transition: 'none' }
       : undefined;
 
-  const panelClass = `player-bar${isMobileVisible ? ' mobile-visible' : ''}${currentTrack ? ' has-track' : ''}`;
+  const panelClass = `player-bar${isMobileVisible ? ' mobile-visible' : ''}${isMobileObscured ? ' mobile-obscured' : ''}${currentTrack ? ' has-track' : ''}`;
 
   // On mobile the compact bar is tappable to expand into the full sheet; on
   // desktop there's no sheet, so tapping the identity area does nothing.
@@ -477,7 +479,7 @@ export default function PlayerPanel({
         {/* Compact-bar progress line — a thin fill along the top of the bar,
             visible only in the collapsed (mobile) state via CSS. */}
         <div className="pb__mini-progress" aria-hidden>
-          <span style={{ width: `${progressPercent}%` }} />
+          <span style={{ transform: `scaleX(${progressPercent / 100})` }} />
         </div>
 
         {/* LEFT — track identity. On mobile the whole zone expands the sheet. */}
@@ -510,8 +512,8 @@ export default function PlayerPanel({
               </>
             ) : (
               <>
-                <span className="pb__title">No track playing</span>
-                <span className="pb__author">Paste a TikTok URL to start</span>
+                <span className="pb__title">Chưa phát bài nào</span>
+                <span className="pb__author">Dán URL TikTok để bắt đầu</span>
               </>
             )}
           </span>
@@ -543,31 +545,36 @@ export default function PlayerPanel({
           {/* Controls */}
           <div className="np__controls">
             <button
+              type="button"
               className={`iconbtn pb__ctrl pb__ctrl--shuffle${shuffle ? ' iconbtn--on' : ''}${pulseShuffle ? ' iconbtn--pulse' : ''}`}
               onClick={() => {
                 setShuffle(!shuffle);
                 setPulseShuffle(true);
               }}
               onAnimationEnd={() => setPulseShuffle(false)}
-              aria-label="Shuffle"
-              title="Shuffle (S)"
+              aria-label="Phát ngẫu nhiên"
+              title="Phát ngẫu nhiên (S)"
             >
               <ShuffleIcon size={16} />
             </button>
             <button
+              type="button"
               className="btn btn--icon pb__ctrl pb__ctrl--prev"
               onClick={prev}
               disabled={!currentTrack}
-              aria-label="Previous"
-              title="Previous (Shift+←)"
+              aria-label="Bài trước"
+              title="Bài trước (Shift+←)"
             >
               <PrevIcon size={18} />
             </button>
             <button
+              type="button"
               className="btn btn--play pb__ctrl pb__ctrl--play"
               onClick={togglePlay}
-              aria-label={isLoading ? 'Loading' : isPlaying ? 'Pause' : 'Play'}
-              title={`${isLoading ? 'Loading' : isPlaying ? 'Pause' : 'Play'} (Space)`}
+              aria-label={
+                isLoading ? 'Đang tải' : isPlaying ? 'Tạm dừng' : 'Phát'
+              }
+              title={`${isLoading ? 'Đang tải' : isPlaying ? 'Tạm dừng' : 'Phát'} (Space)`}
             >
               {isLoading ? (
                 <SpinnerIcon className="np__spin" size={22} />
@@ -581,15 +588,17 @@ export default function PlayerPanel({
               )}
             </button>
             <button
+              type="button"
               className="btn btn--icon pb__ctrl pb__ctrl--next"
               onClick={next}
               disabled={!currentTrack}
-              aria-label="Next"
-              title="Next (Shift+→)"
+              aria-label="Bài tiếp theo"
+              title="Bài tiếp theo (Shift+→)"
             >
               <NextIcon size={18} />
             </button>
             <button
+              type="button"
               className={`iconbtn pb__ctrl pb__ctrl--repeat${repeat !== 'off' ? ' iconbtn--on' : ''}${pulseRepeat ? ' iconbtn--pulse' : ''}`}
               onClick={() => {
                 cycleRepeat();
@@ -598,12 +607,12 @@ export default function PlayerPanel({
               onAnimationEnd={() => setPulseRepeat(false)}
               aria-label={
                 repeat === 'one'
-                  ? 'Repeat one'
+                  ? 'Lặp lại một bài'
                   : repeat === 'all'
-                    ? 'Repeat all'
-                    : 'Repeat off'
+                    ? 'Lặp lại tất cả'
+                    : 'Tắt lặp lại'
               }
-              title={`${repeat === 'one' ? 'Repeat one' : repeat === 'all' ? 'Repeat all' : 'Repeat off'} (R)`}
+              title={`${repeat === 'one' ? 'Lặp lại một bài' : repeat === 'all' ? 'Lặp lại tất cả' : 'Tắt lặp lại'} (R)`}
             >
               {repeat === 'one' ? (
                 <RepeatOneIcon size={16} />
@@ -638,7 +647,7 @@ export default function PlayerPanel({
                 onPointerUp={commitScrub}
                 onPointerCancel={commitScrub}
                 disabled={!currentTrack || engine.duration <= 0}
-                aria-label="Seek"
+                aria-label="Tua bài hát"
                 style={
                   {
                     '--progress': `${displayedPercent}%`,
@@ -686,8 +695,8 @@ export default function PlayerPanel({
             type="button"
             className={`iconbtn pb__toggle${openPanel === 'eq' ? ' iconbtn--on' : ''}`}
             onClick={() => setOpenPanel((p) => (p === 'eq' ? null : 'eq'))}
-            aria-label="Equalizer"
-            title="Equalizer"
+            aria-label="Bộ cân bằng"
+            title="Bộ cân bằng"
           >
             <SlidersIcon size={18} />
           </button>
@@ -701,8 +710,8 @@ export default function PlayerPanel({
               type="button"
               className="np__vol-btn"
               onClick={() => engine.toggleMute(volume, setVolume)}
-              aria-label={isMuted ? 'Unmute' : 'Mute'}
-              title={`${isMuted ? 'Unmute' : 'Mute'} (M)`}
+              aria-label={isMuted ? 'Bật âm thanh' : 'Tắt âm thanh'}
+              title={`${isMuted ? 'Bật âm thanh' : 'Tắt âm thanh'} (M)`}
             >
               {isMuted ? (
                 <VolumeMuteIcon size={16} />
@@ -722,9 +731,9 @@ export default function PlayerPanel({
                 value={volume}
                 onChange={(e) => setVolume(Number(e.target.value))}
                 onDoubleClick={() => setVolume(1)}
-                aria-label="Volume"
+                aria-label="Âm lượng"
                 aria-valuetext={`${Math.round(volume * 100)}%`}
-                title="Double-click for 100% · scroll to adjust"
+                title="Nhấp đúp về 100% · cuộn để điều chỉnh"
                 style={{ '--vol': `${volPercent}%` } as React.CSSProperties}
               />
               {/* 100% detent — marks the end of the normal range / start of boost */}
@@ -745,7 +754,7 @@ export default function PlayerPanel({
           >
             <div className="pb__popover-head">
               <span className="pb__popover-title">
-                {openPanel === 'queue' ? 'Hàng chờ' : 'Equalizer & tốc độ'}
+                {openPanel === 'queue' ? 'Hàng chờ' : 'Bộ cân bằng & tốc độ'}
               </span>
               <button
                 type="button"
@@ -753,7 +762,7 @@ export default function PlayerPanel({
                 onClick={() => setOpenPanel(null)}
                 aria-label="Đóng"
               >
-                ✕
+                <CloseIcon size={15} />
               </button>
             </div>
             <div className="pb__popover-body">

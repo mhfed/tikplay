@@ -564,7 +564,7 @@ export function getCategory(slug: string): CategoryDef | undefined {
   return CATEGORIES.find((c) => c.slug === slug);
 }
 
-/** Map slugs to human-readable names (with "Others" fallback). */
+/** Map slugs to human-readable names (with a localized fallback). */
 export function categoryName(slug: string): string {
-  return getCategory(slug)?.name ?? 'Others';
+  return getCategory(slug)?.name ?? 'Khác';
 }
