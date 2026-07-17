@@ -49,14 +49,21 @@ export default function TrackRow({
       fn?.();
     };
 
+  const handlePlayClick = () => {
+    // If the track is not active, this first click activates it.
+    // Ensure we trigger the global audio unlock correctly natively attached to this touch/click.
+    // The hook in AppStore will also call `el.play()`.
+    onPlay();
+  };
+
   return (
     <li
       ref={setNodeRef}
       style={style}
       className={`track-row${isActive ? ' track-row--active' : ''}${isDragging ? ' track-row--dragging' : ''}`}
-      onClick={onPlay}
+      onClick={handlePlayClick}
       onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
+        if (e.key === 'Enter') {
           e.preventDefault();
           onPlay();
         }

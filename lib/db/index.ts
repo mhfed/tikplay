@@ -21,6 +21,7 @@ export interface DbTrackRow {
   cover: string;
   duration: number;
   added_at: number;
+  category?: string;
 }
 
 export interface DbPlaylistRow {

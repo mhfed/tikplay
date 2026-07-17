@@ -1,7 +1,8 @@
 'use client';
 
 import { useAppStore } from '../hooks/useAppStore';
-import { PlayIcon } from './icons';
+import { categoryName } from '../lib/categories';
+import { CloseIcon, PlayIcon } from './icons';
 import SearchBar from './SearchBar';
 import TrackList from './TrackList';
 import UrlInput from './UrlInput';
@@ -10,11 +11,13 @@ export default function PlaylistView() {
   const {
     playlists,
     currentPlaylistId,
+    selectedCategory,
     tracks,
     query,
     setQuery,
     addTrackFromUrl,
     playAll,
+    selectCategory,
     loading,
     error,
   } = useAppStore();
@@ -26,17 +29,23 @@ export default function PlaylistView() {
           name: 'All Tracks',
         };
 
+  const categoryLabel = selectedCategory ? categoryName(selectedCategory) : null;
+
   return (
     <div className="main">
       <div className="main__header">
         <div className="main__heading">
-          <h1 className="main__title">{currentPlaylist.name}</h1>
+          <h1 className="main__title">
+            {categoryLabel ? `${categoryLabel} Music` : currentPlaylist.name}
+          </h1>
           <p className="main__subtitle">
-            {currentPlaylistId === 1
-              ? 'Nhạc đã tải về của bạn'
-              : currentPlaylistId === -1
-                ? 'Những bài bạn đã thích'
-                : `${tracks.length} bài hát`}
+            {categoryLabel
+              ? `${tracks.length} bài hát`
+              : currentPlaylistId === 1
+                ? 'Nhạc đã tải về của bạn'
+                : currentPlaylistId === -1
+                  ? 'Những bài bạn đã thích'
+                  : `${tracks.length} bài hát`}
           </p>
         </div>
         {tracks.length > 0 && (
@@ -44,7 +53,18 @@ export default function PlaylistView() {
             <PlayIcon size={14} /> Play All
           </button>
         )}
-        <SearchBar value={query} onChange={setQuery} />
+        <div className="main__filters">
+          {selectedCategory && (
+            <button
+              className="main__filter-chip is-active"
+              onClick={() => selectCategory(null)}
+            >
+              {categoryLabel}
+              <CloseIcon size={12} />
+            </button>
+          )}
+          <SearchBar value={query} onChange={setQuery} />
+        </div>
       </div>
       <div className="main__body">
         <UrlInput onAdd={addTrackFromUrl} loading={loading} error={error} />

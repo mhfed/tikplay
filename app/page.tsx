@@ -1,6 +1,7 @@
 import AppShell from '@/components/AppShell';
 import { AppStoreProvider, type InitialAppData } from '@/hooks/useAppStore';
 import {
+  getAllCategories,
   getAllPlaylists,
   getAllTracks,
   getAutoRules,
@@ -53,6 +54,7 @@ export default async function Page({
   const initialData: InitialAppData = {
     tracks,
     playlists: getAllPlaylists(),
+    categories: getAllCategories(),
     favoriteIds: Array.from(favIds),
     autoRules: getAutoRules(),
     currentPlaylistId: pl,

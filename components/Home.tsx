@@ -23,6 +23,7 @@ export default function Home({ onOpenLibrary }: HomeProps) {
   const {
     tracks,
     playlists,
+    categories,
     favorites,
     recentlyPlayed,
     currentTrack,
@@ -31,6 +32,7 @@ export default function Home({ onOpenLibrary }: HomeProps) {
     playAll,
     setShuffle,
     selectPlaylist,
+    selectCategory,
   } = useAppStore();
 
   const heroTrack = useMemo<Track | null>(() => {
@@ -171,6 +173,38 @@ export default function Home({ onOpenLibrary }: HomeProps) {
         </HomeRow>
       )}
 
+      {categories.length > 0 && (
+        <section className="home-section">
+          <div className="home-section__head">
+            <h2 className="home-section__title">
+              <TagIcon />
+              Thể loại nhạc
+            </h2>
+            <p className="home-section__subtitle">Khám phá theo thể loại</p>
+          </div>
+          <div className="home-category-grid">
+            {categories
+              .filter((c) => c.count && c.count > 0)
+              .slice(0, 10)
+              .map((c) => (
+                <button
+                  key={c.slug}
+                  className="home-category-card"
+                  onClick={() => {
+                    withViewTransition(() => selectCategory(c.slug));
+                    onOpenLibrary?.();
+                  }}
+                >
+                  <span className="home-category-card__name">{c.name}</span>
+                  <span className="home-category-card__count">
+                    {c.count} bài
+                  </span>
+                </button>
+              ))}
+          </div>
+        </section>
+      )}
+
       <HomeRow
         icon={<ListMusicIcon size={16} />}
         title="Mới thêm gần đây"
@@ -271,6 +305,25 @@ function PlaylistCard({
         )}
       </span>
     </button>
+  );
+}
+
+function TagIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" />
+      <path d="M7 7h.01" />
+    </svg>
   );
 }
 

@@ -21,9 +21,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
-# Install yt-dlp + curl_cffi (curl_cffi is REQUIRED — TikTok now needs
-# impersonation, without it yt-dlp fails with "Requested format is not
-# available"). --break-system-packages needed on Debian bookworm (PEP 668).
+# Install yt-dlp (and curl_cffi for optional impersonation fallback).
+# --break-system-packages needed on Debian bookworm (PEP 668).
 RUN pip3 install --no-cache-dir --break-system-packages yt-dlp curl_cffi
 
 # Try to refresh yt-dlp at build time (best-effort; TikTok changes often).

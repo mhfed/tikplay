@@ -1,4 +1,5 @@
-import type { AutoRule, DbTrack, Playlist } from '../types';
+import { CATEGORIES, categoryName, detectCategory } from '../categories';
+import type { AutoRule, DbTrack, MusicCategory, Playlist } from '../types';
 import { type DbTrackRow, getDb, saveDb } from './index';
 
 function toDbTrack(row: DbTrackRow): DbTrack {
@@ -34,7 +35,8 @@ export function upsertTrack(t: Omit<DbTrack, 'id'>): DbTrack {
     return toDbTrack(existing);
   }
   const id = db.nextTrackId++;
-  const row: DbTrackRow = { id, ...t };
+  const category = t.category || detectCategory(t.title, t.author);
+  const row: DbTrackRow = { id, ...t, category };
   db.tracks.push(row);
   saveDb();
   return toDbTrack(row);
@@ -239,4 +241,33 @@ export function applyAutoRules(
     else if (rule.match_mode === 'starts_with') matched = text.startsWith(kw);
     if (matched) addTrackToPlaylist(rule.playlist_id, trackId);
   }
+}
+
+// ── CATEGORIES ───────────────────────────────────────────
+
+/** Get all categories that have at least one track, with counts. */
+export function getAllCategories(): MusicCategory[] {
+  const db = getDb();
+  const countMap = new Map<string, number>();
+  for (const t of db.tracks) {
+    const cat = (t as DbTrackRow).category || 'others';
+    countMap.set(cat, (countMap.get(cat) || 0) + 1);
+  }
+  return CATEGORIES.map((c) => ({
+    slug: c.slug,
+    name: c.name,
+    count: countMap.get(c.slug) || 0,
+  })).concat(
+    countMap.has('others')
+      ? [{ slug: 'others', name: 'Others', count: countMap.get('others')! }]
+      : [],
+  );
+}
+
+/** Get tracks filtered by category slug. */
+export function getTracksByCategory(category: string): DbTrack[] {
+  return getDb()
+    .tracks.filter((t) => (t.category || 'others') === category)
+    .sort((a, b) => b.added_at - a.added_at)
+    .map(toDbTrack);
 }
