@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import AddPlaylistDialog from './AddPlaylistDialog';
@@ -7,18 +9,13 @@ import AutoRuleDialog from './AutoRuleDialog';
 import { ClockIcon, ListMusicIcon, MusicIcon, PlusIcon } from './icons';
 
 export default function Sidebar() {
-  const {
-    playlists,
-    categories,
-    currentPlaylistId,
-    selectedCategory,
-    view,
-    selectPlaylist,
-    selectCategory,
-    goHome,
-  } = useAppStore();
+  const { playlists, categories, selectedCategory, selectCategory } =
+    useAppStore();
+  const pathname = usePathname();
   const [showAddPlaylist, setShowAddPlaylist] = useState(false);
   const [showAutoRules, setShowAutoRules] = useState(false);
+
+  const isActive = (href: string) => pathname === href;
 
   return (
     <aside className="sidebar">
@@ -27,45 +24,47 @@ export default function Sidebar() {
           <MusicIcon size={18} />
         </div>
         <div className="sidebar__brand-text">
-          <span className="sidebar__name">TikPlay</span>
-          <span className="sidebar__tagline">Vibe with TikTok</span>
+          <Link href="/" className="sidebar__brand-link">
+            <span className="sidebar__name">TikPlay</span>
+            <span className="sidebar__tagline">Vibe with TikTok</span>
+          </Link>
         </div>
       </div>
 
       <div className="sidebar__section">Library</div>
       <ul className="sidebar__list">
         <li>
-          <button
-            className={`sidebar__item${view === 'home' ? ' is-active' : ''}`}
-            onClick={goHome}
+          <Link
+            href="/"
+            className={`sidebar__item${isActive('/') ? ' is-active' : ''}`}
           >
             <span className="sidebar__item-icon">
               <HomeIcon />
             </span>
             Home
-          </button>
+          </Link>
         </li>
         <li>
-          <button
-            className={`sidebar__item${view === 'library' && currentPlaylistId === 1 ? ' is-active' : ''}`}
-            onClick={() => selectPlaylist(1)}
+          <Link
+            href="/library"
+            className={`sidebar__item${isActive('/library') ? ' is-active' : ''}`}
           >
             <span className="sidebar__item-icon">
               <ListMusicIcon size={16} />
             </span>
             All Tracks
-          </button>
+          </Link>
         </li>
         <li>
-          <button
-            className={`sidebar__item${view === 'library' && currentPlaylistId === -1 ? ' is-active' : ''}`}
-            onClick={() => selectPlaylist(-1)}
+          <Link
+            href="/library/favorites"
+            className={`sidebar__item${isActive('/library/favorites') ? ' is-active' : ''}`}
           >
             <span className="sidebar__item-icon">
               <HeartIcon />
             </span>
             Favorites
-          </button>
+          </Link>
         </li>
       </ul>
 
@@ -75,9 +74,9 @@ export default function Sidebar() {
           .filter((p) => p.id !== 1)
           .map((p) => (
             <li key={p.id}>
-              <button
-                className={`sidebar__item${view === 'library' && currentPlaylistId === p.id ? ' is-active' : ''}`}
-                onClick={() => selectPlaylist(p.id)}
+              <Link
+                href={`/library/${p.id}`}
+                className={`sidebar__item${isActive(`/library/${p.id}`) ? ' is-active' : ''}`}
               >
                 <span className="sidebar__item-icon">
                   <ClockIcon size={16} />
@@ -86,7 +85,7 @@ export default function Sidebar() {
                 {p.trackCount != null && (
                   <span className="sidebar__item-count">{p.trackCount}</span>
                 )}
-              </button>
+              </Link>
             </li>
           ))}
       </ul>

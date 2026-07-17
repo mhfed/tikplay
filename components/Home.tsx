@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import { pickArt, pickArtAt } from '../lib/artwork';
@@ -31,7 +32,6 @@ export default function Home({ onOpenLibrary }: HomeProps) {
     playTrack,
     playAll,
     setShuffle,
-    selectPlaylist,
     selectCategory,
   } = useAppStore();
 
@@ -53,11 +53,6 @@ export default function Home({ onOpenLibrary }: HomeProps) {
     () => [...tracks].sort((a, b) => b.addedAt - a.addedAt).slice(0, 12),
     [tracks],
   );
-
-  const goToPlaylist = (id: number) => {
-    withViewTransition(() => selectPlaylist(id));
-    onOpenLibrary?.();
-  };
 
   const handlePlayHero = () => {
     if (heroTrack) playTrack(heroTrack);
@@ -138,12 +133,12 @@ export default function Home({ onOpenLibrary }: HomeProps) {
           <PlaylistCard
             name="Tất cả bài hát"
             count={tracks.length}
-            onClick={() => goToPlaylist(1)}
+            href="/library"
           />
           <PlaylistCard
             name="Yêu thích"
             count={favorites.size}
-            onClick={() => goToPlaylist(-1)}
+            href="/library/favorites"
           />
           {playlists
             .filter((p) => p.id !== 1)
@@ -152,7 +147,7 @@ export default function Home({ onOpenLibrary }: HomeProps) {
                 key={p.id}
                 name={p.name}
                 count={p.trackCount}
-                onClick={() => goToPlaylist(p.id)}
+                href={`/library/${p.id}`}
               />
             ))}
         </div>
@@ -285,14 +280,14 @@ function TrackCard({
 function PlaylistCard({
   name,
   count,
-  onClick,
+  href,
 }: {
   name: string;
   count?: number;
-  onClick: () => void;
+  href: string;
 }) {
   return (
-    <button className="playlist-card" onClick={onClick}>
+    <Link href={href} className="playlist-card">
       <span
         className="playlist-card__art"
         style={{ backgroundImage: `url(${pickArt(name)})` }}
@@ -304,7 +299,7 @@ function PlaylistCard({
           <span className="playlist-card__count">{count} bài</span>
         )}
       </span>
-    </button>
+    </Link>
   );
 }
 

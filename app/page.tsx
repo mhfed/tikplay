@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import AppShell from '@/components/AppShell';
 import { AppStoreProvider, type InitialAppData } from '@/hooks/useAppStore';
 import {
@@ -15,6 +16,17 @@ import './components.css';
 // Reads searchParams and the on-disk DB directly — must never be statically
 // cached, or mutations (add/remove/favorite) would appear to silently fail.
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  title: 'TikPlay — Nghe nhạc từ TikTok',
+  description:
+    'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok. Tạo playlist, yêu thích bài hát, nghe offline.',
+  openGraph: {
+    title: 'TikPlay — Nghe nhạc từ TikTok',
+    description:
+      'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok.',
+  },
+};
 
 function tracksForPlaylist(playlistId: number, favIds: Set<number>): Track[] {
   const rows =

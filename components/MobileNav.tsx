@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { ListMusicIcon, MusicIcon } from './icons';
 
 export type MobileTab = 'home' | 'tracks' | 'player' | 'playlists';
@@ -17,7 +18,8 @@ export default function MobileNav({
 }: MobileNavProps) {
   return (
     <nav className="mobile-nav">
-      <button
+      <Link
+        href="/"
         className={`mobile-nav__tab${activeTab === 'home' ? ' is-active' : ''}`}
         onClick={() => onChange('home')}
       >
@@ -25,8 +27,9 @@ export default function MobileNav({
           <HomeIcon />
         </span>
         <span>Home</span>
-      </button>
-      <button
+      </Link>
+      <Link
+        href="/library"
         className={`mobile-nav__tab${activeTab === 'tracks' ? ' is-active' : ''}`}
         onClick={() => onChange('tracks')}
       >
@@ -34,7 +37,7 @@ export default function MobileNav({
           <ListMusicIcon size={20} />
         </span>
         <span>Library</span>
-      </button>
+      </Link>
       <button
         className={`mobile-nav__tab${activeTab === 'player' ? ' is-active' : ''}`}
         onClick={() => onChange('player')}

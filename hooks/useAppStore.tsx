@@ -11,8 +11,14 @@ import {
   useOptimistic,
   useState,
 } from 'react';
+import type {
+  AutoRule,
+  MusicCategory,
+  Playlist,
+  RepeatMode,
+  Track,
+} from '../lib/types';
 import { EQ_PRESETS } from '../lib/types';
-import type { AutoRule, MusicCategory, Playlist, RepeatMode, Track } from '../lib/types';
 
 // Default EQ curve for new sessions — Bass Boost rather than Flat.
 const DEFAULT_EQ_GAINS =
@@ -96,7 +102,11 @@ interface AppActions {
   setView: (v: AppView) => void;
   goHome: () => void;
   selectCategory: (slug: string | null) => void;
-  updateTrackTiming: (trackId: number, startTime?: number, endTime?: number) => Promise<void>;
+  updateTrackTiming: (
+    trackId: number,
+    startTime?: number,
+    endTime?: number,
+  ) => Promise<void>;
 }
 
 type AppStore = AppState & AppActions;
@@ -208,7 +218,13 @@ export function AppStoreProvider({
       loadAutoRules(),
       loadCategoriesFn(),
     ]);
-  }, [loadPlaylists, loadTracks, loadAutoRules, loadCategoriesFn, currentPlaylistId]);
+  }, [
+    loadPlaylists,
+    loadTracks,
+    loadAutoRules,
+    loadCategoriesFn,
+    currentPlaylistId,
+  ]);
 
   // Hydrate "recently played" from localStorage once, on mount (client-only —
   // reading it in a useState initializer would desync client/server render).
@@ -241,20 +257,29 @@ export function AppStoreProvider({
   }, [currentTrack?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep the URL in sync with what's selected/playing so the address bar is
-  // always shareable. `t` only appears in links built by the Share button.
+  // always shareable. Uses path-based routing (/library, /library/3, etc.)
+  // instead of query params.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (currentPlaylistId !== 1) params.set('pl', String(currentPlaylistId));
-    else params.delete('pl');
+    const basePath =
+      currentPlaylistId === 1
+        ? '/library'
+        : currentPlaylistId === -1
+          ? '/library/favorites'
+          : `/library/${currentPlaylistId}`;
+
+    const params = new URLSearchParams();
     if (currentTrack) params.set('track', String(currentTrack.id));
-    else params.delete('track');
-    params.delete('t');
     const qs = params.toString();
-    window.history.replaceState(
-      null,
-      '',
-      qs ? `?${qs}` : window.location.pathname,
-    );
+    const href = qs ? `${basePath}?${qs}` : basePath;
+
+    // Only update if the path part differs to avoid infinite loops with
+    // router.replace triggering re-renders.
+    if (
+      window.location.pathname !== basePath ||
+      window.location.search !== (qs ? `?${qs}` : '')
+    ) {
+      window.history.replaceState(null, '', href);
+    }
   }, [currentPlaylistId, currentTrack?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const selectPlaylist = useCallback(
@@ -342,7 +367,9 @@ export function AppStoreProvider({
       } catch {
         setError('Network error downloading track');
       } finally {
-        setPendingDownloads((prev: string[]) => prev.filter((u: string) => u !== url));
+        setPendingDownloads((prev: string[]) =>
+          prev.filter((u: string) => u !== url),
+        );
       }
     },
     [currentPlaylistId, query, loadTracks, loadPlaylists],
@@ -588,12 +615,10 @@ export function AppStoreProvider({
       });
       // Update local state directly so we don't have to reload all tracks just for this
       setTracks((prev) =>
-        prev.map((t) =>
-          t.id === trackId ? { ...t, startTime, endTime } : t,
-        ),
+        prev.map((t) => (t.id === trackId ? { ...t, startTime, endTime } : t)),
       );
       if (currentTrack?.id === trackId) {
-        setCurrentTrack((t) => t ? { ...t, startTime, endTime } : t);
+        setCurrentTrack((t) => (t ? { ...t, startTime, endTime } : t));
       }
     },
     [currentTrack?.id],
