@@ -7,8 +7,16 @@ import AutoRuleDialog from './AutoRuleDialog';
 import { ClockIcon, ListMusicIcon, MusicIcon, PlusIcon } from './icons';
 
 export default function Sidebar() {
-  const { playlists, currentPlaylistId, view, selectPlaylist, goHome } =
-    useAppStore();
+  const {
+    playlists,
+    categories,
+    currentPlaylistId,
+    selectedCategory,
+    view,
+    selectPlaylist,
+    selectCategory,
+    goHome,
+  } = useAppStore();
   const [showAddPlaylist, setShowAddPlaylist] = useState(false);
   const [showAutoRules, setShowAutoRules] = useState(false);
 
@@ -83,6 +91,32 @@ export default function Sidebar() {
           ))}
       </ul>
 
+      {categories.length > 0 && (
+        <>
+          <div className="sidebar__section">Categories</div>
+          <ul className="sidebar__list">
+            {categories
+              .filter((c) => c.count && c.count > 0)
+              .map((c) => (
+                <li key={c.slug}>
+                  <button
+                    className={`sidebar__item${selectedCategory === c.slug ? ' is-active' : ''}`}
+                    onClick={() => selectCategory(c.slug)}
+                  >
+                    <span className="sidebar__item-icon">
+                      <TagIcon />
+                    </span>
+                    {c.name}
+                    {c.count != null && (
+                      <span className="sidebar__item-count">{c.count}</span>
+                    )}
+                  </button>
+                </li>
+              ))}
+          </ul>
+        </>
+      )}
+
       <div className="sidebar__footer">
         <button
           className="sidebar__action"
@@ -105,6 +139,25 @@ export default function Sidebar() {
         <AutoRuleDialog onClose={() => setShowAutoRules(false)} />
       )}
     </aside>
+  );
+}
+
+function TagIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" />
+      <path d="M7 7h.01" />
+    </svg>
   );
 }
 

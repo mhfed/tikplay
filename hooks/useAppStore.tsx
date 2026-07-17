@@ -12,7 +12,7 @@ import {
   useState,
 } from 'react';
 import { EQ_PRESETS } from '../lib/types';
-import type { AutoRule, Playlist, RepeatMode, Track } from '../lib/types';
+import type { AutoRule, MusicCategory, Playlist, RepeatMode, Track } from '../lib/types';
 
 // Default EQ curve for new sessions — Bass Boost rather than Flat.
 const DEFAULT_EQ_GAINS =
@@ -24,6 +24,7 @@ export type AppView = 'home' | 'library';
 export interface InitialAppData {
   tracks: Track[];
   playlists: Playlist[];
+  categories: MusicCategory[];
   favoriteIds: number[];
   autoRules: AutoRule[];
   currentPlaylistId: number;
@@ -35,6 +36,7 @@ export interface InitialAppData {
 interface AppState {
   tracks: Track[];
   playlists: Playlist[];
+  categories: MusicCategory[];
   favorites: Set<number>;
   autoRules: AutoRule[];
   currentPlaylistId: number;
@@ -55,6 +57,8 @@ interface AppState {
   view: AppView;
   /** Most recently played tracks (newest first), persisted to localStorage — powers the Home "Continue" row. */
   recentlyPlayed: Track[];
+  /** Currently selected category slug (null = all). */
+  selectedCategory: string | null;
 }
 
 interface AppActions {
@@ -90,6 +94,7 @@ interface AppActions {
   clearPendingSeek: () => void;
   setView: (v: AppView) => void;
   goHome: () => void;
+  selectCategory: (slug: string | null) => void;
 }
 
 type AppStore = AppState & AppActions;
@@ -153,6 +158,10 @@ export function AppStoreProvider({
   );
   const [view, setView] = useState<AppView>(initialData.view);
   const [recentIds, setRecentIds] = useState<number[]>([]);
+  const [categories, setCategories] = useState<MusicCategory[]>(
+    initialData.categories || [],
+  );
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const loadPlaylists = useCallback(async () => {
     const data = await api<{ playlists: Playlist[] }>('/api/playlists');
@@ -184,13 +193,19 @@ export function AppStoreProvider({
     setAutoRules(data.rules || []);
   }, []);
 
+  const loadCategoriesFn = useCallback(async () => {
+    const data = await api<{ categories: MusicCategory[] }>('/api/categories');
+    setCategories(data.categories || []);
+  }, []);
+
   const loadAll = useCallback(async () => {
     await Promise.all([
       loadPlaylists(),
       loadTracks(currentPlaylistId),
       loadAutoRules(),
+      loadCategoriesFn(),
     ]);
-  }, [loadPlaylists, loadTracks, loadAutoRules, currentPlaylistId]);
+  }, [loadPlaylists, loadTracks, loadAutoRules, loadCategoriesFn, currentPlaylistId]);
 
   // Hydrate "recently played" from localStorage once, on mount (client-only —
   // reading it in a useState initializer would desync client/server render).
@@ -241,6 +256,7 @@ export function AppStoreProvider({
 
   const selectPlaylist = useCallback(
     (id: number) => {
+      setSelectedCategory(null);
       setCurrentPlaylistId(id);
       setView('library');
       loadTracks(id, query);
@@ -252,10 +268,32 @@ export function AppStoreProvider({
   // was last browsed — so switching to it re-scopes `tracks`/`favorites` to
   // "All Tracks" rather than leaving them narrowed to the last playlist.
   const goHome = useCallback(() => {
+    setSelectedCategory(null);
     setCurrentPlaylistId(1);
     setView('home');
     loadTracks(1, query);
   }, [loadTracks, query]);
+
+  const selectCategory = useCallback(
+    async (slug: string | null) => {
+      setSelectedCategory(slug);
+      if (slug) {
+        setCurrentPlaylistId(1);
+        setView('library');
+        const data = await api<{ tracks: Track[] }>(
+          `/api/categories?slug=${encodeURIComponent(slug)}`,
+        );
+        setTracks(data.tracks || []);
+        const favSet = new Set(
+          (data.tracks || []).filter((t) => t.isFavorite).map((t) => t.id),
+        );
+        setFavorites(favSet);
+      } else {
+        loadTracks(1, query);
+      }
+    },
+    [loadTracks, query],
+  );
 
   const addTrackFromUrl = useCallback(
     async (url: string) => {
@@ -566,6 +604,7 @@ export function AppStoreProvider({
   const store: AppStore = {
     tracks: filteredTracks,
     playlists,
+    categories,
     favorites: optimisticFavorites,
     autoRules,
     currentPlaylistId,
@@ -583,6 +622,7 @@ export function AppStoreProvider({
     pendingSeek,
     view,
     recentlyPlayed,
+    selectedCategory,
     loadAll,
     selectPlaylist,
     addTrackFromUrl,
@@ -610,6 +650,7 @@ export function AppStoreProvider({
     clearPendingSeek,
     setView,
     goHome,
+    selectCategory,
   };
 
   return (

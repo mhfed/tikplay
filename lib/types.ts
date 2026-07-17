@@ -8,6 +8,7 @@ export interface DbTrack {
   cover: string;
   duration: number;
   added_at: number;
+  category?: string;
 }
 
 /** Frontend-facing track (camelCase, includes computed fields). */
@@ -21,6 +22,15 @@ export interface Track {
   duration: number;
   addedAt: number;
   isFavorite?: boolean;
+  category?: string;
+}
+
+/** A music genre/category definition. */
+export interface MusicCategory {
+  slug: string;
+  name: string;
+  /** Track count (computed at query time). */
+  count?: number;
 }
 
 /** Convert a DB row to the frontend shape. */
@@ -34,6 +44,7 @@ export function toTrack(row: DbTrack, favIds?: Set<number>): Track {
     cover: row.cover,
     duration: row.duration,
     addedAt: row.added_at,
+    category: row.category,
     isFavorite: favIds ? favIds.has(row.id) : undefined,
   };
 }
