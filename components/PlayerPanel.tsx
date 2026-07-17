@@ -104,11 +104,7 @@ export default function PlayerPanel({
   const volumeRef = useRef(volume);
   volumeRef.current = volume;
 
-  // Volume bar is collapsed to just the icon; it reveals on hover (CSS) or,
-  // on touch, when tapped open. `volOpen` drives only the touch path.
   const volGroupRef = useRef<HTMLDivElement>(null);
-  const [volOpen, setVolOpen] = useState(false);
-  const pointerTypeRef = useRef<string>('mouse');
 
   const engine = useAudioEngine({
     startTime: currentTrack?.startTime,
@@ -160,16 +156,6 @@ export default function PlayerPanel({
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
   }, [setVolume]);
-
-  // Touch: collapse the volume bar again when tapping anywhere outside it.
-  useEffect(() => {
-    if (!volOpen) return;
-    const onDown = (e: PointerEvent) => {
-      if (!volGroupRef.current?.contains(e.target as Node)) setVolOpen(false);
-    };
-    document.addEventListener('pointerdown', onDown);
-    return () => document.removeEventListener('pointerdown', onDown);
-  }, [volOpen]);
 
   // Close the queue/EQ popover when clicking outside it (but not when clicking
   // the toggle button that owns it — that button handles its own toggle).
@@ -706,25 +692,15 @@ export default function PlayerPanel({
             <SlidersIcon size={18} />
           </button>
 
-          {/* Volume — collapsed to the icon; bar reveals on hover / tap */}
+          {/* Volume */}
           <div
             ref={volGroupRef}
-            className={`np__volume${isBoosted ? ' is-boosted' : ''}${volOpen ? ' is-open' : ''}`}
+            className={`np__volume${isBoosted ? ' is-boosted' : ''}`}
           >
             <button
               type="button"
               className="np__vol-btn"
-              onPointerDown={(e) => {
-                pointerTypeRef.current = e.pointerType;
-              }}
-              onClick={() => {
-                // Touch: first tap reveals the bar, a second tap (while open) mutes.
-                if (pointerTypeRef.current === 'touch' && !volOpen) {
-                  setVolOpen(true);
-                  return;
-                }
-                engine.toggleMute(volume, setVolume);
-              }}
+              onClick={() => engine.toggleMute(volume, setVolume)}
               aria-label={isMuted ? 'Unmute' : 'Mute'}
               title={`${isMuted ? 'Unmute' : 'Mute'} (M)`}
             >

@@ -1276,34 +1276,20 @@ input[type="range"] {
   );
 }
 
-/* Collapsible slider: hidden by default, revealed on hover / focus / tap.
-   No overflow:hidden — that would clip the thumb; opacity does the hiding. */
+/* Static slider: always expanded and visible for better UX. */
 .np__vol-track {
   position: relative;
   flex: 1;
   display: flex;
   align-items: center;
-  max-width: 0;
-  margin-left: 0;
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    max-width 0.24s ease,
-    margin-left 0.24s ease,
-    opacity 0.16s ease;
+  width: 100px;
+  margin-left: 8px;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .np__vol-range {
   width: 100%;
-}
-
-.np__volume:hover .np__vol-track,
-.np__volume:focus-within .np__vol-track,
-.np__volume.is-open .np__vol-track {
-  max-width: 100%;
-  margin-left: 8px;
-  opacity: 1;
-  pointer-events: auto;
 }
 
 /* Detent marking the 100% point (⅓ of the 0–300% track) */
@@ -1331,27 +1317,15 @@ input[type="range"] {
 
 .np__vol-value {
   flex: 0 0 auto;
-  max-width: 0;
-  margin-left: 0;
-  opacity: 0;
+  width: 32px;
+  margin-left: 8px;
+  opacity: 1;
   overflow: hidden;
   white-space: nowrap;
   text-align: right;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
-  transition:
-    max-width 0.24s ease,
-    margin-left 0.24s ease,
-    opacity 0.16s ease;
-}
-
-.np__volume:hover .np__vol-value,
-.np__volume:focus-within .np__vol-value,
-.np__volume.is-open .np__vol-value {
-  max-width: 46px;
-  margin-left: 8px;
-  opacity: 1;
 }
 
 .np__vol-value.is-boosted {
