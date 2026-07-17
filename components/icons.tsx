@@ -18,7 +18,7 @@ function stroke(size: number): SVGProps<SVGSVGElement> {
     viewBox: '0 0 24 24',
     fill: 'none',
     stroke: 'currentColor',
-    strokeWidth: 2,
+    strokeWidth: 1.6,
     strokeLinecap: 'round',
     strokeLinejoin: 'round',
   };
@@ -162,6 +162,70 @@ export function CloseIcon({ size = 24, ...rest }: IconProps) {
     <svg {...stroke(size)} aria-hidden {...rest}>
       <path d="M6 6l12 12" />
       <path d="M18 6 6 18" />
+    </svg>
+  );
+}
+
+export function HomeIcon({ size = 24, ...rest }: IconProps) {
+  return (
+    <svg {...stroke(size)} aria-hidden {...rest}>
+      <path d="m3.5 10.7 8.5-7 8.5 7" />
+      <path d="M5.7 9.2v9.3a1.8 1.8 0 0 0 1.8 1.8h2.2v-5.1a1.8 1.8 0 0 1 1.8-1.8h1a1.8 1.8 0 0 1 1.8 1.8v5.1h2.2a1.8 1.8 0 0 0 1.8-1.8V9.2" />
+    </svg>
+  );
+}
+
+export function PlaylistsIcon({ size = 24, ...rest }: IconProps) {
+  return (
+    <svg {...stroke(size)} aria-hidden {...rest}>
+      <rect x="4" y="5" width="12" height="3" rx="1.5" />
+      <rect x="4" y="10.5" width="12" height="3" rx="1.5" />
+      <rect x="4" y="16" width="8" height="3" rx="1.5" />
+      <path d="M18 14v6" />
+      <path d="M18 14.8 21 14v4.5" />
+      <circle cx="16.8" cy="20" r="1.2" />
+      <circle cx="19.8" cy="18.5" r="1.2" />
+    </svg>
+  );
+}
+
+type HeartIconProps = IconProps & {
+  filled?: boolean;
+};
+
+export function HeartIcon({
+  size = 24,
+  filled = false,
+  ...rest
+}: HeartIconProps) {
+  return (
+    <svg {...stroke(size)} aria-hidden {...rest}>
+      <path
+        d="M20.2 5.7a5 5 0 0 0-7.1 0L12 6.8l-1.1-1.1a5 5 0 0 0-7.1 7.1L12 21l8.2-8.2a5 5 0 0 0 0-7.1Z"
+        fill={filled ? 'currentColor' : 'none'}
+      />
+    </svg>
+  );
+}
+
+export function TagIcon({ size = 24, ...rest }: IconProps) {
+  return (
+    <svg {...stroke(size)} aria-hidden {...rest}>
+      <path d="M12.3 3.3H4.8a1.5 1.5 0 0 0-1.5 1.5v7.5l8.5 8.4a1.8 1.8 0 0 0 2.5 0l6.4-6.4a1.8 1.8 0 0 0 0-2.5l-8.4-8.5Z" />
+      <circle cx="8" cy="8" r="1.1" />
+    </svg>
+  );
+}
+
+export function SettingsIcon({ size = 24, ...rest }: IconProps) {
+  return (
+    <svg {...stroke(size)} aria-hidden {...rest}>
+      <path d="M4 7h10" />
+      <path d="M18 7h2" />
+      <circle cx="16" cy="7" r="2" />
+      <path d="M4 17h2" />
+      <path d="M10 17h10" />
+      <circle cx="8" cy="17" r="2" />
     </svg>
   );
 }

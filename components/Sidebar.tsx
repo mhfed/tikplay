@@ -6,7 +6,16 @@ import { useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import AddPlaylistDialog from './AddPlaylistDialog';
 import AutoRuleDialog from './AutoRuleDialog';
-import { ClockIcon, ListMusicIcon, MusicIcon, PlusIcon } from './icons';
+import {
+  ClockIcon,
+  HeartIcon,
+  HomeIcon,
+  ListMusicIcon,
+  MusicIcon,
+  PlusIcon,
+  SettingsIcon,
+  TagIcon,
+} from './icons';
 
 export default function Sidebar() {
   const { playlists, categories, selectedCategory, selectCategory } =
@@ -26,12 +35,12 @@ export default function Sidebar() {
         <div className="sidebar__brand-text">
           <Link href="/" className="sidebar__brand-link">
             <span className="sidebar__name">TikPlay</span>
-            <span className="sidebar__tagline">Vibe with TikTok</span>
+            <span className="sidebar__tagline">Nhạc từ TikTok</span>
           </Link>
         </div>
       </div>
 
-      <div className="sidebar__section">Library</div>
+      <div className="sidebar__section">Thư viện</div>
       <ul className="sidebar__list">
         <li>
           <Link
@@ -39,9 +48,9 @@ export default function Sidebar() {
             className={`sidebar__item${isActive('/') ? ' is-active' : ''}`}
           >
             <span className="sidebar__item-icon">
-              <HomeIcon />
+              <HomeIcon size={16} />
             </span>
-            Home
+            Trang chủ
           </Link>
         </li>
         <li>
@@ -52,7 +61,7 @@ export default function Sidebar() {
             <span className="sidebar__item-icon">
               <ListMusicIcon size={16} />
             </span>
-            All Tracks
+            Tất cả bài hát
           </Link>
         </li>
         <li>
@@ -61,14 +70,14 @@ export default function Sidebar() {
             className={`sidebar__item${isActive('/library/favorites') ? ' is-active' : ''}`}
           >
             <span className="sidebar__item-icon">
-              <HeartIcon />
+              <HeartIcon size={16} />
             </span>
-            Favorites
+            Yêu thích
           </Link>
         </li>
       </ul>
 
-      <div className="sidebar__section">Playlists</div>
+      <div className="sidebar__section">Danh sách phát</div>
       <ul className="sidebar__list">
         {playlists
           .filter((p) => p.id !== 1)
@@ -92,18 +101,19 @@ export default function Sidebar() {
 
       {categories.length > 0 && (
         <>
-          <div className="sidebar__section">Categories</div>
+          <div className="sidebar__section">Thể loại</div>
           <ul className="sidebar__list">
             {categories
               .filter((c) => c.count && c.count > 0)
               .map((c) => (
                 <li key={c.slug}>
                   <button
+                    type="button"
                     className={`sidebar__item${selectedCategory === c.slug ? ' is-active' : ''}`}
                     onClick={() => selectCategory(c.slug)}
                   >
                     <span className="sidebar__item-icon">
-                      <TagIcon />
+                      <TagIcon size={16} />
                     </span>
                     {c.name}
                     {c.count != null && (
@@ -118,16 +128,18 @@ export default function Sidebar() {
 
       <div className="sidebar__footer">
         <button
+          type="button"
           className="sidebar__action"
           onClick={() => setShowAddPlaylist(true)}
         >
-          <PlusIcon size={14} /> New Playlist
+          <PlusIcon size={14} /> Tạo danh sách
         </button>
         <button
+          type="button"
           className="sidebar__action"
           onClick={() => setShowAutoRules(true)}
         >
-          <SettingsIcon /> Auto Rules
+          <SettingsIcon size={14} /> Quy tắc tự động
         </button>
       </div>
 
@@ -138,80 +150,5 @@ export default function Sidebar() {
         <AutoRuleDialog onClose={() => setShowAutoRules(false)} />
       )}
     </aside>
-  );
-}
-
-function TagIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" />
-      <path d="M7 7h.01" />
-    </svg>
-  );
-}
-
-function HomeIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M3 11.5 12 4l9 7.5" />
-      <path d="M5.5 10v9.5a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1V16a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3.5a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1V10" />
-    </svg>
-  );
-}
-
-function HeartIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-    </svg>
-  );
-}
-
-function SettingsIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <circle cx="12" cy="12" r="3" />
-      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-    </svg>
   );
 }

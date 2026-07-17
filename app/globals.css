@@ -63,6 +63,14 @@
   --shadow-glow: 0 0 32px var(--accent-glow);
   --shadow-glow-pink: 0 0 32px var(--secondary-glow);
 
+  /* Motion: one shared physical language for hover, press and panels. */
+  --motion-fast: 160ms;
+  --motion-base: 320ms;
+  --motion-slow: 680ms;
+  --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring: cubic-bezier(0.2, 0.9, 0.2, 1.15);
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
   /* Fonts (populated by next/font variables) */
   --font-display: var(
     --font-montserrat,

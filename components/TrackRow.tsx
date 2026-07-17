@@ -4,7 +4,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Track } from '../lib/types';
 import Cover from './Cover';
-import { GripIcon, PauseIcon, PlayIcon } from './icons';
+import { CloseIcon, GripIcon, HeartIcon, PauseIcon, PlayIcon } from './icons';
 
 interface TrackRowProps {
   track: Track;
@@ -41,79 +41,56 @@ export default function TrackRow({
     transition,
   };
 
-  // The whole row is the play surface; nested controls (drag/fav/remove) stop
-  // propagation so they don't also trigger playback.
-  const stop =
-    (fn?: () => void) => (e: React.MouseEvent | React.PointerEvent) => {
-      e.stopPropagation();
-      fn?.();
-    };
-
-  const handlePlayClick = () => {
-    // If the track is not active, this first click activates it.
-    // Ensure we trigger the global audio unlock correctly natively attached to this touch/click.
-    // The hook in AppStore will also call `el.play()`.
-    onPlay();
-  };
-
   return (
     <li
       ref={setNodeRef}
       style={style}
       className={`track-row${isActive ? ' track-row--active' : ''}${isDragging ? ' track-row--dragging' : ''}`}
-      onClick={handlePlayClick}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          onPlay();
-        }
-      }}
-      role="button"
-      tabIndex={0}
-      aria-label={`Phát ${track.title}`}
     >
       {isDraggable && (
-        <span
-          className="track-row__drag"
-          onClick={stop()}
-          {...attributes}
-          {...listeners}
-        >
+        <span className="track-row__drag" {...attributes} {...listeners}>
           <GripIcon size={14} />
-        </span>
-      )}
-      <Cover
-        src={track.cover}
-        alt={track.title}
-        subtitle={track.author}
-        className="track-row__cover"
-      />
-      <div className="track-row__info">
-        <span className="track-row__title">{track.title}</span>
-        <span className="track-row__author">{track.author}</span>
-      </div>
-      {isActive && (
-        <span className="track-row__badge">
-          {isPlaying ? <PauseIcon size={12} /> : <PlayIcon size={12} />}
         </span>
       )}
       <button
         type="button"
+        className="track-row__play"
+        onClick={onPlay}
+        aria-label={`${isActive && isPlaying ? 'Tạm dừng' : 'Phát'} ${track.title}`}
+      >
+        <Cover
+          src={track.cover}
+          alt={track.title}
+          subtitle={track.author}
+          className="track-row__cover"
+        />
+        <span className="track-row__info">
+          <span className="track-row__title">{track.title}</span>
+          <span className="track-row__author">{track.author}</span>
+        </span>
+        {isActive && (
+          <span className="track-row__badge">
+            {isPlaying ? <PauseIcon size={12} /> : <PlayIcon size={12} />}
+          </span>
+        )}
+      </button>
+      <button
+        type="button"
         className={`track-row__fav${isFavorite ? ' is-fav' : ''}`}
-        onClick={stop(onFavorite)}
+        onClick={onFavorite}
         aria-label={isFavorite ? 'Bỏ yêu thích' : 'Yêu thích'}
         title={isFavorite ? 'Bỏ yêu thích' : 'Yêu thích'}
       >
-        {isFavorite ? '♥' : '♡'}
+        <HeartIcon size={17} filled={isFavorite} />
       </button>
       <button
         type="button"
         className="track-row__remove"
-        onClick={stop(onRemove)}
+        onClick={onRemove}
         aria-label="Xóa"
         title="Xóa"
       >
-        ×
+        <CloseIcon size={16} />
       </button>
     </li>
   );

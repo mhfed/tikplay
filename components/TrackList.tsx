@@ -55,8 +55,8 @@ export default function TrackList() {
     return (
       <div className="empty">
         <span className="empty__icon">♪</span>
-        <p className="empty__text">No tracks yet</p>
-        <p className="empty__sub">Paste a TikTok URL to get started</p>
+        <p className="empty__text">Chưa có bài hát</p>
+        <p className="empty__sub">Dán liên kết TikTok để bắt đầu</p>
       </div>
     );
   }
@@ -72,12 +72,46 @@ export default function TrackList() {
         strategy={verticalListSortingStrategy}
       >
         <ul className="track-list">
-          {pendingDownloads.map((url, i) => (
-            <li key={`pending-${i}`} className="track-row" style={{ opacity: 0.6, pointerEvents: 'none' }}>
-              <div className="track-row__cover" style={{ background: 'rgba(255,255,255,0.1)', animation: 'pulse 1.5s infinite' }}></div>
-              <div className="track-row__info" style={{ flex: 1, padding: '0 12px', minWidth: 0 }}>
-                <p className="track-row__title" style={{ fontSize: '15px', fontWeight: 500, color: '#fff', marginBottom: '4px' }}>Đang tải & xử lý...</p>
-                <p className="track-row__author" style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{url}</p>
+          {pendingDownloads.map((url) => (
+            <li
+              key={url}
+              className="track-row"
+              style={{ opacity: 0.6, pointerEvents: 'none' }}
+            >
+              <div
+                className="track-row__cover"
+                style={{
+                  background: 'rgba(255,255,255,0.1)',
+                  animation: 'pulse 1.5s infinite',
+                }}
+              ></div>
+              <div
+                className="track-row__info"
+                style={{ flex: 1, padding: '0 12px', minWidth: 0 }}
+              >
+                <p
+                  className="track-row__title"
+                  style={{
+                    fontSize: '15px',
+                    fontWeight: 500,
+                    color: '#fff',
+                    marginBottom: '4px',
+                  }}
+                >
+                  Đang tải & xử lý...
+                </p>
+                <p
+                  className="track-row__author"
+                  style={{
+                    fontSize: '13px',
+                    color: 'rgba(255,255,255,0.5)',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {url}
+                </p>
               </div>
             </li>
           ))}

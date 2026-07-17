@@ -11,7 +11,6 @@ import {
   getPlaylistTracks,
 } from '@/lib/db/queries';
 import { type Track, toTrack } from '@/lib/types';
-import './components.css';
 
 // Reads searchParams and the on-disk DB directly — must never be statically
 // cached, or mutations (add/remove/favorite) would appear to silently fail.

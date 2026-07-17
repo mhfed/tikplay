@@ -4,7 +4,15 @@ import { useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import AddPlaylistDialog from './AddPlaylistDialog';
 import AutoRuleDialog from './AutoRuleDialog';
-import { ClockIcon, CloseIcon, ListMusicIcon, PlusIcon } from './icons';
+import {
+  ClockIcon,
+  CloseIcon,
+  HeartIcon,
+  ListMusicIcon,
+  PlusIcon,
+  SettingsIcon,
+  TagIcon,
+} from './icons';
 
 interface MobileSidebarProps {
   visible: boolean;
@@ -40,45 +48,50 @@ export default function MobileSidebar({
       />
       <aside className={`mobile-sidebar${visible ? ' is-visible' : ''}`}>
         <div className="mobile-sidebar__header">
-          <h2 className="mobile-sidebar__title">Playlists</h2>
+          <h2 className="mobile-sidebar__title">Danh sách phát</h2>
           <button
+            type="button"
             className="mobile-sidebar__close"
             onClick={onClose}
-            aria-label="Close"
+            aria-label="Đóng"
+            title="Đóng"
           >
             <CloseIcon size={20} />
           </button>
         </div>
 
-        <div className="mobile-sidebar__section">Library</div>
+        <div className="mobile-sidebar__section">Thư viện</div>
         <ul className="mobile-sidebar__list">
           <li>
             <button
+              type="button"
               className={`mobile-sidebar__item${view === 'library' && currentPlaylistId === 1 ? ' is-active' : ''}`}
               onClick={() => handleSelect(1)}
             >
               <ListMusicIcon size={18} />
-              All Tracks
+              Tất cả bài hát
             </button>
           </li>
           <li>
             <button
+              type="button"
               className={`mobile-sidebar__item${view === 'library' && currentPlaylistId === -1 ? ' is-active' : ''}`}
               onClick={() => handleSelect(-1)}
             >
-              <HeartIcon />
-              Favorites
+              <HeartIcon size={18} />
+              Yêu thích
             </button>
           </li>
         </ul>
 
-        <div className="mobile-sidebar__section">Playlists</div>
+        <div className="mobile-sidebar__section">Danh sách phát</div>
         <ul className="mobile-sidebar__list">
           {playlists
             .filter((p) => p.id !== 1)
             .map((p) => (
               <li key={p.id}>
                 <button
+                  type="button"
                   className={`mobile-sidebar__item${view === 'library' && currentPlaylistId === p.id ? ' is-active' : ''}`}
                   onClick={() => handleSelect(p.id)}
                 >
@@ -96,25 +109,24 @@ export default function MobileSidebar({
 
         {categories.length > 0 && (
           <>
-            <div className="mobile-sidebar__section">Categories</div>
+            <div className="mobile-sidebar__section">Thể loại</div>
             <ul className="mobile-sidebar__list">
               {categories
                 .filter((c) => c.count && c.count > 0)
                 .map((c) => (
                   <li key={c.slug}>
                     <button
+                      type="button"
                       className={`mobile-sidebar__item${selectedCategory === c.slug ? ' is-active' : ''}`}
                       onClick={() => {
                         selectCategory(c.slug);
                         onClose();
                       }}
                     >
-                      <TagIcon />
+                      <TagIcon size={18} />
                       {c.name}
                       {c.count != null && (
-                        <span className="mobile-sidebar__count">
-                          {c.count}
-                        </span>
+                        <span className="mobile-sidebar__count">{c.count}</span>
                       )}
                     </button>
                   </li>
@@ -125,16 +137,18 @@ export default function MobileSidebar({
 
         <div className="mobile-sidebar__footer">
           <button
+            type="button"
             className="mobile-sidebar__action"
             onClick={() => setShowAddPlaylist(true)}
           >
-            <PlusIcon size={16} /> New Playlist
+            <PlusIcon size={16} /> Tạo danh sách
           </button>
           <button
+            type="button"
             className="mobile-sidebar__action"
             onClick={() => setShowAutoRules(true)}
           >
-            <SettingsIcon /> Auto Rules
+            <SettingsIcon size={16} /> Quy tắc tự động
           </button>
         </div>
 
@@ -146,61 +160,5 @@ export default function MobileSidebar({
         )}
       </aside>
     </>
-  );
-}
-
-function HeartIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-    </svg>
-  );
-}
-
-function TagIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" />
-      <path d="M7 7h.01" />
-    </svg>
-  );
-}
-
-function SettingsIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <circle cx="12" cy="12" r="3" />
-      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-    </svg>
   );
 }

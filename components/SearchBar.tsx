@@ -10,15 +10,15 @@ interface SearchBarProps {
 /** Filters the visible playlist / history lists by title or author. */
 export default function SearchBar({ value, onChange }: SearchBarProps) {
   return (
-    <div className="search-bar">
+    <search className="search-bar">
       <SearchIcon size={16} className="search-bar__icon" />
       <input
         type="text"
         className="search-bar__field"
-        placeholder="Search by title or author…"
+        placeholder="Tìm theo tên bài hát hoặc nghệ sĩ..."
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        aria-label="Search tracks"
+        aria-label="Tìm kiếm bài hát"
         spellCheck={false}
       />
       {value && (
@@ -26,11 +26,12 @@ export default function SearchBar({ value, onChange }: SearchBarProps) {
           type="button"
           className="search-bar__clear"
           onClick={() => onChange('')}
-          aria-label="Clear search"
+          aria-label="Xóa nội dung tìm kiếm"
+          title="Xóa tìm kiếm"
         >
           <CloseIcon size={16} />
         </button>
       )}
-    </div>
+    </search>
   );
 }

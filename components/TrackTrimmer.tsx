@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 
 export default function TrackTrimmer() {
@@ -37,32 +37,48 @@ export default function TrackTrimmer() {
       <div className="trimmer-controls">
         <label>
           Bắt đầu (s):
-          <input 
-            type="range" 
-            min="0" 
-            max={duration} 
-            step="1" 
-            value={startTime} 
-            onChange={(e) => setStartTime(Math.min(Number(e.target.value), endTime - 1))} 
+          <input
+            type="range"
+            min="0"
+            max={duration}
+            step="1"
+            value={startTime}
+            onChange={(e) =>
+              setStartTime(Math.min(Number(e.target.value), endTime - 1))
+            }
           />
           {startTime}s
         </label>
         <label>
           Kết thúc (s):
-          <input 
-            type="range" 
-            min="0" 
-            max={duration} 
-            step="1" 
-            value={endTime} 
-            onChange={(e) => setEndTime(Math.max(Number(e.target.value), startTime + 1))} 
+          <input
+            type="range"
+            min="0"
+            max={duration}
+            step="1"
+            value={endTime}
+            onChange={(e) =>
+              setEndTime(Math.max(Number(e.target.value), startTime + 1))
+            }
           />
           {endTime}s
         </label>
       </div>
       <div className="trimmer-actions">
-        <button className="btn btn--outline" onClick={handleReset}>Reset</button>
-        <button className="btn btn--primary" onClick={handleApply}>Áp dụng</button>
+        <button
+          type="button"
+          className="btn btn--outline"
+          onClick={handleReset}
+        >
+          Đặt lại
+        </button>
+        <button
+          type="button"
+          className="btn btn--primary"
+          onClick={handleApply}
+        >
+          Áp dụng
+        </button>
       </div>
     </div>
   );

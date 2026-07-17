@@ -6,7 +6,13 @@ import { useAppStore } from '../hooks/useAppStore';
 import { pickArt, pickArtAt } from '../lib/artwork';
 import type { Track } from '../lib/types';
 import { withViewTransition } from '../lib/viewTransition';
-import { ClockIcon, ListMusicIcon, PlayIcon, ShuffleIcon } from './icons';
+import {
+  ClockIcon,
+  ListMusicIcon,
+  PlayIcon,
+  ShuffleIcon,
+  TagIcon,
+} from './icons';
 
 interface HomeProps {
   /** Fires after navigating to a playlist/track list — lets the mobile shell flip to the Library tab. */
@@ -79,31 +85,45 @@ export default function Home({ onOpenLibrary }: HomeProps) {
   return (
     <div className="home">
       {heroTrack && (
-        <section
-          className="home-hero"
-          style={{ backgroundImage: `url(${pickArt(heroTrack.title)})` }}
-        >
-          <div className="home-hero__scrim" aria-hidden />
-          <div className="home-hero__content">
-            <span className="home-hero__eyebrow">
-              {recentlyPlayed[0] ? 'Tiếp tục nghe' : 'Gợi ý hôm nay'}
-            </span>
-            <h1 className="home-hero__title">{heroTrack.title}</h1>
-            <p className="home-hero__author">{heroTrack.author}</p>
-            <div className="home-hero__actions">
-              <button className="home-hero__play" onClick={handlePlayHero}>
-                <PlayIcon size={16} />
-                {currentTrack?.id === heroTrack.id && isPlaying
-                  ? 'Đang phát'
-                  : 'Phát ngay'}
-              </button>
-              <button className="home-hero__shuffle" onClick={handleShuffleAll}>
-                <ShuffleIcon size={16} />
-                Phát ngẫu nhiên
-              </button>
+        <div className="home-hero-shell">
+          <section
+            className="home-hero"
+            style={{ backgroundImage: `url(${pickArt(heroTrack.title)})` }}
+          >
+            <div className="home-hero__scrim" aria-hidden />
+            <div className="home-hero__content">
+              <span className="home-hero__eyebrow">
+                {recentlyPlayed[0] ? 'Tiếp tục nghe' : 'Gợi ý hôm nay'}
+              </span>
+              <h1 className="home-hero__title">{heroTrack.title}</h1>
+              <p className="home-hero__author">{heroTrack.author}</p>
+              <div className="home-hero__actions">
+                <button
+                  type="button"
+                  className="home-hero__play"
+                  onClick={handlePlayHero}
+                >
+                  <span className="home-hero__action-icon" aria-hidden>
+                    <PlayIcon size={15} />
+                  </span>
+                  {currentTrack?.id === heroTrack.id && isPlaying
+                    ? 'Đang phát'
+                    : 'Phát ngay'}
+                </button>
+                <button
+                  type="button"
+                  className="home-hero__shuffle"
+                  onClick={handleShuffleAll}
+                >
+                  <span className="home-hero__action-icon" aria-hidden>
+                    <ShuffleIcon size={15} />
+                  </span>
+                  Phát ngẫu nhiên
+                </button>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
       )}
 
       {recentlyPlayed.length > 0 && (
@@ -183,6 +203,7 @@ export default function Home({ onOpenLibrary }: HomeProps) {
               .slice(0, 10)
               .map((c) => (
                 <button
+                  type="button"
                   key={c.slug}
                   className="home-category-card"
                   onClick={() => {
@@ -260,15 +281,18 @@ function TrackCard({
 }) {
   return (
     <button
+      type="button"
       className={`track-card${active ? ' is-active' : ''}`}
       onClick={onPlay}
     >
-      <span
-        className="track-card__art"
-        style={{ backgroundImage: `url(${art})` }}
-      >
-        <span className="track-card__play" aria-hidden>
-          {active && playing ? <EqDots /> : <PlayIcon size={18} />}
+      <span className="track-card__shell">
+        <span
+          className="track-card__art"
+          style={{ backgroundImage: `url(${art})` }}
+        >
+          <span className="track-card__play" aria-hidden>
+            {active && playing ? <EqDots /> : <PlayIcon size={18} />}
+          </span>
         </span>
       </span>
       <span className="track-card__title">{track.title}</span>
@@ -288,37 +312,20 @@ function PlaylistCard({
 }) {
   return (
     <Link href={href} className="playlist-card">
-      <span
-        className="playlist-card__art"
-        style={{ backgroundImage: `url(${pickArt(name)})` }}
-      />
-      <span className="playlist-card__scrim" aria-hidden />
-      <span className="playlist-card__body">
-        <span className="playlist-card__name">{name}</span>
-        {count != null && (
-          <span className="playlist-card__count">{count} bài</span>
-        )}
+      <span className="playlist-card__inner">
+        <span
+          className="playlist-card__art"
+          style={{ backgroundImage: `url(${pickArt(name)})` }}
+        />
+        <span className="playlist-card__scrim" aria-hidden />
+        <span className="playlist-card__body">
+          <span className="playlist-card__name">{name}</span>
+          {count != null && (
+            <span className="playlist-card__count">{count} bài</span>
+          )}
+        </span>
       </span>
     </Link>
-  );
-}
-
-function TagIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" />
-      <path d="M7 7h.01" />
-    </svg>
   );
 }
 

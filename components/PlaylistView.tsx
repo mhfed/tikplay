@@ -24,19 +24,23 @@ export default function PlaylistView() {
 
   const currentPlaylist =
     currentPlaylistId === -1
-      ? { name: 'Favorites' }
+      ? { name: 'Yêu thích' }
       : playlists.find((p) => p.id === currentPlaylistId) || {
-          name: 'All Tracks',
+          name: 'Tất cả bài hát',
         };
 
-  const categoryLabel = selectedCategory ? categoryName(selectedCategory) : null;
+  const categoryLabel = selectedCategory
+    ? categoryName(selectedCategory)
+    : null;
+  const playlistTitle =
+    currentPlaylistId === 1 ? 'Tất cả bài hát' : currentPlaylist.name;
 
   return (
     <div className="main">
       <div className="main__header">
         <div className="main__heading">
           <h1 className="main__title">
-            {categoryLabel ? `${categoryLabel} Music` : currentPlaylist.name}
+            {categoryLabel ? `Nhạc ${categoryLabel}` : playlistTitle}
           </h1>
           <p className="main__subtitle">
             {categoryLabel
@@ -49,13 +53,23 @@ export default function PlaylistView() {
           </p>
         </div>
         {tracks.length > 0 && (
-          <button className="main__play-all" onClick={playAll}>
-            <PlayIcon size={14} /> Play All
+          <button type="button" className="main__play-all" onClick={playAll}>
+            <PlayIcon size={14} /> Phát tất cả
           </button>
         )}
-        <div className="main__filters">
+        <UrlInput
+          onAdd={addTrackFromUrl}
+          loading={loading}
+          error={error}
+          compact
+        />
+      </div>
+      <div className="main__body">
+        <div className="main__list-toolbar">
+          <SearchBar value={query} onChange={setQuery} />
           {selectedCategory && (
             <button
+              type="button"
               className="main__filter-chip is-active"
               onClick={() => selectCategory(null)}
             >
@@ -63,11 +77,7 @@ export default function PlaylistView() {
               <CloseIcon size={12} />
             </button>
           )}
-          <SearchBar value={query} onChange={setQuery} />
         </div>
-      </div>
-      <div className="main__body">
-        <UrlInput onAdd={addTrackFromUrl} loading={loading} error={error} />
         <TrackList />
       </div>
     </div>
