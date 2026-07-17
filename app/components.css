@@ -3483,3 +3483,39 @@ input.eq__band-slider::-webkit-slider-thumb {
     }
   }
 }
+
+/* ── Track Trimmer ────────────────────────────── */
+.trimmer-panel {
+  padding: 16px;
+  background: var(--surface-1);
+  border-radius: var(--radius-md);
+  margin-bottom: 16px;
+}
+.trimmer-header {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+.trimmer-controls label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+.trimmer-controls input[type=range] {
+  flex: 1;
+}
+.trimmer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+.trimmer-actions .btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+}

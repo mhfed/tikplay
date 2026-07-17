@@ -21,6 +21,7 @@ import TrackRow from './TrackRow';
 export default function TrackList() {
   const {
     tracks,
+    pendingDownloads,
     currentTrack,
     isPlaying,
     favorites,
@@ -50,7 +51,7 @@ export default function TrackList() {
     reorderTracks(reordered.map((t) => t.id));
   };
 
-  if (tracks.length === 0) {
+  if (tracks.length === 0 && pendingDownloads.length === 0) {
     return (
       <div className="empty">
         <span className="empty__icon">♪</span>
@@ -71,6 +72,15 @@ export default function TrackList() {
         strategy={verticalListSortingStrategy}
       >
         <ul className="track-list">
+          {pendingDownloads.map((url, i) => (
+            <li key={`pending-${i}`} className="track-row" style={{ opacity: 0.6, pointerEvents: 'none' }}>
+              <div className="track-row__cover" style={{ background: 'rgba(255,255,255,0.1)', animation: 'pulse 1.5s infinite' }}></div>
+              <div className="track-row__info" style={{ flex: 1, padding: '0 12px', minWidth: 0 }}>
+                <p className="track-row__title" style={{ fontSize: '15px', fontWeight: 500, color: '#fff', marginBottom: '4px' }}>Đang tải & xử lý...</p>
+                <p className="track-row__author" style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{url}</p>
+              </div>
+            </li>
+          ))}
           {tracks.map((track) => (
             <TrackRow
               key={track.id}

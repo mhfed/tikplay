@@ -5,6 +5,7 @@ import { useAppStore } from '../hooks/useAppStore';
 import { useAudioEngine } from '../hooks/useAudioEngine';
 import Cover from './Cover';
 import Equalizer from './Equalizer';
+import TrackTrimmer from './TrackTrimmer';
 import {
   CheckIcon,
   ListMusicIcon,
@@ -110,9 +111,11 @@ export default function PlayerPanel({
   const pointerTypeRef = useRef<string>('mouse');
 
   const engine = useAudioEngine({
+    startTime: currentTrack?.startTime,
+    endTime: currentTrack?.endTime,
     onEnded: () => {
       if (repeat === 'one' && currentTrack) {
-        engine.seek(0);
+        engine.seek(currentTrack.startTime || 0);
         engine.play();
         return;
       }
@@ -780,6 +783,7 @@ export default function PlayerPanel({
             <div className="pb__popover-body">
               {openPanel === 'eq' && (
                 <>
+                  <TrackTrimmer />
                   <SpeedControl speed={speed} onChange={setSpeed} />
                   <Equalizer
                     gains={eqGains}
