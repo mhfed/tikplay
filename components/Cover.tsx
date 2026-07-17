@@ -58,11 +58,14 @@ export default function Cover({
   const { bg, ring } = useMemo(() => palette(alt), [alt]);
 
   if (useImage && src && !failed) {
+    // Bust browser cache for local APIs to flush out poisoned 'immutable' black images
+    const bustedSrc = src.startsWith('/api/') ? `${src}?v=2` : src;
+    
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
         className={`cover ${className}`}
-        src={src}
+        src={bustedSrc}
         alt={alt}
         referrerPolicy="no-referrer"
         loading="lazy"

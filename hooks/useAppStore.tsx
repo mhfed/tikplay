@@ -65,6 +65,7 @@ interface AppActions {
   loadAll: () => Promise<void>;
   selectPlaylist: (id: number) => void;
   addTrackFromUrl: (url: string) => Promise<void>;
+  pendingDownloads: string[];
   playTrack: (track: Track) => void;
   playAll: () => void;
   togglePlay: () => void;
@@ -95,6 +96,7 @@ interface AppActions {
   setView: (v: AppView) => void;
   goHome: () => void;
   selectCategory: (slug: string | null) => void;
+  updateTrackTiming: (trackId: number, startTime?: number, endTime?: number) => Promise<void>;
 }
 
 type AppStore = AppState & AppActions;
@@ -123,6 +125,7 @@ export function AppStoreProvider({
   initialData: InitialAppData;
 }) {
   const [tracks, setTracks] = useState<Track[]>(initialData.tracks);
+  const [pendingDownloads, setPendingDownloads] = useState<string[]>([]);
   const [playlists, setPlaylists] = useState<Playlist[]>(initialData.playlists);
   const [favorites, setFavorites] = useState<Set<number>>(
     () => new Set(initialData.favoriteIds),
@@ -297,8 +300,8 @@ export function AppStoreProvider({
 
   const addTrackFromUrl = useCallback(
     async (url: string) => {
-      setLoading(true);
       setError(null);
+      setPendingDownloads((prev: string[]) => [...prev, url]);
       try {
         const res = await api<{
           ok: boolean;
@@ -310,15 +313,15 @@ export function AppStoreProvider({
           body: JSON.stringify({ url }),
         });
         if (!res.ok) {
-          setError(res.error || 'Failed');
+          setError(res.error || 'Failed to download');
           return;
         }
         await loadTracks(currentPlaylistId, query);
         await loadPlaylists();
         // Auto-play the new track
-        if (res.data) {
+        if (res.data && res.trackId) {
           const newTrack: Track = {
-            id: res.trackId || 0,
+            id: res.trackId,
             url,
             audioUrl: res.data.audioUrl,
             title: res.data.title,
@@ -327,13 +330,19 @@ export function AppStoreProvider({
             duration: res.data.duration,
             addedAt: Date.now(),
           };
-          setCurrentTrack(newTrack);
-          setIsPlaying(true);
+          // Don't auto-play if we are already playing a track
+          setCurrentTrack((prev: Track | null) => {
+            if (!prev) {
+              setIsPlaying(true);
+              return newTrack;
+            }
+            return prev;
+          });
         }
       } catch {
-        setError('Network error');
+        setError('Network error downloading track');
       } finally {
-        setLoading(false);
+        setPendingDownloads((prev: string[]) => prev.filter((u: string) => u !== url));
       }
     },
     [currentPlaylistId, query, loadTracks, loadPlaylists],
@@ -571,6 +580,25 @@ export function AppStoreProvider({
     [loadAutoRules],
   );
 
+  const updateTrackTiming = useCallback(
+    async (trackId: number, startTime?: number, endTime?: number) => {
+      await api('/api/tracks', {
+        method: 'PATCH',
+        body: JSON.stringify({ id: trackId, startTime, endTime }),
+      });
+      // Update local state directly so we don't have to reload all tracks just for this
+      setTracks((prev) =>
+        prev.map((t) =>
+          t.id === trackId ? { ...t, startTime, endTime } : t,
+        ),
+      );
+      if (currentTrack?.id === trackId) {
+        setCurrentTrack((t) => t ? { ...t, startTime, endTime } : t);
+      }
+    },
+    [currentTrack?.id],
+  );
+
   const clearPendingSeek = useCallback(() => setPendingSeek(null), []);
 
   const cycleRepeat = useCallback(() => {
@@ -626,6 +654,7 @@ export function AppStoreProvider({
     loadAll,
     selectPlaylist,
     addTrackFromUrl,
+    pendingDownloads,
     playTrack,
     playAll,
     togglePlay,
@@ -640,6 +669,7 @@ export function AppStoreProvider({
     renamePlaylist: renamePlaylistAction,
     createAutoRule: createAutoRuleAction,
     deleteAutoRule: deleteAutoRuleAction,
+    updateTrackTiming,
     setVolume,
     setSpeed,
     setEqGains,

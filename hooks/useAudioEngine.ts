@@ -6,12 +6,22 @@ import { EQ_BANDS } from '../lib/types';
 interface AudioEngineOptions {
   onTimeUpdate?: (currentTime: number, duration: number) => void;
   onEnded?: () => void;
+  startTime?: number;
+  endTime?: number;
 }
 
 export function useAudioEngine(opts: AudioEngineOptions = {}) {
+  const audioRefA = useRef<HTMLAudioElement | null>(null);
+  const audioRefB = useRef<HTMLAudioElement | null>(null);
+  const activeDeckRef = useRef<'A' | 'B'>('A');
+  // For external refs (like analyser), we expose the currently active audio
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  
   const ctxRef = useRef<AudioContext | null>(null);
-  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const sourceARef = useRef<MediaElementAudioSourceNode | null>(null);
+  const sourceBRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const gainARef = useRef<GainNode | null>(null);
+  const gainBRef = useRef<GainNode | null>(null);
   const filtersRef = useRef<BiquadFilterNode[]>([]);
   const gainRef = useRef<GainNode | null>(null);
   const limiterRef = useRef<DynamicsCompressorNode | null>(null);
@@ -22,6 +32,11 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
   const lastVolumeRef = useRef(0.8);
   // Desired volume (0–3): may be set before the audio graph exists.
   const desiredVolumeRef = useRef(0.8);
+  
+  const optsRef = useRef(opts);
+  useEffect(() => {
+    optsRef.current = opts;
+  }, [opts]);
 
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -32,14 +47,22 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
   const [buffered, setBuffered] = useState(0);
 
   const getOrCreateAudio = useCallback(() => {
-    if (!audioRef.current) {
-      const el = new Audio();
-      el.id = 'global-audio';
-      el.crossOrigin = 'anonymous';
-      el.preload = 'metadata';
-      audioRef.current = el;
+    if (!audioRefA.current) {
+      const elA = new Audio();
+      elA.id = 'global-audio-A';
+      elA.crossOrigin = 'anonymous';
+      elA.preload = 'metadata';
+      audioRefA.current = elA;
+      
+      const elB = new Audio();
+      elB.id = 'global-audio-B';
+      elB.crossOrigin = 'anonymous';
+      elB.preload = 'metadata';
+      audioRefB.current = elB;
     }
-    return audioRef.current;
+    const currentAudio = activeDeckRef.current === 'A' ? audioRefA.current! : audioRefB.current!;
+    audioRef.current = currentAudio; // Update exported ref
+    return currentAudio;
   }, []);
 
   // Mobile browsers suspend (iOS: "interrupted") the context on screen lock,
@@ -54,20 +77,38 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
 
   const ensureAudioGraph = useCallback(() => {
     if (connectedRef.current) return;
-    const audio = getOrCreateAudio();
+    getOrCreateAudio(); // Ensures both A and B are created
 
     const ctx = new AudioContext();
     ctxRef.current = ctx;
 
     ctx.addEventListener('statechange', () => {
-      const el = audioRef.current;
+      const el = activeDeckRef.current === 'A' ? audioRefA.current : audioRefB.current;
       if (ctx.state !== 'running' && el && !el.paused) {
         ctx.resume().catch(() => {});
       }
     });
 
-    const source = ctx.createMediaElementSource(audio);
-    sourceRef.current = source;
+    const sourceA = ctx.createMediaElementSource(audioRefA.current!);
+    const sourceB = ctx.createMediaElementSource(audioRefB.current!);
+    sourceARef.current = sourceA;
+    sourceBRef.current = sourceB;
+    
+    // Crossfade gain nodes (for fading out/in)
+    const fadeA = ctx.createGain();
+    const fadeB = ctx.createGain();
+    gainARef.current = fadeA;
+    gainBRef.current = fadeB;
+    fadeA.gain.value = 1;
+    fadeB.gain.value = 1;
+    
+    sourceA.connect(fadeA);
+    sourceB.connect(fadeB);
+    
+    // Mix them into a single track before hitting EQ
+    const mix = ctx.createGain();
+    fadeA.connect(mix);
+    fadeB.connect(mix);
 
     const filters: BiquadFilterNode[] = EQ_BANDS.map((freq, i) => {
       const filter = ctx.createBiquadFilter();
@@ -107,8 +148,8 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
     analyser.smoothingTimeConstant = 0.8;
     analyserRef.current = analyser;
 
-    // Chain: source → filters → gain (boost) → limiter → analyser → destination
-    let prev: AudioNode = source;
+    // Chain: mix → filters → gain (boost) → limiter → analyser → destination
+    let prev: AudioNode = mix;
     for (const f of filters) {
       prev.connect(f);
       prev = f;
@@ -121,18 +162,45 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
     connectedRef.current = true;
   }, [getOrCreateAudio]);
 
+  const crossfadeQueuedRef = useRef(false);
+
   const loadTrack = useCallback(
     (audioUrl: string) => {
-      const audio = getOrCreateAudio();
       if (lastUrlRef.current === audioUrl) return;
+      
+      // If we are playing, and it's a new track, swap decks and crossfade
+      const nextDeck = activeDeckRef.current === 'A' ? 'B' : 'A';
+      const newAudio = nextDeck === 'A' ? audioRefA.current! : audioRefB.current!;
+      const oldAudio = activeDeckRef.current === 'A' ? audioRefA.current! : audioRefB.current!;
+      const oldFade = activeDeckRef.current === 'A' ? gainARef.current : gainBRef.current;
+      const newFade = nextDeck === 'A' ? gainARef.current : gainBRef.current;
+      
+      activeDeckRef.current = nextDeck;
+      audioRef.current = newAudio;
       lastUrlRef.current = audioUrl;
-      audio.src = audioUrl;
+      
+      newAudio.src = audioUrl;
       setCurrentTime(0);
       setDuration(0);
       setBuffered(0);
       setIsReady(false);
+      crossfadeQueuedRef.current = false;
+      
+      if (ctxRef.current && oldFade && newFade && !oldAudio.paused) {
+        // Crossfade!
+        newFade.gain.setValueAtTime(0, ctxRef.current.currentTime);
+        newFade.gain.linearRampToValueAtTime(1, ctxRef.current.currentTime + 3);
+        
+        oldFade.gain.setValueAtTime(1, ctxRef.current.currentTime);
+        oldFade.gain.linearRampToValueAtTime(0, ctxRef.current.currentTime + 3);
+        
+        setTimeout(() => {
+           oldAudio.pause();
+           oldFade.gain.value = 1; // reset for next time
+        }, 3000);
+      }
     },
-    [getOrCreateAudio],
+    [],
   );
 
   // Recover from a network/decode error: if the element dies mid-playback
@@ -157,12 +225,16 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
       audio.src = url;
       // Seek back to where we were once metadata is back, then play.
       const onReady = () => {
+        let targetTime = resumeAt;
+        if (optsRef.current.startTime && targetTime < optsRef.current.startTime) {
+            targetTime = optsRef.current.startTime;
+        }
         if (
-          resumeAt > 0 &&
+          targetTime > 0 &&
           Number.isFinite(audio.duration) &&
-          resumeAt < audio.duration
+          targetTime < audio.duration
         ) {
-          audio.currentTime = resumeAt;
+          audio.currentTime = targetTime;
         }
         audio.play().catch(() => {});
         recoveringRef.current = false;
@@ -190,7 +262,8 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
 
   const pause = useCallback(() => {
     wantsPlayingRef.current = false;
-    audioRef.current?.pause();
+    if (audioRefA.current && !audioRefA.current.paused) audioRefA.current.pause();
+    if (audioRefB.current && !audioRefB.current.paused) audioRefB.current.pause();
   }, []);
 
   const toggle = useCallback(async () => {
@@ -250,8 +323,6 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
 
   // Attach event listeners
   useEffect(() => {
-    const audio = getOrCreateAudio();
-
     // Global interaction listener to unlock AudioContext right away
     const unlock = () => {
       ensureAudioGraph();
@@ -267,30 +338,50 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
     });
     document.addEventListener('click', unlock, { once: true, passive: true });
 
-    const handleTimeUpdate = () => {
-      // Watchdog: media events keep firing in the background even when the
-      // context got suspended, so this is the one hook that can revive audio
-      // while the page is hidden or the screen is locked.
+    const handleTimeUpdate = (e: Event) => {
+      if (e.target !== audioRef.current) return;
       resumeContext();
-      setCurrentTime(audio.currentTime);
-      setDuration(audio.duration || 0);
-      opts.onTimeUpdate?.(audio.currentTime, audio.duration || 0);
+      
+      const el = e.target as HTMLAudioElement;
+      const t = el.currentTime;
+      const d = el.duration || 0;
+      
+      // Auto-skip or Crossfade logic
+      const targetEnd = optsRef.current.endTime || d;
+      
+      // If within 3 seconds of the end, trigger crossfade
+      if (targetEnd > 3 && t >= targetEnd - 3 && !crossfadeQueuedRef.current) {
+        crossfadeQueuedRef.current = true;
+        optsRef.current.onEnded?.();
+      }
+      
+      setCurrentTime(t);
+      setDuration(d);
+      optsRef.current.onTimeUpdate?.(t, d);
     };
 
-    const handleEnded = () => {
-      opts.onEnded?.();
+    const handleEnded = (e: Event) => {
+      if (e.target !== audioRef.current) return;
+      optsRef.current.onEnded?.();
     };
 
-    const handleCanPlay = () => {
+    const handleCanPlay = (e: Event) => {
+      if (e.target !== audioRef.current) return;
+      const el = e.target as HTMLAudioElement;
       setIsReady(true);
-      setDuration(audio.duration || 0);
+      setDuration(el.duration || 0);
+      if (optsRef.current.startTime && el.currentTime < optsRef.current.startTime) {
+        el.currentTime = optsRef.current.startTime;
+      }
     };
 
     // Buffered amount changed (network chunk arrived). Take the furthest
     // buffered end and express it as a fraction of the duration.
-    const handleProgress = () => {
-      const ranges = audio.buffered;
-      const dur = audio.duration || 0;
+    const handleProgress = (e: Event) => {
+      if (e.target !== audioRef.current) return;
+      const el = e.target as HTMLAudioElement;
+      const ranges = el.buffered;
+      const dur = el.duration || 0;
       if (!ranges.length || !dur) {
         setBuffered(0);
         return;
@@ -301,7 +392,8 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
 
     // Element errored (network drop while backgrounded, decode failure, etc).
     // Try to recover once, then give up so we don't spin on a dead URL.
-    const handleError = () => {
+    const handleError = (e: Event) => {
+      if (e.target !== audioRef.current) return;
       recover();
     };
 
@@ -318,24 +410,33 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
       }
     };
 
-    audio.addEventListener('timeupdate', handleTimeUpdate);
-    audio.addEventListener('ended', handleEnded);
-    audio.addEventListener('canplay', handleCanPlay);
-    audio.addEventListener('loadedmetadata', handleCanPlay);
-    audio.addEventListener('progress', handleProgress);
-    audio.addEventListener('error', handleError);
-    audio.addEventListener('play', resumeContext);
+    getOrCreateAudio();
+    const elA = audioRefA.current!;
+    const elB = audioRefB.current!;
+
+    [elA, elB].forEach(el => {
+      el.addEventListener('timeupdate', handleTimeUpdate);
+      el.addEventListener('ended', handleEnded);
+      el.addEventListener('canplay', handleCanPlay);
+      el.addEventListener('loadedmetadata', handleCanPlay);
+      el.addEventListener('progress', handleProgress);
+      el.addEventListener('error', handleError);
+      el.addEventListener('play', resumeContext);
+    });
     document.addEventListener('visibilitychange', handleVisible);
     window.addEventListener('pageshow', handleVisible);
 
     return () => {
-      audio.removeEventListener('timeupdate', handleTimeUpdate);
-      audio.removeEventListener('ended', handleEnded);
-      audio.removeEventListener('canplay', handleCanPlay);
-      audio.removeEventListener('loadedmetadata', handleCanPlay);
-      audio.removeEventListener('progress', handleProgress);
-      audio.removeEventListener('error', handleError);
-      audio.removeEventListener('play', resumeContext);
+      [elA, elB].forEach(el => {
+        if (!el) return;
+        el.removeEventListener('timeupdate', handleTimeUpdate as any);
+        el.removeEventListener('ended', handleEnded as any);
+        el.removeEventListener('canplay', handleCanPlay as any);
+        el.removeEventListener('loadedmetadata', handleCanPlay as any);
+        el.removeEventListener('progress', handleProgress as any);
+        el.removeEventListener('error', handleError as any);
+        el.removeEventListener('play', resumeContext);
+      });
       document.removeEventListener('visibilitychange', handleVisible);
       window.removeEventListener('pageshow', handleVisible);
       document.removeEventListener('touchstart', unlock);

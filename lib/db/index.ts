@@ -22,6 +22,8 @@ export interface DbTrackRow {
   duration: number;
   added_at: number;
   category?: string;
+  start_time?: number;
+  end_time?: number;
 }
 
 export interface DbPlaylistRow {

@@ -1,8 +1,7 @@
-import { createReadStream, statSync } from 'node:fs';
+import { promises as fs } from 'node:fs';
 import type { NextRequest } from 'next/server';
 import { FileCacheStore } from '@/lib/cache';
 
-// Cover files live on disk and are streamed; Node runtime required.
 export const runtime = 'nodejs';
 
 // Cache keys are 64-char hex (sha256). Reject anything else to avoid path abuse.
@@ -26,26 +25,27 @@ export async function GET(
     return new Response('Not found', { status: 404 });
   }
 
-  const stat = statSync(cover.path);
-  const stream = createReadStream(cover.path);
+  try {
+    const stat = await fs.stat(cover.path);
+    
+    // TikTok CDN often returns a 3.2KB black image for hotlink protection
+    // which our backend might have successfully cached. If the cover is
+    // suspiciously small, reject it so the frontend falls back to the gradient.
+    if (stat.size < 4000) {
+      return new Response('Invalid cover (too small)', { status: 404 });
+    }
 
-  const body = new ReadableStream<Uint8Array>({
-    start(controller) {
-      stream.on('data', (chunk) => controller.enqueue(chunk as Buffer));
-      stream.on('end', () => controller.close());
-      stream.on('error', (err) => controller.error(err));
-    },
-    cancel() {
-      stream.destroy();
-    },
-  });
+    const buffer = await fs.readFile(cover.path);
 
-  return new Response(body, {
-    status: 200,
-    headers: {
-      'Content-Type': cover.contentType,
-      'Content-Length': String(stat.size),
-      'Cache-Control': 'public, max-age=31536000, immutable',
-    },
-  });
+    return new Response(buffer, {
+      status: 200,
+      headers: {
+        'Content-Type': cover.contentType,
+        'Content-Length': String(stat.size),
+        'Cache-Control': 'public, max-age=31536000, immutable',
+      },
+    });
+  } catch (err) {
+    return new Response('Internal error reading file', { status: 500 });
+  }
 }

@@ -34,6 +34,20 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true, track: toTrack(row, favIds) });
 }
 
+export async function PATCH(req: NextRequest) {
+  const body = await req.json();
+  const { id, startTime, endTime } = body;
+  const db = require('@/lib/db').getDb();
+  const track = db.tracks.find((t: any) => t.id === id);
+  if (!track) return NextResponse.json({ ok: false }, { status: 404 });
+  
+  if (startTime !== undefined) track.start_time = startTime;
+  if (endTime !== undefined) track.end_time = endTime;
+  
+  require('@/lib/db').saveDb();
+  return NextResponse.json({ ok: true, track: toTrack(track, getFavoriteIds()) });
+}
+
 export async function DELETE(req: NextRequest) {
   const { id } = await req.json();
   deleteTrack(id);

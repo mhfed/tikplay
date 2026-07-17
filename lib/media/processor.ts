@@ -27,15 +27,40 @@ export class MediaProcessor {
   private cache: FileCacheStore;
   /** In-flight jobs keyed by cacheKey so concurrent identical URLs share one. */
   private inFlight = new Map<string, Promise<ProcessResult>>();
+  
+  /** Concurrency queue to avoid freezing the system with 10x concurrent FFmpeg encodings */
+  private queue: Array<() => void> = [];
+  private activeJobs = 0;
+  private readonly MAX_CONCURRENT = 2; // Process 2 tracks at most simultaneously
 
   constructor(cache?: FileCacheStore, ytdlpPath?: string) {
     this.ytdlpPath = ytdlpPath ?? process.env.YTDLP_PATH ?? 'yt-dlp';
     this.cache = cache ?? new FileCacheStore();
   }
 
+  /** Request a slot in the concurrency queue */
+  private async acquireSlot(): Promise<void> {
+    if (this.activeJobs < this.MAX_CONCURRENT) {
+      this.activeJobs++;
+      return;
+    }
+    return new Promise(resolve => this.queue.push(resolve));
+  }
+
+  /** Release a slot back to the queue */
+  private releaseSlot(): void {
+    if (this.queue.length > 0) {
+      const next = this.queue.shift();
+      next?.(); // Transfer the slot to the waiting job
+    } else {
+      this.activeJobs--;
+    }
+  }
+
   /**
    * Validate, debounce and process a TikTok URL. Concurrent calls with the
    * same cacheKey resolve to the same underlying job.
+   * Throttles active processing to prevent CPU overload from parallel yt-dlp/ffmpeg tasks.
    */
   async process(rawUrl: string): Promise<ProcessResult> {
     const validation = validateTikTokUrl(rawUrl);
@@ -44,12 +69,24 @@ export class MediaProcessor {
     }
 
     const key = cacheKeyFromRaw(rawUrl);
+    
+    // Quick dedup check before awaiting a queue slot
     const existing = this.inFlight.get(key);
     if (existing) return existing;
 
+    await this.acquireSlot();
+
+    // Check again in case another identical request squeezed through the queue
+    if (this.inFlight.has(key)) {
+      this.releaseSlot();
+      return this.inFlight.get(key)!;
+    }
+
     const job = this.run(validation.normalized, key).finally(() => {
       this.inFlight.delete(key);
+      this.releaseSlot();
     });
+    
     this.inFlight.set(key, job);
     return job;
   }
@@ -96,12 +133,15 @@ export class MediaProcessor {
     ]);
 
     // TikTok's cover URL is signed and expires; re-host it under our own
-    // cache/route so playback UI can hotlink it indefinitely. Best-effort —
-    // if the download fails, leave meta.cover as the raw (eventually-dead)
-    // TikTok URL rather than failing the whole crawl.
+    // cache/route so playback UI can hotlink it indefinitely. If the
+    // download fails (or returns a CDN blocking black image), clear it
+    // so the UI falls back to the generated gradient immediately instead
+    // of rendering a black box when the signed URL expires.
     if (cover) {
       await this.cache.saveCover(key, cover.buffer, cover.contentType);
       meta.cover = `/api/cover/${key}`;
+    } else {
+      meta.cover = '';
     }
 
     // Persist metadata so the API can serve it from cache without re-running.
@@ -126,6 +166,10 @@ export class MediaProcessor {
       if (!res.ok) return null;
       const contentType = res.headers.get('content-type') || 'image/jpeg';
       const buffer = Buffer.from(await res.arrayBuffer());
+      
+      // TikTok CDN may return a 3.2KB black image when hotlink-blocked
+      if (buffer.length < 4000) return null;
+      
       return { buffer, contentType };
     } catch {
       return null;
@@ -164,7 +208,7 @@ export class MediaProcessor {
    * errors (bad URL, private/deleted video) don't match and fail fast.
    */
   private static isTransient(msg: string): boolean {
-    return /rehydration|Unable to extract|Requested format is not available|Unable to download webpage|HTTP Error 5\d\d|timed out|Connection reset|Read timed out/i.test(
+    return /rehydration|Unable to extract|Requested format is not available|Unable to download webpage|HTTP Error [45]\d\d|timed out|Connection reset|Read timed out|Unexpected response/i.test(
       msg,
     );
   }
@@ -174,11 +218,19 @@ export class MediaProcessor {
    * failures a few times with a short backoff.
    */
   private execYtDlp(args: string[], attempts = 3): Promise<string> {
+    const defaultArgs = [
+      '--add-header', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      '--add-header', 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+      '--add-header', 'Accept-Language: en-US,en;q=0.9',
+      '--add-header', 'Sec-Fetch-Mode: navigate'
+    ];
+    const finalArgs = [...defaultArgs, ...args];
+
     const attempt = (n: number): Promise<string> =>
       new Promise<string>((resolve, reject) => {
         execFile(
           this.ytdlpPath,
-          args,
+          finalArgs,
           { maxBuffer: 50 * 1024 * 1024 },
           (err, stdout, stderr) => {
             if (err) {
