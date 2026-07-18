@@ -27,7 +27,7 @@ export class MediaProcessor {
   private cache: FileCacheStore;
   /** In-flight jobs keyed by cacheKey so concurrent identical URLs share one. */
   private inFlight = new Map<string, Promise<ProcessResult>>();
-  
+
   /** Concurrency queue to avoid freezing the system with 10x concurrent FFmpeg encodings */
   private queue: Array<() => void> = [];
   private activeJobs = 0;
@@ -44,7 +44,7 @@ export class MediaProcessor {
       this.activeJobs++;
       return;
     }
-    return new Promise(resolve => this.queue.push(resolve));
+    return new Promise((resolve) => this.queue.push(resolve));
   }
 
   /** Release a slot back to the queue */
@@ -69,7 +69,7 @@ export class MediaProcessor {
     }
 
     const key = cacheKeyFromRaw(rawUrl);
-    
+
     // Quick dedup check before awaiting a queue slot
     const existing = this.inFlight.get(key);
     if (existing) return existing;
@@ -86,7 +86,7 @@ export class MediaProcessor {
       this.inFlight.delete(key);
       this.releaseSlot();
     });
-    
+
     this.inFlight.set(key, job);
     return job;
   }
@@ -166,10 +166,10 @@ export class MediaProcessor {
       if (!res.ok) return null;
       const contentType = res.headers.get('content-type') || 'image/jpeg';
       const buffer = Buffer.from(await res.arrayBuffer());
-      
+
       // TikTok CDN may return a 3.2KB black image when hotlink-blocked
       if (buffer.length < 4000) return null;
-      
+
       return { buffer, contentType };
     } catch {
       return null;
@@ -219,10 +219,14 @@ export class MediaProcessor {
    */
   private execYtDlp(args: string[], attempts = 3): Promise<string> {
     const defaultArgs = [
-      '--add-header', 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      '--add-header', 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-      '--add-header', 'Accept-Language: en-US,en;q=0.9',
-      '--add-header', 'Sec-Fetch-Mode: navigate'
+      '--add-header',
+      'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      '--add-header',
+      'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+      '--add-header',
+      'Accept-Language: en-US,en;q=0.9',
+      '--add-header',
+      'Sec-Fetch-Mode: navigate',
     ];
     const finalArgs = [...defaultArgs, ...args];
 

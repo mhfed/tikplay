@@ -27,7 +27,7 @@ export async function GET(
 
   try {
     const stat = await fs.stat(cover.path);
-    
+
     // TikTok CDN often returns a 3.2KB black image for hotlink protection
     // which our backend might have successfully cached. If the cover is
     // suspiciously small, reject it so the frontend falls back to the gradient.
@@ -45,7 +45,7 @@ export async function GET(
         'Cache-Control': 'public, max-age=31536000, immutable',
       },
     });
-  } catch (err) {
+  } catch {
     return new Response('Internal error reading file', { status: 500 });
   }
 }

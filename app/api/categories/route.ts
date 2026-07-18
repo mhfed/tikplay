@@ -1,10 +1,7 @@
 import { NextResponse } from 'next/server';
-import {
-  getAllCategories,
-  getTracksByCategory,
-} from '@/lib/db/queries';
-import { getFavoriteIds, toTrack } from '../tracks/helpers';
 import { categoryName } from '@/lib/categories';
+import { getAllCategories, getTracksByCategory } from '@/lib/db/queries';
+import { getFavoriteIds, toTrack } from '../tracks/helpers';
 
 export const dynamic = 'force-dynamic';
 

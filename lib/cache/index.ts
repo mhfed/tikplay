@@ -1,13 +1,13 @@
-import { promises as fs } from 'fs';
 import {
   existsSync,
-  statSync,
-  readdirSync,
-  unlinkSync,
+  promises as fs,
   mkdirSync,
+  readdirSync,
   readFileSync,
-} from 'fs';
-import { join } from 'path';
+  statSync,
+  unlinkSync,
+} from 'node:fs';
+import { join } from 'node:path';
 
 const DEFAULT_TTL_DAYS = 7;
 const DEFAULT_MAX_GB = 5;

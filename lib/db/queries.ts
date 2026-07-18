@@ -1,4 +1,4 @@
-import { CATEGORIES, categoryName, detectCategory } from '../categories';
+import { CATEGORIES, detectCategory } from '../categories';
 import type { AutoRule, DbTrack, MusicCategory, Playlist } from '../types';
 import { type DbTrackRow, getDb, saveDb } from './index';
 

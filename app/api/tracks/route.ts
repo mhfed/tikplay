@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { getDb, saveDb } from '@/lib/db';
 import {
   applyAutoRules,
   deleteTrack,
@@ -37,15 +38,18 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const body = await req.json();
   const { id, startTime, endTime } = body;
-  const db = require('@/lib/db').getDb();
-  const track = db.tracks.find((t: any) => t.id === id);
+  const db = getDb();
+  const track = db.tracks.find((t) => t.id === id);
   if (!track) return NextResponse.json({ ok: false }, { status: 404 });
-  
+
   if (startTime !== undefined) track.start_time = startTime;
   if (endTime !== undefined) track.end_time = endTime;
-  
-  require('@/lib/db').saveDb();
-  return NextResponse.json({ ok: true, track: toTrack(track, getFavoriteIds()) });
+
+  saveDb();
+  return NextResponse.json({
+    ok: true,
+    track: toTrack(track, getFavoriteIds()),
+  });
 }
 
 export async function DELETE(req: NextRequest) {
