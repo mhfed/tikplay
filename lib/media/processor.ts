@@ -1,4 +1,6 @@
 import { execFile } from 'node:child_process';
+import { existsSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ensureCacheDir, FileCacheStore, getCacheDir } from '../cache';
 import { cacheKeyFromRaw, type MediaSource, validateMediaUrl } from './source';
@@ -33,6 +35,7 @@ export class MediaProcessor {
   private queue: Array<() => void> = [];
   private activeJobs = 0;
   private readonly MAX_CONCURRENT = 2; // Process 2 tracks at most simultaneously
+  private cookiesPath: string | null = null;
 
   constructor(cache?: FileCacheStore, ytdlpPath?: string) {
     this.ytdlpPath = ytdlpPath ?? process.env.YTDLP_PATH ?? 'yt-dlp';
@@ -225,6 +228,7 @@ export class MediaProcessor {
    * failures a few times with a short backoff.
    */
   private execYtDlp(args: string[], attempts = 3): Promise<string> {
+    const cookiesPath = this.getCookiesPath();
     const defaultArgs = [
       '--js-runtimes',
       'deno:/usr/local/bin/deno',
@@ -237,6 +241,7 @@ export class MediaProcessor {
       '--add-header',
       'Sec-Fetch-Mode: navigate',
     ];
+    if (cookiesPath) defaultArgs.push('--cookies', cookiesPath);
     const finalArgs = [...defaultArgs, ...args];
 
     const attempt = (n: number): Promise<string> =>
@@ -261,5 +266,23 @@ export class MediaProcessor {
         );
       });
     return attempt(1);
+  }
+
+  private getCookiesPath(): string | null {
+    if (this.cookiesPath) return this.cookiesPath;
+
+    const path = process.env.YOUTUBE_COOKIES_PATH;
+    if (path && existsSync(path)) {
+      this.cookiesPath = path;
+      return this.cookiesPath;
+    }
+
+    const encoded = process.env.YOUTUBE_COOKIES_B64;
+    if (!encoded) return null;
+
+    const filePath = join(tmpdir(), 'yt-dlp-youtube-cookies.txt');
+    writeFileSync(filePath, Buffer.from(encoded, 'base64'), { mode: 0o600 });
+    this.cookiesPath = filePath;
+    return this.cookiesPath;
   }
 }
