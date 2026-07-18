@@ -34,16 +34,16 @@ export default function UrlInput({
           : 'mb-4 flex flex-wrap gap-2.5 rounded-panel border border-line-soft bg-surface p-3.5'
       }
       onSubmit={submit}
-      aria-label="Thêm bài hát từ TikTok"
+      aria-label="Thêm bài hát từ TikTok hoặc YouTube"
     >
       <input
         type="text"
         className={`min-w-0 flex-1 rounded-full border border-line-soft bg-canvas px-4 py-3 font-mono text-[13px] text-ink outline-none transition-[border-color,box-shadow] duration-[var(--motion-fast)] ease-out-app placeholder:text-muted-2 focus:border-accent focus:shadow-[0_0_0_3px_var(--accent-muted)] disabled:opacity-60 max-[640px]:text-base${compact ? ' bg-surface px-3.5 py-[9px] max-[640px]:py-2.5' : ' max-[640px]:px-4 max-[640px]:py-[11px]'}`}
-        placeholder="Dán liên kết video TikTok..."
+        placeholder="Dán link TikTok hoặc YouTube..."
         value={value}
         onChange={(e) => setValue(e.target.value)}
         disabled={loading}
-        aria-label="Liên kết video TikTok"
+        aria-label="Liên kết video TikTok hoặc YouTube"
         aria-invalid={Boolean(error)}
         aria-describedby={error ? 'tiktok-url-error' : undefined}
         inputMode="url"

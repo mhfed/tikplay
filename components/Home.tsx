@@ -77,7 +77,7 @@ export default function Home({ onOpenLibrary }: HomeProps) {
             Chưa có bài hát nào
           </p>
           <p className="text-sm text-muted">
-            Dán một link TikTok ở tab Thư viện để bắt đầu vibe.
+            Dán một link TikTok hoặc YouTube ở tab Thư viện để bắt đầu.
           </p>
         </div>
       </div>
@@ -241,7 +241,7 @@ export default function Home({ onOpenLibrary }: HomeProps) {
       <HomeRow
         icon={<ListMusicIcon size={16} />}
         title="Mới thêm gần đây"
-        subtitle="Vừa tải về từ TikTok"
+        subtitle="Vừa thêm gần đây"
       >
         {recentlyAdded.map((t, i) => (
           <TrackCard

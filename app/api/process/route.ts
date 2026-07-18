@@ -2,7 +2,11 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { FileCacheStore } from '@/lib/cache';
 import { applyAutoRules, upsertTrack } from '@/lib/db/queries';
 import { MediaProcessor, type TrackMeta } from '@/lib/media/processor';
-import { cacheKeyFromRaw, validateTikTokUrl } from '@/lib/tiktok/validate';
+import {
+  cacheKeyFromRaw,
+  type MediaSource,
+  validateMediaUrl,
+} from '@/lib/media/source';
 
 // Long-running yt-dlp jobs must run on the Node.js runtime, never Edge.
 export const runtime = 'nodejs';
@@ -28,8 +32,8 @@ export async function POST(req: NextRequest) {
   }
 
   const url = typeof body.url === 'string' ? body.url : '';
-  const validation = validateTikTokUrl(url);
-  if (!validation.valid || !validation.normalized) {
+  const validation = validateMediaUrl(url);
+  if (!validation.valid || !validation.normalized || !validation.source) {
     return NextResponse.json(
       { ok: false, error: validation.error ?? 'URL không hợp lệ' },
       { status: 400 },
@@ -50,20 +54,25 @@ export async function POST(req: NextRequest) {
   const cached = cache.get(key);
   const meta = cache.getMeta(key) as TrackMeta | null;
   if (cached && meta) {
-    const dbTrack = persistTrack(url, key, meta);
+    const dbTrack = persistTrack(url, key, meta, validation.source);
     return NextResponse.json({
       ok: true,
-      data: payload(key, meta),
+      data: payload(key, meta, validation.source),
       trackId: dbTrack.id,
     });
   }
 
   try {
     const result = await processor.process(url);
-    const dbTrack = persistTrack(url, result.audioKey, result.meta);
+    const dbTrack = persistTrack(
+      url,
+      result.audioKey,
+      result.meta,
+      result.source,
+    );
     return NextResponse.json({
       ok: true,
-      data: payload(result.audioKey, result.meta),
+      data: payload(result.audioKey, result.meta, result.source),
       trackId: dbTrack.id,
     });
   } catch (e) {
@@ -74,7 +83,12 @@ export async function POST(req: NextRequest) {
   }
 }
 
-function persistTrack(url: string, audioKey: string, meta: TrackMeta) {
+function persistTrack(
+  url: string,
+  audioKey: string,
+  meta: TrackMeta,
+  source: MediaSource,
+) {
   const dbTrack = upsertTrack({
     url,
     audio_key: audioKey,
@@ -83,17 +97,19 @@ function persistTrack(url: string, audioKey: string, meta: TrackMeta) {
     cover: meta.cover,
     duration: meta.duration,
     added_at: Date.now(),
+    source,
   });
   applyAutoRules(dbTrack.id, dbTrack.title, dbTrack.author);
   return dbTrack;
 }
 
-function payload(key: string, meta: TrackMeta) {
+function payload(key: string, meta: TrackMeta, source: MediaSource) {
   return {
     audioUrl: `/api/audio/${key}`,
     title: meta.title,
     author: meta.author,
     cover: meta.cover,
     duration: meta.duration,
+    source,
   };
 }

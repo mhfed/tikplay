@@ -1,9 +1,20 @@
 import { CATEGORIES, detectCategory } from '../categories';
-import type { AutoRule, DbTrack, MusicCategory, Playlist } from '../types';
+import { MEDIA_SOURCE_LABELS, type MediaSource } from '../media/source';
+import type {
+  AutoRule,
+  DbTrack,
+  MusicCategory,
+  MusicSource,
+  Playlist,
+} from '../types';
 import { type DbTrackRow, getDb, saveDb } from './index';
 
 function toDbTrack(row: DbTrackRow): DbTrack {
   return row as DbTrack;
+}
+
+function trackSource(row: Pick<DbTrackRow, 'source'>): MediaSource {
+  return row.source ?? 'tiktok';
 }
 
 // ── TRACKS ──────────────────────────────────────────────
@@ -25,12 +36,15 @@ export function getTrackByUrl(url: string): DbTrack | undefined {
 
 export function upsertTrack(t: Omit<DbTrack, 'id'>): DbTrack {
   const db = getDb();
-  const existing = db.tracks.find((r) => r.url === t.url);
+  const existing = db.tracks.find(
+    (r) => r.url === t.url || r.audio_key === t.audio_key,
+  );
   if (existing) {
     existing.title = t.title;
     existing.author = t.author;
     existing.cover = t.cover;
     existing.duration = t.duration;
+    existing.source = t.source ?? trackSource(existing);
     saveDb();
     return toDbTrack(existing);
   }
@@ -268,6 +282,30 @@ export function getAllCategories(): MusicCategory[] {
 export function getTracksByCategory(category: string): DbTrack[] {
   return getDb()
     .tracks.filter((t) => (t.category || 'others') === category)
+    .sort((a, b) => b.added_at - a.added_at)
+    .map(toDbTrack);
+}
+
+// ── SOURCES ──────────────────────────────────────────────
+
+export function getAllSources(): MusicSource[] {
+  const db = getDb();
+  const countMap = new Map<MediaSource, number>();
+  for (const t of db.tracks) {
+    const source = trackSource(t);
+    countMap.set(source, (countMap.get(source) || 0) + 1);
+  }
+
+  return (Object.keys(MEDIA_SOURCE_LABELS) as MediaSource[]).map((slug) => ({
+    slug,
+    name: MEDIA_SOURCE_LABELS[slug],
+    count: countMap.get(slug) || 0,
+  }));
+}
+
+export function getTracksBySource(source: MediaSource): DbTrack[] {
+  return getDb()
+    .tracks.filter((t) => trackSource(t) === source)
     .sort((a, b) => b.added_at - a.added_at)
     .map(toDbTrack);
 }

@@ -12,12 +12,14 @@ export default function PlaylistView() {
     playlists,
     currentPlaylistId,
     selectedCategory,
+    selectedSource,
     tracks,
     query,
     setQuery,
     addTrackFromUrl,
     playAll,
     selectCategory,
+    selectSource,
     loading,
     error,
   } = useAppStore();
@@ -32,6 +34,11 @@ export default function PlaylistView() {
   const categoryLabel = selectedCategory
     ? categoryName(selectedCategory)
     : null;
+  const sourceLabel = selectedSource
+    ? selectedSource === 'youtube'
+      ? 'YouTube'
+      : 'TikTok'
+    : null;
   const playlistTitle =
     currentPlaylistId === 1 ? 'Tất cả bài hát' : currentPlaylist.name;
 
@@ -40,16 +47,19 @@ export default function PlaylistView() {
       <div className="flex min-h-[var(--header-h)] shrink-0 items-center gap-4 border-b border-line-soft px-6 py-3 max-[1024px]:min-h-[calc(var(--header-h)+env(safe-area-inset-top))] max-[1024px]:flex-wrap max-[1024px]:pt-[calc(12px+env(safe-area-inset-top))] max-[640px]:h-auto max-[640px]:gap-2.5 max-[640px]:px-4 max-[640px]:pb-3 max-[640px]:pt-[calc(10px+env(safe-area-inset-top))]">
         <div className="flex min-w-0 flex-col gap-0.5 max-[640px]:flex-[1_1_0]">
           <h1 className="truncate font-display text-xl font-extrabold max-[640px]:text-[17px]">
-            {categoryLabel ? `Nhạc ${categoryLabel}` : playlistTitle}
+            {sourceLabel ??
+              (categoryLabel ? `Nhạc ${categoryLabel}` : playlistTitle)}
           </h1>
           <p className="truncate font-mono text-[11px] text-muted">
-            {categoryLabel
-              ? `${tracks.length} bài hát`
-              : currentPlaylistId === 1
-                ? 'Nhạc đã tải về của bạn'
-                : currentPlaylistId === -1
-                  ? 'Những bài bạn đã thích'
-                  : `${tracks.length} bài hát`}
+            {sourceLabel
+              ? `${tracks.length} bài từ ${sourceLabel}`
+              : categoryLabel
+                ? `${tracks.length} bài hát`
+                : currentPlaylistId === 1
+                  ? 'Nhạc đã tải về của bạn'
+                  : currentPlaylistId === -1
+                    ? 'Những bài bạn đã thích'
+                    : `${tracks.length} bài hát`}
           </p>
         </div>
         {tracks.length > 0 && (
@@ -78,6 +88,16 @@ export default function PlaylistView() {
               onClick={() => selectCategory(null)}
             >
               {categoryLabel}
+              <CloseIcon size={12} />
+            </button>
+          )}
+          {selectedSource && sourceLabel && (
+            <button
+              type="button"
+              className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-accent bg-accent-muted px-3 py-1.5 text-xs font-semibold text-accent transition-[background,transform] duration-[var(--motion-fast)] ease-spring hover:-translate-y-px hover:bg-[rgba(0,221,214,0.2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent [&_svg]:opacity-70"
+              onClick={() => selectSource(null)}
+            >
+              {sourceLabel}
               <CloseIcon size={12} />
             </button>
           )}

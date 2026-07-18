@@ -1,3 +1,5 @@
+import type { MediaSource } from './media/source';
+
 /** A track row as stored in SQLite. */
 export interface DbTrack {
   id: number;
@@ -8,6 +10,7 @@ export interface DbTrack {
   cover: string;
   duration: number;
   added_at: number;
+  source?: MediaSource;
   category?: string;
   start_time?: number;
   end_time?: number;
@@ -23,6 +26,7 @@ export interface Track {
   cover: string;
   duration: number;
   addedAt: number;
+  source: MediaSource;
   isFavorite?: boolean;
   category?: string;
   startTime?: number;
@@ -37,6 +41,12 @@ export interface MusicCategory {
   count?: number;
 }
 
+export interface MusicSource {
+  slug: MediaSource;
+  name: string;
+  count: number;
+}
+
 /** Convert a DB row to the frontend shape. */
 export function toTrack(row: DbTrack, favIds?: Set<number>): Track {
   return {
@@ -48,6 +58,7 @@ export function toTrack(row: DbTrack, favIds?: Set<number>): Track {
     cover: row.cover,
     duration: row.duration,
     addedAt: row.added_at,
+    source: row.source ?? 'tiktok',
     category: row.category,
     startTime: row.start_time,
     endTime: row.end_time,
@@ -79,6 +90,7 @@ export interface ProcessResponse {
     author: string;
     cover: string;
     duration: number;
+    source?: MediaSource;
   };
 }
 

@@ -11,9 +11,11 @@ import {
   useOptimistic,
   useState,
 } from 'react';
+import type { MediaSource } from '../lib/media/source';
 import type {
   AutoRule,
   MusicCategory,
+  MusicSource,
   Playlist,
   RepeatMode,
   Track,
@@ -27,6 +29,7 @@ export interface InitialAppData {
   tracks: Track[];
   playlists: Playlist[];
   categories: MusicCategory[];
+  sources: MusicSource[];
   favoriteIds: number[];
   autoRules: AutoRule[];
   currentPlaylistId: number;
@@ -39,6 +42,7 @@ interface AppState {
   tracks: Track[];
   playlists: Playlist[];
   categories: MusicCategory[];
+  sources: MusicSource[];
   favorites: Set<number>;
   autoRules: AutoRule[];
   currentPlaylistId: number;
@@ -61,6 +65,8 @@ interface AppState {
   recentlyPlayed: Track[];
   /** Currently selected category slug (null = all). */
   selectedCategory: string | null;
+  /** Currently selected media source (null = all). */
+  selectedSource: MediaSource | null;
 }
 
 interface AppActions {
@@ -97,6 +103,7 @@ interface AppActions {
   setView: (v: AppView) => void;
   goHome: () => void;
   selectCategory: (slug: string | null) => void;
+  selectSource: (source: MediaSource | null) => void;
   updateTrackTiming: (
     trackId: number,
     startTime?: number,
@@ -182,7 +189,13 @@ export function AppStoreProvider({
   const [categories, setCategories] = useState<MusicCategory[]>(
     initialData.categories || [],
   );
+  const [sources, setSources] = useState<MusicSource[]>(
+    initialData.sources || [],
+  );
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedSource, setSelectedSource] = useState<MediaSource | null>(
+    null,
+  );
 
   // A shared URL can seed global playback on the first route mount. Later
   // route transitions must never replace the already-running global track.
@@ -227,18 +240,25 @@ export function AppStoreProvider({
     setCategories(data.categories || []);
   }, []);
 
+  const loadSourcesFn = useCallback(async () => {
+    const data = await api<{ sources: MusicSource[] }>('/api/sources');
+    setSources(data.sources || []);
+  }, []);
+
   const loadAll = useCallback(async () => {
     await Promise.all([
       loadPlaylists(),
       loadTracks(currentPlaylistId),
       loadAutoRules(),
       loadCategoriesFn(),
+      loadSourcesFn(),
     ]);
   }, [
     loadPlaylists,
     loadTracks,
     loadAutoRules,
     loadCategoriesFn,
+    loadSourcesFn,
     currentPlaylistId,
   ]);
 
@@ -301,6 +321,7 @@ export function AppStoreProvider({
   const selectPlaylist = useCallback(
     (id: number) => {
       setSelectedCategory(null);
+      setSelectedSource(null);
       setCurrentPlaylistId(id);
       setView('library');
       loadTracks(id, query);
@@ -313,6 +334,7 @@ export function AppStoreProvider({
   // "All Tracks" rather than leaving them narrowed to the last playlist.
   const goHome = useCallback(() => {
     setSelectedCategory(null);
+    setSelectedSource(null);
     setCurrentPlaylistId(1);
     setView('home');
     loadTracks(1, query);
@@ -321,6 +343,7 @@ export function AppStoreProvider({
   const selectCategory = useCallback(
     async (slug: string | null) => {
       setSelectedCategory(slug);
+      setSelectedSource(null);
       if (slug) {
         setCurrentPlaylistId(1);
         setView('library');
@@ -339,9 +362,32 @@ export function AppStoreProvider({
     [loadTracks, query],
   );
 
+  const selectSource = useCallback(
+    async (source: MediaSource | null) => {
+      setSelectedSource(source);
+      setSelectedCategory(null);
+      if (source) {
+        setCurrentPlaylistId(1);
+        setView('library');
+        const data = await api<{ tracks: Track[] }>(
+          `/api/sources?source=${encodeURIComponent(source)}`,
+        );
+        setTracks(data.tracks || []);
+        const favSet = new Set(
+          (data.tracks || []).filter((t) => t.isFavorite).map((t) => t.id),
+        );
+        setFavorites(favSet);
+      } else {
+        loadTracks(1, query);
+      }
+    },
+    [loadTracks, query],
+  );
+
   const addTrackFromUrl = useCallback(
     async (url: string) => {
       setError(null);
+      setLoading(true);
       setPendingDownloads((prev: string[]) => [...prev, url]);
       try {
         const res = await api<{
@@ -357,8 +403,16 @@ export function AppStoreProvider({
           setError(res.error || 'Failed to download');
           return;
         }
-        await loadTracks(currentPlaylistId, query);
+        if (selectedSource) {
+          await selectSource(selectedSource);
+        } else if (selectedCategory) {
+          await selectCategory(selectedCategory);
+        } else {
+          await loadTracks(currentPlaylistId, query);
+        }
         await loadPlaylists();
+        await loadCategoriesFn();
+        await loadSourcesFn();
         // Auto-play the new track
         if (res.data && res.trackId) {
           const newTrack: Track = {
@@ -370,6 +424,7 @@ export function AppStoreProvider({
             cover: res.data.cover,
             duration: res.data.duration,
             addedAt: Date.now(),
+            source: res.data.source ?? 'tiktok',
           };
           // Don't auto-play if global playback already owns a track.
           if (!currentTrack) {
@@ -379,6 +434,7 @@ export function AppStoreProvider({
       } catch {
         setError('Network error downloading track');
       } finally {
+        setLoading(false);
         setPendingDownloads((prev: string[]) =>
           prev.filter((u: string) => u !== url),
         );
@@ -387,8 +443,14 @@ export function AppStoreProvider({
     [
       currentPlaylistId,
       query,
+      selectedCategory,
+      selectedSource,
+      selectCategory,
+      selectSource,
       loadTracks,
       loadPlaylists,
+      loadCategoriesFn,
+      loadSourcesFn,
       currentTrack,
       playGlobalTrack,
       tracks,
@@ -445,10 +507,29 @@ export function AppStoreProvider({
           body: JSON.stringify({ trackId }),
         });
       }
-      await loadTracks(currentPlaylistId, query);
+      if (selectedSource) {
+        await selectSource(selectedSource);
+      } else if (selectedCategory) {
+        await selectCategory(selectedCategory);
+      } else {
+        await loadTracks(currentPlaylistId, query);
+      }
       await loadPlaylists();
+      await loadCategoriesFn();
+      await loadSourcesFn();
     },
-    [currentPlaylistId, query, loadTracks, loadPlaylists],
+    [
+      currentPlaylistId,
+      query,
+      selectedCategory,
+      selectedSource,
+      selectCategory,
+      selectSource,
+      loadTracks,
+      loadPlaylists,
+      loadCategoriesFn,
+      loadSourcesFn,
+    ],
   );
 
   const reorderTracks = useCallback(
@@ -560,6 +641,7 @@ export function AppStoreProvider({
     tracks: filteredTracks,
     playlists,
     categories,
+    sources,
     favorites: optimisticFavorites,
     autoRules,
     currentPlaylistId,
@@ -578,6 +660,7 @@ export function AppStoreProvider({
     view,
     recentlyPlayed,
     selectedCategory,
+    selectedSource,
     loadAll,
     selectPlaylist,
     addTrackFromUrl,
@@ -607,6 +690,7 @@ export function AppStoreProvider({
     setView,
     goHome,
     selectCategory,
+    selectSource,
   };
 
   return (

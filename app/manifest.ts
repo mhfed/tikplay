@@ -4,7 +4,8 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'TikPlay',
     short_name: 'TikPlay',
-    description: 'Personal music player — extract & play audio from TikTok.',
+    description:
+      'Personal music player — extract & play audio from TikTok or YouTube.',
     start_url: '/',
     display: 'standalone',
     orientation: 'portrait',

@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { join } from 'node:path';
 import { ensureCacheDir, FileCacheStore, getCacheDir } from '../cache';
-import { cacheKeyFromRaw, validateTikTokUrl } from '../tiktok/validate';
+import { cacheKeyFromRaw, type MediaSource, validateMediaUrl } from './source';
 
 export interface TrackMeta {
   title: string;
@@ -13,12 +13,13 @@ export interface TrackMeta {
 
 export interface ProcessResult {
   audioKey: string;
+  source: MediaSource;
   meta: TrackMeta;
 }
 
 /**
  * Wraps `yt-dlp` + `ffmpeg` (called internally by yt-dlp) to download and
- * extract the best available audio from a TikTok URL, caching the result on
+ * extract the best available audio from a supported media URL, caching the result on
  * disk. This is the single module that would change if we later move to a job
  * queue (BullMQ) or cloud storage (R2/S3).
  */
@@ -58,13 +59,13 @@ export class MediaProcessor {
   }
 
   /**
-   * Validate, debounce and process a TikTok URL. Concurrent calls with the
+   * Validate, debounce and process a supported media URL. Concurrent calls with the
    * same cacheKey resolve to the same underlying job.
    * Throttles active processing to prevent CPU overload from parallel yt-dlp/ffmpeg tasks.
    */
   async process(rawUrl: string): Promise<ProcessResult> {
-    const validation = validateTikTokUrl(rawUrl);
-    if (!validation.valid || !validation.normalized) {
+    const validation = validateMediaUrl(rawUrl);
+    if (!validation.valid || !validation.normalized || !validation.source) {
       throw new Error(validation.error ?? 'URL không hợp lệ');
     }
 
@@ -82,16 +83,22 @@ export class MediaProcessor {
       return this.inFlight.get(key)!;
     }
 
-    const job = this.run(validation.normalized, key).finally(() => {
-      this.inFlight.delete(key);
-      this.releaseSlot();
-    });
+    const job = this.run(validation.normalized, key, validation.source).finally(
+      () => {
+        this.inFlight.delete(key);
+        this.releaseSlot();
+      },
+    );
 
     this.inFlight.set(key, job);
     return job;
   }
 
-  private async run(url: string, key: string): Promise<ProcessResult> {
+  private async run(
+    url: string,
+    key: string,
+    source: MediaSource,
+  ): Promise<ProcessResult> {
     const meta = await this.fetchMetadata(url);
 
     const cacheDir = getCacheDir();
@@ -109,7 +116,7 @@ export class MediaProcessor {
         // reliably muxes real audio, so prefer it; audio quality is the same
         // regardless of which video codec/watermark it's paired with, and we
         // only keep the extracted audio anyway.
-        'download/bestaudio*/best',
+        source === 'tiktok' ? 'download/bestaudio*/best' : 'bestaudio*/best',
         // Without this, yt-dlp sees a same-named file already on disk (e.g.
         // left over from a prior failed attempt) and skips straight to
         // postprocessing it instead of redownloading — silently reusing a
@@ -132,7 +139,7 @@ export class MediaProcessor {
       this.downloadCover(meta.cover),
     ]);
 
-    // TikTok's cover URL is signed and expires; re-host it under our own
+    // Some cover URLs are signed and expire; re-host them under our own
     // cache/route so playback UI can hotlink it indefinitely. If the
     // download fails (or returns a CDN blocking black image), clear it
     // so the UI falls back to the generated gradient immediately instead
@@ -147,10 +154,10 @@ export class MediaProcessor {
     // Persist metadata so the API can serve it from cache without re-running.
     await this.cache.saveMeta(key, meta);
 
-    return { audioKey: key, meta };
+    return { audioKey: key, source, meta };
   }
 
-  /** Best-effort fetch of the TikTok cover image; TikTok gates the CDN on Referer. */
+  /** Best-effort fetch of the cover image; TikTok gates the CDN on Referer. */
   private async downloadCover(
     url: string,
   ): Promise<{ buffer: Buffer; contentType: string } | null> {
@@ -183,7 +190,7 @@ export class MediaProcessor {
     try {
       json = JSON.parse(out);
     } catch {
-      throw new Error('Không thể đọc metadata từ TikTok');
+      throw new Error('Không thể đọc metadata từ nguồn media');
     }
 
     const str = (v: unknown): string => (typeof v === 'string' ? v : '');

@@ -4,6 +4,7 @@ import { AppStoreProvider, type InitialAppData } from '@/hooks/useAppStore';
 import {
   getAllCategories,
   getAllPlaylists,
+  getAllSources,
   getAutoRules,
   getFavoriteIds,
   getFavoriteTracks,
@@ -29,6 +30,7 @@ export default async function FavoritesPage() {
     tracks,
     playlists: getAllPlaylists(),
     categories: getAllCategories(),
+    sources: getAllSources(),
     favoriteIds: Array.from(favIds),
     autoRules: getAutoRules(),
     currentPlaylistId: -1,

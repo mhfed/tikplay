@@ -26,11 +26,14 @@ export default function MobileSidebar({
   const {
     playlists,
     categories,
+    sources,
     currentPlaylistId,
     selectedCategory,
+    selectedSource,
     view,
     selectPlaylist,
     selectCategory,
+    selectSource,
   } = useAppStore();
   const [showAddPlaylist, setShowAddPlaylist] = useState(false);
   const [showAutoRules, setShowAutoRules] = useState(false);
@@ -79,7 +82,7 @@ export default function MobileSidebar({
           <li>
             <button
               type="button"
-              className={`${itemClass}${view === 'library' && currentPlaylistId === 1 ? activeItemClass : ''}`}
+              className={`${itemClass}${view === 'library' && currentPlaylistId === 1 && !selectedCategory && !selectedSource ? activeItemClass : ''}`}
               onClick={() => handleSelect(1)}
             >
               <ListMusicIcon size={18} />
@@ -144,6 +147,34 @@ export default function MobileSidebar({
                           {c.count}
                         </span>
                       )}
+                    </button>
+                  </li>
+                ))}
+            </ul>
+          </>
+        )}
+
+        {sources.some((s) => s.count > 0) && (
+          <>
+            <div className={sectionClass}>Nguồn</div>
+            <ul className={listClass}>
+              {sources
+                .filter((s) => s.count > 0)
+                .map((s) => (
+                  <li key={s.slug}>
+                    <button
+                      type="button"
+                      className={`${itemClass}${selectedSource === s.slug ? activeItemClass : ''}`}
+                      onClick={() => {
+                        selectSource(s.slug);
+                        onClose();
+                      }}
+                    >
+                      <ListMusicIcon size={18} />
+                      {s.name}
+                      <span className="ml-auto text-xs text-muted-2">
+                        {s.count}
+                      </span>
                     </button>
                   </li>
                 ))}

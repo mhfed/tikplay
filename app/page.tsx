@@ -4,6 +4,7 @@ import { AppStoreProvider, type InitialAppData } from '@/hooks/useAppStore';
 import {
   getAllCategories,
   getAllPlaylists,
+  getAllSources,
   getAllTracks,
   getAutoRules,
   getFavoriteIds,
@@ -17,13 +18,13 @@ import { type Track, toTrack } from '@/lib/types';
 // cached, or mutations (add/remove/favorite) would appear to silently fail.
 export const dynamic = 'force-dynamic';
 
-const DEFAULT_TITLE = 'TikPlay — Nghe nhạc từ TikTok';
+const DEFAULT_TITLE = 'TikPlay — Nghe nhạc từ TikTok & YouTube';
 const DEFAULT_DESCRIPTION =
-  'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok. Tạo playlist, yêu thích bài hát, nghe offline.';
+  'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok hoặc YouTube. Tạo playlist, yêu thích bài hát, nghe offline.';
 const DEFAULT_IMAGE = '/icons/icon-512.png';
 
 function shareDescription(track: Pick<Track, 'title' | 'author'>): string {
-  return `Nghe "${track.title}" của ${track.author} trên TikPlay — trình phát nhạc cá nhân từ TikTok.`;
+  return `Nghe "${track.title}" của ${track.author} trên TikPlay — trình phát nhạc cá nhân từ TikTok hoặc YouTube.`;
 }
 
 export async function generateMetadata({
@@ -40,7 +41,7 @@ export async function generateMetadata({
       openGraph: {
         title: DEFAULT_TITLE,
         description:
-          'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok.',
+          'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok hoặc YouTube.',
       },
     };
   }
@@ -129,6 +130,7 @@ export default async function Page({
     tracks,
     playlists: getAllPlaylists(),
     categories: getAllCategories(),
+    sources: getAllSources(),
     favoriteIds: Array.from(favIds),
     autoRules: getAutoRules(),
     currentPlaylistId: pl,

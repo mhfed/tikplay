@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import type { MediaSource } from '@/lib/media/source';
 
 export interface DbData {
   tracks: DbTrackRow[];
@@ -21,6 +22,7 @@ export interface DbTrackRow {
   cover: string;
   duration: number;
   added_at: number;
+  source?: MediaSource;
   category?: string;
   start_time?: number;
   end_time?: number;

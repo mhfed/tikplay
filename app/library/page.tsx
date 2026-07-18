@@ -4,6 +4,7 @@ import { AppStoreProvider, type InitialAppData } from '@/hooks/useAppStore';
 import {
   getAllCategories,
   getAllPlaylists,
+  getAllSources,
   getAllTracks,
   getAutoRules,
   getFavoriteIds,
@@ -14,10 +15,12 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Tất cả bài hát',
-  description: 'Danh sách toàn bộ nhạc đã tải về từ TikTok trên TikPlay.',
+  description:
+    'Danh sách toàn bộ nhạc đã tải về từ TikTok hoặc YouTube trên TikPlay.',
   openGraph: {
     title: 'Tất cả bài hát | TikPlay',
-    description: 'Danh sách toàn bộ nhạc đã tải về từ TikTok trên TikPlay.',
+    description:
+      'Danh sách toàn bộ nhạc đã tải về từ TikTok hoặc YouTube trên TikPlay.',
   },
 };
 
@@ -29,6 +32,7 @@ export default async function LibraryPage() {
     tracks,
     playlists: getAllPlaylists(),
     categories: getAllCategories(),
+    sources: getAllSources(),
     favoriteIds: Array.from(favIds),
     autoRules: getAutoRules(),
     currentPlaylistId: 1,

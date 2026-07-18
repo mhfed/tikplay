@@ -58,7 +58,9 @@ export default function TrackList() {
         <p className="text-sm font-semibold text-ink-secondary">
           Chưa có bài hát
         </p>
-        <p className="text-xs text-muted">Dán liên kết TikTok để bắt đầu</p>
+        <p className="text-xs text-muted">
+          Dán liên kết TikTok hoặc YouTube để bắt đầu
+        </p>
       </div>
     );
   }

@@ -18,8 +18,15 @@ import {
 } from './icons';
 
 export default function Sidebar() {
-  const { playlists, categories, selectedCategory, selectCategory } =
-    useAppStore();
+  const {
+    playlists,
+    categories,
+    sources,
+    selectedCategory,
+    selectedSource,
+    selectCategory,
+    selectSource,
+  } = useAppStore();
   const pathname = usePathname();
   const [showAddPlaylist, setShowAddPlaylist] = useState(false);
   const [showAutoRules, setShowAutoRules] = useState(false);
@@ -48,7 +55,7 @@ export default function Sidebar() {
               TikPlay
             </span>
             <span className="truncate font-mono text-[10px] tracking-[0.04em] text-muted-2">
-              Nhạc từ TikTok
+              Nhạc từ TikTok & YouTube
             </span>
           </Link>
         </div>
@@ -137,6 +144,33 @@ export default function Sidebar() {
                         {c.count}
                       </span>
                     )}
+                  </button>
+                </li>
+              ))}
+          </ul>
+        </>
+      )}
+
+      {sources.some((s) => s.count > 0) && (
+        <>
+          <div className={sectionClass}>Nguồn</div>
+          <ul className={listClass}>
+            {sources
+              .filter((s) => s.count > 0)
+              .map((s) => (
+                <li key={s.slug}>
+                  <button
+                    type="button"
+                    className={`${itemClass}${selectedSource === s.slug ? activeItemClass : ''}`}
+                    onClick={() => selectSource(s.slug)}
+                  >
+                    <span className={iconClass}>
+                      <MusicIcon size={16} />
+                    </span>
+                    {s.name}
+                    <span className="ml-auto text-xs text-muted-2 tabular-nums">
+                      {s.count}
+                    </span>
                   </button>
                 </li>
               ))}

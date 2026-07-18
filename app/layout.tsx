@@ -31,18 +31,20 @@ const SITE_URL = 'https://craw-music.fly.dev';
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'TikPlay — Nghe nhạc từ TikTok',
+    default: 'TikPlay — Nghe nhạc từ TikTok & YouTube',
     template: '%s | TikPlay',
   },
   description:
-    'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok. Tạo playlist, yêu thích bài hát, nghe offline.',
+    'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok hoặc YouTube. Tạo playlist, yêu thích bài hát, nghe offline.',
   keywords: [
     'tiktok music',
+    'youtube music',
     'nhac tiktok',
     'nghe nhac',
     'music player',
     'tikplay',
     'download nhac tiktok',
+    'download nhac youtube',
     'nhac tik tok',
     'phat nhac',
   ],
@@ -51,9 +53,9 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'vi_VN',
     siteName: 'TikPlay',
-    title: 'TikPlay — Nghe nhạc từ TikTok',
+    title: 'TikPlay — Nghe nhạc từ TikTok & YouTube',
     description:
-      'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok.',
+      'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok hoặc YouTube.',
     images: [
       {
         url: '/icons/icon-512.png',
@@ -65,9 +67,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'TikPlay — Nghe nhạc từ TikTok',
+    title: 'TikPlay — Nghe nhạc từ TikTok & YouTube',
     description:
-      'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok.',
+      'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok hoặc YouTube.',
     images: ['/icons/icon-512.png'],
   },
   robots: { index: true, follow: true },
@@ -102,7 +104,7 @@ const jsonLd = {
       name: 'TikPlay',
       url: SITE_URL,
       description:
-        'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok.',
+        'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok hoặc YouTube.',
       inLanguage: 'vi',
     },
     {
@@ -112,7 +114,7 @@ const jsonLd = {
       operatingSystem: 'Web',
       url: SITE_URL,
       description:
-        'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok.',
+        'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok hoặc YouTube.',
       offers: {
         '@type': 'Offer',
         price: '0',
