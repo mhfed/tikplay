@@ -18,8 +18,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     python3 \
     python3-pip \
+    curl \
+    unzip \
     ca-certificates \
   && rm -rf /var/lib/apt/lists/*
+
+# yt-dlp's YouTube extractor now expects a JS runtime; Deno is the only one it
+# enables by default in recent releases.
+RUN curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh
 
 # Install yt-dlp (and curl_cffi for optional impersonation fallback).
 # --break-system-packages needed on Debian bookworm (PEP 668).
