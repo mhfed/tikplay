@@ -10,6 +10,7 @@ import {
   getFavoriteIds,
 } from '@/lib/db/queries';
 import { type Track, toTrack } from '@/lib/types';
+import { resolveSharedTrack } from './shared';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,9 +25,17 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function LibraryPage() {
+export default async function LibraryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ track?: string; t?: string }>;
+}) {
+  const sp = await searchParams;
   const favIds = getFavoriteIds();
   const tracks: Track[] = getAllTracks().map((r) => toTrack(r, favIds));
+  const sharedTrackId = Number(sp.track) || 0;
+  const seekTime = Number(sp.t) || 0;
+  const currentTrack = resolveSharedTrack(tracks, tracks, sharedTrackId);
 
   const initialData: InitialAppData = {
     tracks,
@@ -36,9 +45,9 @@ export default async function LibraryPage() {
     favoriteIds: Array.from(favIds),
     autoRules: getAutoRules(),
     currentPlaylistId: 1,
-    currentTrack: null,
+    currentTrack,
     view: 'library',
-    pendingSeek: null,
+    pendingSeek: currentTrack && seekTime > 0 ? seekTime : null,
   };
 
   return (
