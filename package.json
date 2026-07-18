@@ -8,7 +8,8 @@
     "start": "node .next/standalone/server.js",
     "lint": "biome check",
     "format": "biome format --write",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "youtube:cookies": "bash scripts/set-youtube-cookies.sh"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

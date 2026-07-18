@@ -223,6 +223,15 @@ export class MediaProcessor {
     );
   }
 
+  private static formatYtDlpError(msg: string): string {
+    if (
+      /Sign in to confirm.*not a bot|cookies-from-browser|--cookies/i.test(msg)
+    ) {
+      return 'YouTube đang chặn bot-check. Hãy refresh YOUTUBE_COOKIES_B64 bằng cookie YouTube đăng nhập hợp lệ rồi thử lại.';
+    }
+    return `yt-dlp thất bại: ${msg.slice(0, 500)}`;
+  }
+
   /**
    * Promise wrapper around execFile for yt-dlp, retrying transient TikTok
    * failures a few times with a short backoff.
@@ -258,7 +267,7 @@ export class MediaProcessor {
                 setTimeout(() => resolve(attempt(n + 1)), 400 * n);
                 return;
               }
-              reject(new Error(`yt-dlp thất bại: ${msg.slice(0, 500)}`));
+              reject(new Error(MediaProcessor.formatYtDlpError(msg)));
               return;
             }
             resolve(stdout);
