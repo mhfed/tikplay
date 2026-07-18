@@ -3,6 +3,7 @@ import { existsSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ensureCacheDir, FileCacheStore, getCacheDir } from '../cache';
+import { getDb } from '../db';
 import { cacheKeyFromRaw, type MediaSource, validateMediaUrl } from './source';
 
 export interface TrackMeta {
@@ -227,7 +228,7 @@ export class MediaProcessor {
     if (
       /Sign in to confirm.*not a bot|cookies-from-browser|--cookies/i.test(msg)
     ) {
-      return 'YouTube đang chặn bot-check. Hãy refresh YOUTUBE_COOKIES_B64 bằng cookie YouTube đăng nhập hợp lệ rồi thử lại.';
+      return 'YouTube đang chặn bot-check. Hãy refresh cookies YouTube trong admin surface rồi thử lại.';
     }
     return `yt-dlp thất bại: ${msg.slice(0, 500)}`;
   }
@@ -278,6 +279,15 @@ export class MediaProcessor {
   }
 
   private getCookiesPath(): string | null {
+    const dbCookies = getDb().settings?.youtubeCookiesB64;
+    if (dbCookies) {
+      const filePath = join(tmpdir(), 'yt-dlp-youtube-cookies.txt');
+      writeFileSync(filePath, Buffer.from(dbCookies, 'base64'), {
+        mode: 0o600,
+      });
+      return filePath;
+    }
+
     if (this.cookiesPath) return this.cookiesPath;
 
     const path = process.env.YOUTUBE_COOKIES_PATH;

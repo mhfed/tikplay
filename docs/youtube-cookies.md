@@ -1,6 +1,6 @@
 # YouTube Cookies
 
-YouTube may block `yt-dlp` on Fly/datacenter IPs with `Sign in to confirm you're not a bot`. TikPlay supports passing YouTube cookies to `yt-dlp` through the `YOUTUBE_COOKIES_B64` Fly secret.
+YouTube may block `yt-dlp` on Fly/datacenter IPs with `Sign in to confirm you're not a bot`. TikPlay supports refreshing YouTube cookies from the admin surface and storing them in the app's persistent JSON DB. The older `YOUTUBE_COOKIES_B64` Fly secret still works as a fallback.
 
 ## Export
 
@@ -19,7 +19,7 @@ npm run youtube:cookies -- /absolute/path/to/youtube-cookies.txt
 fly deploy
 ```
 
-The cookie file is never committed. The script base64-encodes it and writes only the encoded value to the Fly secret `YOUTUBE_COOKIES_B64`.
+The cookie file is never committed. The script base64-encodes it and writes only the encoded value to the Fly secret `YOUTUBE_COOKIES_B64`. The in-app refresh button uses the same export file and stores it on the Fly volume instead.
 
 ## Runtime
 

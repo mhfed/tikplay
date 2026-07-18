@@ -8,9 +8,16 @@ export interface DbData {
   playlistTracks: DbPlaylistTrackRow[];
   favorites: number[];
   autoRules: DbAutoRuleRow[];
+  settings: DbSettingsRow;
   nextTrackId: number;
   nextPlaylistId: number;
   nextRuleId: number;
+}
+
+export interface DbSettingsRow {
+  youtubeCookiesB64?: string;
+  youtubeCookiesUpdatedAt?: number;
+  youtubeCookiesFileName?: string;
 }
 
 export interface DbTrackRow {
@@ -60,10 +67,25 @@ const DEFAULT_DATA: DbData = {
   playlistTracks: [],
   favorites: [],
   autoRules: [],
+  settings: {},
   nextTrackId: 1,
   nextPlaylistId: 2,
   nextRuleId: 1,
 };
+
+function normalizeDbData(data: Partial<DbData>): DbData {
+  return {
+    tracks: data.tracks ?? [],
+    playlists: data.playlists ?? structuredClone(DEFAULT_DATA.playlists),
+    playlistTracks: data.playlistTracks ?? [],
+    favorites: data.favorites ?? [],
+    autoRules: data.autoRules ?? [],
+    settings: data.settings ?? {},
+    nextTrackId: data.nextTrackId ?? 1,
+    nextPlaylistId: data.nextPlaylistId ?? 2,
+    nextRuleId: data.nextRuleId ?? 1,
+  };
+}
 
 let cached: DbData | null = null;
 
@@ -77,7 +99,7 @@ export function getDb(): DbData {
     return cached;
   }
   try {
-    cached = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
+    cached = normalizeDbData(JSON.parse(fs.readFileSync(DB_PATH, 'utf-8')));
     return cached!;
   } catch {
     cached = structuredClone(DEFAULT_DATA);

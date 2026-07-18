@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { basename } from 'node:path';
 import { CATEGORIES, detectCategory } from '../categories';
 import { MEDIA_SOURCE_LABELS, type MediaSource } from '../media/source';
 import type {
@@ -308,4 +310,50 @@ export function getTracksBySource(source: MediaSource): DbTrack[] {
     .tracks.filter((t) => trackSource(t) === source)
     .sort((a, b) => b.added_at - a.added_at)
     .map(toDbTrack);
+}
+
+// ── SETTINGS ─────────────────────────────────────────────
+
+export function getYoutubeCookiesInfo() {
+  const settings = getDb().settings || {};
+  if (settings.youtubeCookiesB64) {
+    return {
+      configured: true,
+      source: 'db' as const,
+      updatedAt: settings.youtubeCookiesUpdatedAt || null,
+      fileName: settings.youtubeCookiesFileName || null,
+    };
+  }
+
+  const envCookiesPath = process.env.YOUTUBE_COOKIES_PATH;
+  if (
+    process.env.YOUTUBE_COOKIES_B64 ||
+    (envCookiesPath && existsSync(envCookiesPath))
+  ) {
+    return {
+      configured: true,
+      source: 'env' as const,
+      updatedAt: null,
+      fileName: envCookiesPath ? basename(envCookiesPath) : null,
+    };
+  }
+
+  return {
+    configured: false,
+    source: null,
+    updatedAt: null,
+    fileName: null,
+  };
+}
+
+export function setYoutubeCookies(fileName: string | null, cookiesB64: string) {
+  const db = getDb();
+  db.settings = {
+    ...(db.settings || {}),
+    youtubeCookiesB64: cookiesB64,
+    youtubeCookiesUpdatedAt: Date.now(),
+    youtubeCookiesFileName: fileName || undefined,
+  };
+  saveDb();
+  return getYoutubeCookiesInfo();
 }

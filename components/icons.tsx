@@ -322,6 +322,17 @@ export function ChevronUpIcon({ size = 24, ...rest }: IconProps) {
   );
 }
 
+export function RefreshCwIcon({ size = 24, ...rest }: IconProps) {
+  return (
+    <svg {...stroke(size)} aria-hidden {...rest}>
+      <path d="M20 7v5h-5" />
+      <path d="M4 17v-5h5" />
+      <path d="M20 12a8 8 0 0 0-13.5-5.5L4 11" />
+      <path d="M4 12a8 8 0 0 0 13.5 5.5L20 13" />
+    </svg>
+  );
+}
+
 /** Partial-ring arc used as a loading spinner; pair with a `np__spin` rotate. */
 export function SpinnerIcon({ size = 24, ...rest }: IconProps) {
   return (

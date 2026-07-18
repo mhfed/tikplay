@@ -13,9 +13,11 @@ import {
   ListMusicIcon,
   MusicIcon,
   PlusIcon,
+  RefreshCwIcon,
   SettingsIcon,
   TagIcon,
 } from './icons';
+import YouTubeCookiesDialog from './YouTubeCookiesDialog';
 
 export default function Sidebar() {
   const {
@@ -30,6 +32,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [showAddPlaylist, setShowAddPlaylist] = useState(false);
   const [showAutoRules, setShowAutoRules] = useState(false);
+  const [showYoutubeCookies, setShowYoutubeCookies] = useState(false);
 
   const isActive = (href: string) => pathname === href;
   const itemClass =
@@ -193,6 +196,13 @@ export default function Sidebar() {
         >
           <SettingsIcon size={14} /> Quy tắc tự động
         </button>
+        <button
+          type="button"
+          className={actionClass}
+          onClick={() => setShowYoutubeCookies(true)}
+        >
+          <RefreshCwIcon size={14} /> Refresh YouTube cookies
+        </button>
       </div>
 
       {showAddPlaylist && (
@@ -200,6 +210,9 @@ export default function Sidebar() {
       )}
       {showAutoRules && (
         <AutoRuleDialog onClose={() => setShowAutoRules(false)} />
+      )}
+      {showYoutubeCookies && (
+        <YouTubeCookiesDialog onClose={() => setShowYoutubeCookies(false)} />
       )}
     </aside>
   );

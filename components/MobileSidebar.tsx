@@ -10,9 +10,11 @@ import {
   HeartIcon,
   ListMusicIcon,
   PlusIcon,
+  RefreshCwIcon,
   SettingsIcon,
   TagIcon,
 } from './icons';
+import YouTubeCookiesDialog from './YouTubeCookiesDialog';
 
 interface MobileSidebarProps {
   visible: boolean;
@@ -37,6 +39,7 @@ export default function MobileSidebar({
   } = useAppStore();
   const [showAddPlaylist, setShowAddPlaylist] = useState(false);
   const [showAutoRules, setShowAutoRules] = useState(false);
+  const [showYoutubeCookies, setShowYoutubeCookies] = useState(false);
 
   const handleSelect = (id: number) => {
     selectPlaylist(id);
@@ -197,6 +200,13 @@ export default function MobileSidebar({
           >
             <SettingsIcon size={16} /> Quy tắc tự động
           </button>
+          <button
+            type="button"
+            className={actionClass}
+            onClick={() => setShowYoutubeCookies(true)}
+          >
+            <RefreshCwIcon size={16} /> Refresh YouTube cookies
+          </button>
         </div>
 
         {showAddPlaylist && (
@@ -204,6 +214,9 @@ export default function MobileSidebar({
         )}
         {showAutoRules && (
           <AutoRuleDialog onClose={() => setShowAutoRules(false)} />
+        )}
+        {showYoutubeCookies && (
+          <YouTubeCookiesDialog onClose={() => setShowYoutubeCookies(false)} />
         )}
       </aside>
     </>
