@@ -27,9 +27,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # enables by default in recent releases.
 RUN curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh
 
-# Install yt-dlp (and curl_cffi for optional impersonation fallback).
+# Install yt-dlp with its default extra so the EJS solver package is bundled.
 # --break-system-packages needed on Debian bookworm (PEP 668).
-RUN pip3 install --no-cache-dir --break-system-packages yt-dlp curl_cffi
+RUN pip3 install --no-cache-dir --break-system-packages "yt-dlp[default]" curl_cffi
 
 # Try to refresh yt-dlp at build time (best-effort; TikTok changes often).
 RUN yt-dlp -U || true
