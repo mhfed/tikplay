@@ -318,7 +318,11 @@ export default function PlayerPanel({
     const isTouch = window.matchMedia('(pointer: coarse)').matches;
     if (isTouch && navigator.share) {
       try {
-        await navigator.share({ title: currentTrack.title, url });
+        await navigator.share({
+          title: `${currentTrack.title} - ${currentTrack.author}`,
+          text: `Nghe "${currentTrack.title}" của ${currentTrack.author} trên TikPlay.`,
+          url,
+        });
         return;
       } catch {
         // User dismissed the sheet or share failed — fall through to copy.

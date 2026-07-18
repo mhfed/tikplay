@@ -9,6 +9,7 @@ import {
   getFavoriteIds,
   getFavoriteTracks,
   getPlaylistTracks,
+  getTrack,
 } from '@/lib/db/queries';
 import { type Track, toTrack } from '@/lib/types';
 
@@ -16,16 +17,78 @@ import { type Track, toTrack } from '@/lib/types';
 // cached, or mutations (add/remove/favorite) would appear to silently fail.
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  title: 'TikPlay — Nghe nhạc từ TikTok',
-  description:
-    'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok. Tạo playlist, yêu thích bài hát, nghe offline.',
-  openGraph: {
-    title: 'TikPlay — Nghe nhạc từ TikTok',
-    description:
-      'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok.',
-  },
-};
+const DEFAULT_TITLE = 'TikPlay — Nghe nhạc từ TikTok';
+const DEFAULT_DESCRIPTION =
+  'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok. Tạo playlist, yêu thích bài hát, nghe offline.';
+const DEFAULT_IMAGE = '/icons/icon-512.png';
+
+function shareDescription(track: Pick<Track, 'title' | 'author'>): string {
+  return `Nghe "${track.title}" của ${track.author} trên TikPlay — trình phát nhạc cá nhân từ TikTok.`;
+}
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ track?: string; pl?: string; t?: string }>;
+}): Promise<Metadata> {
+  const sp = await searchParams;
+  const sharedTrackId = Number(sp.track) || 0;
+  if (!sharedTrackId) {
+    return {
+      title: DEFAULT_TITLE,
+      description: DEFAULT_DESCRIPTION,
+      openGraph: {
+        title: DEFAULT_TITLE,
+        description:
+          'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok.',
+      },
+    };
+  }
+
+  const row = getTrack(sharedTrackId);
+  if (!row) {
+    return {
+      title: 'Bài hát không tìm thấy',
+      description: DEFAULT_DESCRIPTION,
+      robots: { index: false, follow: true },
+    };
+  }
+
+  const track = toTrack(row);
+  const title = `${track.title} - ${track.author}`;
+  const description = shareDescription(track);
+  const image = track.cover || DEFAULT_IMAGE;
+  const canonicalUrl = `/?track=${track.id}`;
+  const shareParams = new URLSearchParams();
+  if (sp.pl) shareParams.set('pl', sp.pl);
+  shareParams.set('track', String(track.id));
+  if (sp.t) shareParams.set('t', sp.t);
+  const shareUrl = `/?${shareParams}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: canonicalUrl },
+    openGraph: {
+      title: `${title} | TikPlay`,
+      description,
+      type: 'music.song',
+      url: shareUrl,
+      images: [
+        {
+          url: image,
+          alt: `${track.title} - ${track.author}`,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${title} | TikPlay`,
+      description,
+      images: [image],
+    },
+  };
+}
 
 function tracksForPlaylist(playlistId: number, favIds: Set<number>): Track[] {
   const rows =
