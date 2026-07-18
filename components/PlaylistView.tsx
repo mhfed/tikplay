@@ -36,13 +36,13 @@ export default function PlaylistView() {
     currentPlaylistId === 1 ? 'Tất cả bài hát' : currentPlaylist.name;
 
   return (
-    <div className="main">
-      <div className="main__header">
-        <div className="main__heading">
-          <h1 className="main__title">
+    <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-[var(--header-h)] shrink-0 items-center gap-4 border-b border-line-soft px-6 py-3 max-[1024px]:min-h-[calc(var(--header-h)+env(safe-area-inset-top))] max-[1024px]:flex-wrap max-[1024px]:pt-[calc(12px+env(safe-area-inset-top))] max-[640px]:h-auto max-[640px]:gap-2.5 max-[640px]:px-4 max-[640px]:pb-3 max-[640px]:pt-[calc(10px+env(safe-area-inset-top))]">
+        <div className="flex min-w-0 flex-col gap-0.5 max-[640px]:flex-[1_1_0]">
+          <h1 className="truncate font-display text-xl font-extrabold max-[640px]:text-[17px]">
             {categoryLabel ? `Nhạc ${categoryLabel}` : playlistTitle}
           </h1>
-          <p className="main__subtitle">
+          <p className="truncate font-mono text-[11px] text-muted">
             {categoryLabel
               ? `${tracks.length} bài hát`
               : currentPlaylistId === 1
@@ -53,7 +53,11 @@ export default function PlaylistView() {
           </p>
         </div>
         {tracks.length > 0 && (
-          <button type="button" className="main__play-all" onClick={playAll}>
+          <button
+            type="button"
+            className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border-0 bg-linear-to-br from-accent to-tertiary px-4 py-[7px] text-[13px] font-bold text-[#00201e] shadow-[0_0_20px_var(--accent-glow)] transition-[filter,transform] duration-[var(--motion-fast)] ease-spring hover:brightness-110 active:scale-[0.97] max-[640px]:px-3 max-[640px]:py-1.5 max-[640px]:text-xs"
+            onClick={playAll}
+          >
             <PlayIcon size={14} /> Phát tất cả
           </button>
         )}
@@ -64,13 +68,13 @@ export default function PlaylistView() {
           compact
         />
       </div>
-      <div className="main__body">
-        <div className="main__list-toolbar">
+      <div className="flex-1 overflow-y-auto px-6 pb-6 pt-4 max-[1024px]:pb-[calc(var(--player-bar-h-mobile)+36px)] max-[640px]:px-4 max-[640px]:pb-[calc(var(--mini-h)+40px)] max-[640px]:pt-3">
+        <div className="mb-4 flex w-full min-w-0 items-center gap-2 max-[640px]:mb-3 max-[640px]:flex-wrap">
           <SearchBar value={query} onChange={setQuery} />
           {selectedCategory && (
             <button
               type="button"
-              className="main__filter-chip is-active"
+              className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-accent bg-accent-muted px-3 py-1.5 text-xs font-semibold text-accent transition-[background,transform] duration-[var(--motion-fast)] ease-spring hover:-translate-y-px hover:bg-[rgba(0,221,214,0.2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent [&_svg]:opacity-70"
               onClick={() => selectCategory(null)}
             >
               {categoryLabel}

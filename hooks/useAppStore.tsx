@@ -18,11 +18,7 @@ import type {
   RepeatMode,
   Track,
 } from '../lib/types';
-import { EQ_PRESETS } from '../lib/types';
-
-// Default EQ curve for new sessions — Bass Boost rather than Flat.
-const DEFAULT_EQ_GAINS =
-  EQ_PRESETS.find((p) => p.name === 'Bass Boost')?.gains ?? EQ_PRESETS[0].gains;
+import { usePlayback } from './usePlayback';
 
 export type AppView = 'home' | 'library';
 
@@ -97,7 +93,6 @@ interface AppActions {
   setShuffle: (s: boolean) => void;
   cycleRepeat: () => void;
   setQuery: (q: string) => void;
-  onEnded: () => void;
   clearPendingSeek: () => void;
   setView: (v: AppView) => void;
   goHome: () => void;
@@ -134,6 +129,29 @@ export function AppStoreProvider({
   children: ReactNode;
   initialData: InitialAppData;
 }) {
+  const {
+    currentTrack,
+    currentIndex,
+    isPlaying,
+    shuffle,
+    repeat,
+    volume,
+    speed,
+    eqGains,
+    initializeTrack,
+    playTrack: playGlobalTrack,
+    playAll: playGlobalQueue,
+    togglePlay: toggleGlobalPlay,
+    setPlaying,
+    next,
+    prev,
+    setVolume,
+    setSpeed,
+    setEqGains,
+    setShuffle,
+    cycleRepeat,
+    updateTrack: updatePlaybackTrack,
+  } = usePlayback();
   const [tracks, setTracks] = useState<Track[]>(initialData.tracks);
   const [pendingDownloads, setPendingDownloads] = useState<string[]>([]);
   const [playlists, setPlaylists] = useState<Playlist[]>(initialData.playlists);
@@ -153,16 +171,6 @@ export function AppStoreProvider({
   const [currentPlaylistId, setCurrentPlaylistId] = useState(
     initialData.currentPlaylistId,
   );
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(
-    initialData.currentTrack,
-  );
-  const [currentIndex, setCurrentIndex] = useState(-1);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [shuffle, setShuffle] = useState(false);
-  const [repeat, setRepeat] = useState<RepeatMode>('off');
-  const [volume, setVolume] = useState(0.8);
-  const [speed, setSpeed] = useState(1);
-  const [eqGains, setEqGains] = useState<number[]>([...DEFAULT_EQ_GAINS]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -175,6 +183,14 @@ export function AppStoreProvider({
     initialData.categories || [],
   );
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  // A shared URL can seed global playback on the first route mount. Later
+  // route transitions must never replace the already-running global track.
+  useEffect(() => {
+    if (initialData.currentTrack) {
+      initializeTrack(initialData.currentTrack, initialData.tracks);
+    }
+  }, [initialData.currentTrack, initialData.tracks, initializeTrack]);
 
   const loadPlaylists = useCallback(async () => {
     const data = await api<{ playlists: Playlist[] }>('/api/playlists');
@@ -355,14 +371,10 @@ export function AppStoreProvider({
             duration: res.data.duration,
             addedAt: Date.now(),
           };
-          // Don't auto-play if we are already playing a track
-          setCurrentTrack((prev: Track | null) => {
-            if (!prev) {
-              setIsPlaying(true);
-              return newTrack;
-            }
-            return prev;
-          });
+          // Don't auto-play if global playback already owns a track.
+          if (!currentTrack) {
+            playGlobalTrack(newTrack, [...tracks, newTrack]);
+          }
         }
       } catch {
         setError('Network error downloading track');
@@ -372,128 +384,31 @@ export function AppStoreProvider({
         );
       }
     },
-    [currentPlaylistId, query, loadTracks, loadPlaylists],
+    [
+      currentPlaylistId,
+      query,
+      loadTracks,
+      loadPlaylists,
+      currentTrack,
+      playGlobalTrack,
+      tracks,
+    ],
   );
 
   const playTrack = useCallback(
     (track: Track) => {
-      setCurrentTrack(track);
-      // Set the real position immediately so the queue ("up next") and
-      // next/prev are correct on the first render — not a frame later once the
-      // sync effect catches up. Falls back to -1 (→ full list) if not found.
-      setCurrentIndex(tracks.findIndex((t) => t.id === track.id));
-      setIsPlaying(true);
-      const el = document.getElementById('global-audio') as HTMLAudioElement;
-      if (el) el.play().catch(() => {});
+      playGlobalTrack(track, tracks);
     },
-    [tracks],
+    [playGlobalTrack, tracks],
   );
 
   const playAll = useCallback(() => {
-    if (tracks.length > 0) {
-      setCurrentTrack(tracks[0]);
-      setCurrentIndex(0);
-      setIsPlaying(true);
-      const el = document.getElementById('global-audio') as HTMLAudioElement;
-      if (el) el.play().catch(() => {});
-    }
-  }, [tracks]);
+    playGlobalQueue(tracks);
+  }, [playGlobalQueue, tracks]);
 
   const togglePlay = useCallback(() => {
-    if (!currentTrack && tracks.length > 0) {
-      setCurrentTrack(tracks[0]);
-      setCurrentIndex(0);
-      setIsPlaying(true);
-      const el = document.getElementById('global-audio') as HTMLAudioElement;
-      if (el) el.play().catch(() => {});
-      return;
-    }
-    setIsPlaying((p) => {
-      const nextPlay = !p;
-      const el = document.getElementById('global-audio') as HTMLAudioElement;
-      if (el) {
-        if (nextPlay) el.play().catch(() => {});
-        else el.pause();
-      }
-      return nextPlay;
-    });
-  }, [currentTrack, tracks]);
-
-  const setPlaying = useCallback((playing: boolean) => {
-    setIsPlaying(playing);
-    const el = document.getElementById('global-audio') as HTMLAudioElement;
-    if (el) {
-      if (playing) el.play().catch(() => {});
-      else el.pause();
-    }
-  }, []);
-
-  const pickRandom = useCallback((): number => {
-    if (tracks.length <= 1) return 0;
-    let r = currentIndex;
-    while (r === currentIndex) r = Math.floor(Math.random() * tracks.length);
-    return r;
-  }, [tracks.length, currentIndex]);
-
-  const next = useCallback(() => {
-    if (tracks.length === 0) return;
-
-    // Re-bless the audio element immediately
-    const el = document.getElementById('global-audio') as HTMLAudioElement;
-    if (el) el.play().catch(() => {});
-
-    if (shuffle) {
-      const idx = pickRandom();
-      setCurrentTrack(tracks[idx]);
-      setCurrentIndex(idx);
-      setIsPlaying(true);
-      return;
-    }
-    const nextIdx = currentIndex + 1;
-    if (nextIdx >= tracks.length) {
-      if (repeat === 'all') {
-        setCurrentTrack(tracks[0]);
-        setCurrentIndex(0);
-        setIsPlaying(true);
-      } else {
-        setIsPlaying(false);
-      }
-    } else {
-      setCurrentTrack(tracks[nextIdx]);
-      setCurrentIndex(nextIdx);
-      setIsPlaying(true);
-    }
-  }, [tracks, currentIndex, shuffle, repeat, pickRandom]);
-
-  const prev = useCallback(() => {
-    if (tracks.length === 0) return;
-
-    const el = document.getElementById('global-audio') as HTMLAudioElement;
-    if (el) el.play().catch(() => {});
-
-    if (shuffle) {
-      const idx = pickRandom();
-      setCurrentTrack(tracks[idx]);
-      setCurrentIndex(idx);
-      setIsPlaying(true);
-      return;
-    }
-    const prevIdx = currentIndex - 1;
-    if (prevIdx < 0) {
-      const idx = repeat === 'all' ? tracks.length - 1 : 0;
-      setCurrentTrack(tracks[idx]);
-      setCurrentIndex(idx);
-    } else {
-      setCurrentTrack(tracks[prevIdx]);
-      setCurrentIndex(prevIdx);
-    }
-    setIsPlaying(true);
-  }, [tracks, currentIndex, shuffle, repeat, pickRandom]);
-
-  const onEnded = useCallback(() => {
-    if (repeat === 'one') return; // handled in audio engine
-    next();
-  }, [repeat, next]);
+    toggleGlobalPlay(tracks);
+  }, [toggleGlobalPlay, tracks]);
 
   const toggleFavoriteAction = useCallback((trackId: number) => {
     startTransition(async () => {
@@ -617,25 +532,12 @@ export function AppStoreProvider({
       setTracks((prev) =>
         prev.map((t) => (t.id === trackId ? { ...t, startTime, endTime } : t)),
       );
-      if (currentTrack?.id === trackId) {
-        setCurrentTrack((t) => (t ? { ...t, startTime, endTime } : t));
-      }
+      updatePlaybackTrack(trackId, { startTime, endTime });
     },
-    [currentTrack?.id],
+    [updatePlaybackTrack],
   );
 
   const clearPendingSeek = useCallback(() => setPendingSeek(null), []);
-
-  const cycleRepeat = useCallback(() => {
-    setRepeat((m) => (m === 'off' ? 'all' : m === 'all' ? 'one' : 'off'));
-  }, []);
-
-  // Keep currentIndex in sync with currentTrack
-  useEffect(() => {
-    if (!currentTrack) return;
-    const idx = tracks.findIndex((t) => t.id === currentTrack.id);
-    if (idx !== -1) setCurrentIndex(idx);
-  }, [tracks, currentTrack]);
 
   const filteredTracks = useMemo(() => {
     if (!query.trim()) return tracks;
@@ -701,7 +603,6 @@ export function AppStoreProvider({
     setShuffle,
     cycleRepeat,
     setQuery,
-    onEnded,
     clearPendingSeek,
     setView,
     goHome,

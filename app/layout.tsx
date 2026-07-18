@@ -4,6 +4,7 @@ import './components.css';
 import type { Metadata, Viewport } from 'next';
 import { Hanken_Grotesk, JetBrains_Mono, Montserrat } from 'next/font/google';
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
+import { PlaybackProvider } from '@/hooks/usePlayback';
 
 const montserrat = Montserrat({
   weight: ['700', '800', '900'],
@@ -138,8 +139,10 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <ServiceWorkerRegister />
-        {children}
+        <PlaybackProvider>
+          <ServiceWorkerRegister />
+          {children}
+        </PlaybackProvider>
       </body>
     </html>
   );

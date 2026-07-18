@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
-import { useAudioEngine } from '../hooks/useAudioEngine';
+import { useGlobalAudioEngine, usePlayback } from '../hooks/usePlayback';
 import Cover from './Cover';
 import Equalizer from './Equalizer';
 import {
@@ -54,7 +54,6 @@ export default function PlayerPanel({
   onOpenPlayer,
 }: PlayerPanelProps) {
   const {
-    tracks,
     currentTrack,
     currentIndex,
     currentPlaylistId,
@@ -68,7 +67,6 @@ export default function PlayerPanel({
     clearPendingSeek,
     togglePlay,
     setPlaying,
-    playTrack,
     next,
     prev,
     setVolume,
@@ -76,13 +74,15 @@ export default function PlayerPanel({
     setEqGains,
     setShuffle,
     cycleRepeat,
-    onEnded,
   } = useAppStore();
+  const { queue: playbackQueue, playTrack: playQueuedTrack } = usePlayback();
+  const engine = useGlobalAudioEngine();
 
   const [shareCopied, setShareCopied] = useState(false);
   const [openPanel, setOpenPanel] = useState<PopoverPanel>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
-  const upNext = currentIndex >= 0 ? tracks.slice(currentIndex + 1) : tracks;
+  const upNext =
+    currentIndex >= 0 ? playbackQueue.slice(currentIndex + 1) : playbackQueue;
 
   // ── Scrub-preview seeking ──────────────────────────────
   const [isScrubbing, setIsScrubbing] = useState(false);
@@ -108,39 +108,12 @@ export default function PlayerPanel({
 
   const volGroupRef = useRef<HTMLDivElement>(null);
 
-  const engine = useAudioEngine({
-    startTime: currentTrack?.startTime,
-    endTime: currentTrack?.endTime,
-    onEnded: () => {
-      if (repeat === 'one' && currentTrack) {
-        engine.seek(currentTrack.startTime || 0);
-        engine.play();
-        return;
-      }
-      onEnded();
-    },
-  });
-
-  // Load + play/pause sync. Changing `src` implicitly pauses the element, so
-  // switching tracks mid-playback must re-trigger play() even though
-  // `isPlaying` never flipped — hence a single effect over both deps.
-  useEffect(() => {
-    if (currentTrack) engine.loadTrack(currentTrack.audioUrl);
-    if (isPlaying && currentTrack) engine.play();
-    else engine.pause();
-  }, [currentTrack?.audioUrl, isPlaying]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // Restore the timestamp from a shared URL once the track's metadata is in.
   useEffect(() => {
     if (pendingSeek == null || !engine.isReady || !currentTrack) return;
     engine.seek(pendingSeek);
     clearPendingSeek();
   }, [pendingSeek, engine.isReady, currentTrack?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Volume sync
-  useEffect(() => {
-    engine.setVolume(volume);
-  }, [volume]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll-wheel over the volume track nudges volume in 5% steps (0–300%).
   useEffect(() => {
@@ -172,16 +145,6 @@ export default function PlayerPanel({
     document.addEventListener('pointerdown', onDown);
     return () => document.removeEventListener('pointerdown', onDown);
   }, [openPanel]);
-
-  // Speed sync
-  useEffect(() => {
-    engine.setSpeed(speed);
-  }, [speed]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // EQ sync
-  useEffect(() => {
-    engine.setAllBands(eqGains);
-  }, [eqGains]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Media Session API — lock-screen / notification controls. Handlers are
   // explicit play/pause (not toggle): after an OS interruption (call, screen
@@ -432,7 +395,13 @@ export default function PlayerPanel({
       ? { transform: `translateY(${dragOffset}px)`, transition: 'none' }
       : undefined;
 
-  const panelClass = `player-bar${isMobileVisible ? ' mobile-visible' : ''}${isMobileObscured ? ' mobile-obscured' : ''}${currentTrack ? ' has-track' : ''}`;
+  const panelClass = `fixed inset-x-0 bottom-0 z-[45] flex h-[var(--player-bar-h)] items-center gap-3.5 border-t border-line-soft bg-[var(--glass-bg)] px-5 backdrop-blur-[20px] max-[1024px]:left-2 max-[1024px]:right-2 max-[1024px]:bottom-[calc(var(--bottom-stack)+8px)] max-[1024px]:h-[var(--player-bar-h-mobile)] max-[1024px]:gap-2.5 max-[1024px]:rounded-[18px] max-[1024px]:border max-[1024px]:bg-[rgba(16,16,18,0.94)] max-[1024px]:px-3 max-[1024px]:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_14px_42px_rgba(0,0,0,0.3)] max-[1024px]:transition-[opacity,transform,visibility] max-[1024px]:duration-[var(--motion-base)] max-[1024px]:ease-out-app${isMobileVisible ? " player-sheet-open max-[1024px]:z-[32] max-[1024px]:h-auto max-[1024px]:max-h-[calc(100dvh-var(--bottom-stack)-24px)] max-[1024px]:flex-col max-[1024px]:justify-center max-[1024px]:gap-[22px] max-[1024px]:overflow-y-auto max-[1024px]:rounded-3xl max-[1024px]:px-6 max-[1024px]:pb-7 max-[1024px]:pt-[calc(28px+env(safe-area-inset-top))] max-[1024px]:before:min-h-0 max-[1024px]:before:flex-[1_1_0] max-[1024px]:before:content-[''] max-[1024px]:after:min-h-0 max-[1024px]:after:flex-[1_1_0] max-[1024px]:after:content-[''] max-[1024px]:[&>*]:shrink-0 max-[640px]:px-4 max-[640px]:pb-5 max-[640px]:pt-[calc(16px+env(safe-area-inset-top))]" : ''}${isMobileObscured ? ' max-[1024px]:invisible max-[1024px]:pointer-events-none max-[1024px]:translate-y-4 max-[1024px]:scale-[0.985] max-[1024px]:opacity-0' : ''}${!currentTrack && !isMobileVisible ? ' max-[1024px]:hidden' : ''}`;
+  const iconButtonClass =
+    'inline-flex size-9 cursor-pointer items-center justify-center rounded-full border border-line bg-surface-2 text-muted transition-[color,background,border-color,transform] duration-[var(--motion-fast)] ease-spring hover:-translate-y-0.5 hover:border-accent hover:text-ink active:scale-[0.92] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent max-[1024px]:size-9';
+  const activeIconButtonClass =
+    ' border-accent bg-accent text-[#00201e] shadow-[0_0_12px_var(--accent-glow)]';
+  const transportButtonClass =
+    'inline-flex size-10 cursor-pointer items-center justify-center rounded-full border-0 bg-surface-2 text-ink transition-[background,transform,filter] duration-[var(--motion-fast)] ease-spring hover:-translate-y-0.5 hover:bg-surface-3 active:scale-[0.94] disabled:cursor-not-allowed disabled:opacity-[0.35] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent';
 
   // On mobile the compact bar is tappable to expand into the full sheet; on
   // desktop there's no sheet, so tapping the identity area does nothing.
@@ -453,15 +422,16 @@ export default function PlayerPanel({
 
   return (
     <>
-      <div
-        className={`player-sheet-backdrop${isMobileVisible ? ' is-visible' : ''}`}
+      <button
+        type="button"
+        className={`fixed inset-x-0 top-0 bottom-[var(--bottom-stack)] z-30 hidden bg-black/[0.55] transition-[opacity,visibility] duration-[var(--motion-base)] ease-out-app max-[1024px]:block${isMobileVisible ? ' visible opacity-100' : ' invisible opacity-0'}`}
         onClick={requestClose}
-        aria-hidden
+        aria-label="Đóng trình phát"
       />
       <div className={panelClass} style={sheetStyle}>
         {/* Drag handle — the grip zone for swipe-to-dismiss (mobile) */}
         <div
-          className="np__sheet-handle"
+          className={`${isMobileVisible ? 'max-[1024px]:flex' : 'hidden'} hidden h-[22px] w-full shrink-0 touch-none cursor-grab items-center justify-center -mt-1 before:h-1 before:w-10 before:rounded-full before:bg-line before:opacity-80 before:content-['']`}
           onPointerDown={onSheetPointerDown}
           onPointerMove={onSheetPointerMove}
           onPointerUp={onSheetPointerUp}
@@ -471,21 +441,30 @@ export default function PlayerPanel({
 
         {/* Thin indeterminate line while the track buffers */}
         {isLoading && (
-          <div className="np__loading-line" aria-hidden>
-            <span className="np__loading-bar" />
+          <div
+            className="absolute inset-x-0 top-0 z-[5] h-0.5 overflow-hidden rounded-full bg-surface-3"
+            aria-hidden
+          >
+            <span className="absolute inset-y-0 left-0 w-2/5 -translate-x-[110%] rounded-full bg-accent [animation:np-indeterminate_1.1s_cubic-bezier(0.45,0,0.55,1)_infinite]" />
           </div>
         )}
 
         {/* Compact-bar progress line — a thin fill along the top of the bar,
             visible only in the collapsed (mobile) state via CSS. */}
-        <div className="pb__mini-progress" aria-hidden>
-          <span style={{ transform: `scaleX(${progressPercent / 100})` }} />
+        <div
+          className={`${isMobileVisible ? 'max-[1024px]:hidden' : 'max-[1024px]:block'} absolute inset-x-0 top-0 hidden h-0.5 bg-white/[0.08]`}
+          aria-hidden
+        >
+          <span
+            className="block size-full origin-left bg-accent"
+            style={{ transform: `scaleX(${progressPercent / 100})` }}
+          />
         </div>
 
         {/* LEFT — track identity. On mobile the whole zone expands the sheet. */}
         <button
           type="button"
-          className="pb__identity"
+          className={`flex min-w-0 flex-[1_1_0] items-center gap-3 border-0 bg-transparent p-0 text-left text-inherit${isMobileVisible ? ' max-[1024px]:flex-[0_0_auto] max-[1024px]:cursor-default max-[1024px]:flex-col max-[1024px]:gap-[18px] max-[1024px]:text-center' : ' max-[1024px]:cursor-pointer'}`}
           onClick={expandOnMobile}
           aria-label={currentTrack ? 'Mở trình phát' : undefined}
         >
@@ -495,25 +474,41 @@ export default function PlayerPanel({
               src={currentTrack.cover}
               alt={currentTrack.title}
               subtitle={currentTrack.author}
-              className="pb__cover"
+              className={`shrink-0 rounded-[10px] object-cover shadow-[0_4px_14px_rgba(0,0,0,0.45)]${isMobileVisible ? ' max-[1024px]:size-[min(46vw,26dvh,220px)] max-[1024px]:rounded-[18px]' : ' size-14 max-[1024px]:size-11'}`}
             />
           ) : (
-            <span className="pb__cover pb__cover--empty" aria-hidden>
+            <span
+              className={`grid shrink-0 place-items-center rounded-[10px] bg-white/[0.04] text-[22px] text-muted shadow-[0_4px_14px_rgba(0,0,0,0.45)]${isMobileVisible ? ' max-[1024px]:size-[min(46vw,26dvh,220px)] max-[1024px]:rounded-[18px]' : ' size-14 max-[1024px]:size-11'}`}
+              aria-hidden
+            >
               ♪
             </span>
           )}
-          <span className="pb__meta">
+          <span
+            className={`flex min-w-0 flex-col${isMobileVisible ? ' max-[1024px]:items-center max-[1024px]:text-center' : ''}`}
+          >
             {currentTrack ? (
               <>
-                <span className="pb__title" title={currentTrack.title}>
+                <span
+                  className={`truncate text-sm leading-[1.3] font-bold${isMobileVisible ? ' max-[1024px]:text-xl max-[1024px]:whitespace-normal' : ''}`}
+                  title={currentTrack.title}
+                >
                   {currentTrack.title}
                 </span>
-                <span className="pb__author">{currentTrack.author}</span>
+                <span
+                  className={`mt-0.5 truncate text-xs text-muted${isMobileVisible ? ' max-[1024px]:text-sm' : ''}`}
+                >
+                  {currentTrack.author}
+                </span>
               </>
             ) : (
               <>
-                <span className="pb__title">Chưa phát bài nào</span>
-                <span className="pb__author">Dán URL TikTok để bắt đầu</span>
+                <span className="truncate text-sm leading-[1.3] font-bold">
+                  Chưa phát bài nào
+                </span>
+                <span className="mt-0.5 truncate text-xs text-muted">
+                  Dán URL TikTok để bắt đầu
+                </span>
               </>
             )}
           </span>
@@ -521,7 +516,7 @@ export default function PlayerPanel({
         {currentTrack && (
           <button
             type="button"
-            className={`pb__share${shareCopied ? ' is-copied' : ''}`}
+            className={`grid size-[34px] shrink-0 cursor-pointer place-items-center rounded-full border bg-transparent transition-[color,border-color,transform] duration-[var(--motion-fast)] ease-spring hover:border-current hover:text-ink active:scale-[0.92]${isMobileVisible ? ' max-[1024px]:grid' : ' max-[1024px]:hidden'}${shareCopied ? ' border-accent text-accent' : ' border-line text-muted'}`}
             onClick={shareTrack}
             aria-label="Chia sẻ bài hát"
             title={shareCopied ? 'Đã copy link!' : 'Chia sẻ bài hát'}
@@ -536,17 +531,21 @@ export default function PlayerPanel({
           <SpectrumAnalyzer
             analyserRef={engine.analyserRef}
             isPlaying={isPlaying}
-            className="pb__spectrum pb__spectrum--mobile"
+            className={`${isMobileVisible ? 'max-[1024px]:block' : ''} hidden h-[72px] w-[min(72vw,360px)] shrink-0 opacity-90 max-[1024px]:mx-auto`}
           />
         )}
 
         {/* CENTER — transport + progress */}
-        <div className="pb__center">
+        <div
+          className={`flex w-[min(46vw,560px)] flex-[0_1_auto] flex-col items-center gap-1.5${isMobileVisible ? ' max-[1024px]:w-full max-[1024px]:flex-[0_0_auto] max-[1024px]:gap-[18px]' : ' max-[1024px]:w-auto max-[1024px]:flex-[0_0_auto] max-[1024px]:flex-row max-[1024px]:gap-1.5'}`}
+        >
           {/* Controls */}
-          <div className="np__controls">
+          <div
+            className={`flex items-center gap-[18px]${isMobileVisible ? ' max-[1024px]:gap-5' : ' max-[1024px]:gap-1.5'}`}
+          >
             <button
               type="button"
-              className={`iconbtn pb__ctrl pb__ctrl--shuffle${shuffle ? ' iconbtn--on' : ''}${pulseShuffle ? ' iconbtn--pulse' : ''}`}
+              className={`${iconButtonClass}${shuffle ? activeIconButtonClass : ''}${pulseShuffle ? ' [animation:iconbtn-pulse_var(--motion-base)_var(--ease-spring)]' : ''}${isMobileVisible ? ' max-[1024px]:size-12' : ' max-[1024px]:hidden'}`}
               onClick={() => {
                 setShuffle(!shuffle);
                 setPulseShuffle(true);
@@ -559,7 +558,7 @@ export default function PlayerPanel({
             </button>
             <button
               type="button"
-              className="btn btn--icon pb__ctrl pb__ctrl--prev"
+              className={`${transportButtonClass}${isMobileVisible ? ' max-[1024px]:size-[54px]' : ' max-[1024px]:hidden'}`}
               onClick={prev}
               disabled={!currentTrack}
               aria-label="Bài trước"
@@ -569,7 +568,7 @@ export default function PlayerPanel({
             </button>
             <button
               type="button"
-              className="btn btn--play pb__ctrl pb__ctrl--play"
+              className={`inline-flex size-14 cursor-pointer items-center justify-center rounded-full border-0 bg-linear-to-br from-accent to-tertiary text-[#00201e] shadow-accent transition-[transform,filter] duration-[var(--motion-fast)] ease-spring hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.94] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent${isMobileVisible ? ' max-[1024px]:size-[76px] max-[1024px]:[&_svg]:size-7' : ''}`}
               onClick={togglePlay}
               aria-label={
                 isLoading ? 'Đang tải' : isPlaying ? 'Tạm dừng' : 'Phát'
@@ -577,10 +576,13 @@ export default function PlayerPanel({
               title={`${isLoading ? 'Đang tải' : isPlaying ? 'Tạm dừng' : 'Phát'} (Space)`}
             >
               {isLoading ? (
-                <SpinnerIcon className="np__spin" size={22} />
+                <SpinnerIcon
+                  className="[animation:np-spin-icon_0.8s_linear_infinite]"
+                  size={22}
+                />
               ) : (
                 <span
-                  className="np__play-icon"
+                  className="inline-flex [animation:np-icon-morph_var(--motion-fast)_var(--ease-spring)]"
                   key={isPlaying ? 'pause' : 'play'}
                 >
                   {isPlaying ? <PauseIcon size={22} /> : <PlayIcon size={22} />}
@@ -589,7 +591,7 @@ export default function PlayerPanel({
             </button>
             <button
               type="button"
-              className="btn btn--icon pb__ctrl pb__ctrl--next"
+              className={`${transportButtonClass}${isMobileVisible ? ' max-[1024px]:size-[54px]' : ''}`}
               onClick={next}
               disabled={!currentTrack}
               aria-label="Bài tiếp theo"
@@ -599,7 +601,7 @@ export default function PlayerPanel({
             </button>
             <button
               type="button"
-              className={`iconbtn pb__ctrl pb__ctrl--repeat${repeat !== 'off' ? ' iconbtn--on' : ''}${pulseRepeat ? ' iconbtn--pulse' : ''}`}
+              className={`${iconButtonClass}${repeat !== 'off' ? activeIconButtonClass : ''}${pulseRepeat ? ' [animation:iconbtn-pulse_var(--motion-base)_var(--ease-spring)]' : ''}${isMobileVisible ? ' max-[1024px]:size-12' : ' max-[1024px]:hidden'}`}
               onClick={() => {
                 cycleRepeat();
                 setPulseRepeat(true);
@@ -623,9 +625,13 @@ export default function PlayerPanel({
           </div>
 
           {/* Progress */}
-          <div className="np__progress">
-            <span className="np__time">{formatTime(engine.currentTime)}</span>
-            <div className="np__seek-wrap">
+          <div
+            className={`flex w-full items-center gap-2${isMobileVisible ? '' : ' max-[1024px]:hidden'}`}
+          >
+            <span className="min-w-[34px] text-center text-[11px] text-muted tabular-nums">
+              {formatTime(engine.currentTime)}
+            </span>
+            <div className="relative flex flex-1 items-center">
               <input
                 type="range"
                 className="np__seek"
@@ -657,32 +663,36 @@ export default function PlayerPanel({
               />
               {isScrubbing && (
                 <div
-                  className="np__seek-tip"
+                  className="pointer-events-none absolute bottom-[calc(100%+8px)] -translate-x-1/2 whitespace-nowrap rounded-full border border-accent-muted bg-[var(--scrub-tip-bg)] px-2 py-[3px] text-[11px] text-ink tabular-nums shadow-app-sm [animation:np-tip-in_var(--motion-fast)_var(--ease-out)]"
                   style={{ left: `${displayedPercent}%` }}
                 >
                   {formatTime(previewTime)}
                 </div>
               )}
             </div>
-            <span className="np__time">{formatTime(engine.duration)}</span>
+            <span className="min-w-[34px] text-center text-[11px] text-muted tabular-nums">
+              {formatTime(engine.duration)}
+            </span>
           </div>
         </div>
         {/* /CENTER */}
 
         {/* RIGHT — queue / equalizer / volume */}
-        <div className="pb__right">
+        <div
+          className={`flex flex-[1_1_0] items-center justify-end gap-2${isMobileVisible ? ' max-[1024px]:w-full max-[1024px]:flex-[0_0_auto] max-[1024px]:justify-center max-[1024px]:gap-4' : ' max-[1024px]:hidden'}`}
+        >
           {/* Spectrum analyzer — compact desktop strip. Hidden on mobile. */}
           {currentTrack && (
             <SpectrumAnalyzer
               analyserRef={engine.analyserRef}
               isPlaying={isPlaying}
               barCount={24}
-              className="pb__spectrum pb__spectrum--desktop"
+              className="mr-0.5 block h-10 w-[132px] shrink-0 opacity-90 max-[1024px]:hidden"
             />
           )}
           <button
             type="button"
-            className={`iconbtn pb__toggle${openPanel === 'queue' ? ' iconbtn--on' : ''}`}
+            className={`${iconButtonClass}${openPanel === 'queue' ? activeIconButtonClass : ''}${isMobileVisible ? ' max-[1024px]:size-12' : ''}`}
             onClick={() =>
               setOpenPanel((p) => (p === 'queue' ? null : 'queue'))
             }
@@ -693,7 +703,7 @@ export default function PlayerPanel({
           </button>
           <button
             type="button"
-            className={`iconbtn pb__toggle${openPanel === 'eq' ? ' iconbtn--on' : ''}`}
+            className={`${iconButtonClass}${openPanel === 'eq' ? activeIconButtonClass : ''}${isMobileVisible ? ' max-[1024px]:size-12' : ''}`}
             onClick={() => setOpenPanel((p) => (p === 'eq' ? null : 'eq'))}
             aria-label="Bộ cân bằng"
             title="Bộ cân bằng"
@@ -704,11 +714,11 @@ export default function PlayerPanel({
           {/* Volume */}
           <div
             ref={volGroupRef}
-            className={`np__volume${isBoosted ? ' is-boosted' : ''}`}
+            className={`np__volume flex w-auto items-center gap-0${isBoosted ? ' is-boosted' : ''}`}
           >
             <button
               type="button"
-              className="np__vol-btn"
+              className="inline-flex shrink-0 cursor-pointer items-center rounded-full border-0 bg-transparent p-1.5 text-muted transition-[color,background,transform] duration-[var(--motion-fast)] ease-spring hover:bg-surface-3 hover:text-ink active:scale-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               onClick={() => engine.toggleMute(volume, setVolume)}
               aria-label={isMuted ? 'Bật âm thanh' : 'Tắt âm thanh'}
               title={`${isMuted ? 'Bật âm thanh' : 'Tắt âm thanh'} (M)`}
@@ -721,7 +731,10 @@ export default function PlayerPanel({
                 <VolumeIcon size={16} />
               )}
             </button>
-            <div className="np__vol-track" ref={volTrackRef}>
+            <div
+              className="np__vol-track relative ml-2 flex w-[100px] flex-1 items-center opacity-100"
+              ref={volTrackRef}
+            >
               <input
                 type="range"
                 className="np__vol-range"
@@ -737,9 +750,14 @@ export default function PlayerPanel({
                 style={{ '--vol': `${volPercent}%` } as React.CSSProperties}
               />
               {/* 100% detent — marks the end of the normal range / start of boost */}
-              <span className="np__vol-detent" aria-hidden />
+              <span
+                className="np__vol-detent pointer-events-none absolute top-1/2 left-1/3 h-2.5 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-muted-2 opacity-70 transition-[background,opacity] duration-[var(--motion-fast)] ease-out-app"
+                aria-hidden
+              />
             </div>
-            <span className={`np__vol-value${isBoosted ? ' is-boosted' : ''}`}>
+            <span
+              className={`ml-2 w-8 shrink-0 overflow-hidden text-right text-[11px] whitespace-nowrap tabular-nums${isBoosted ? ' text-tertiary-light' : ' text-muted'}`}
+            >
               {Math.round(volume * 100)}%
             </span>
           </div>
@@ -750,22 +768,22 @@ export default function PlayerPanel({
         {openPanel && (
           <div
             ref={popoverRef}
-            className={`pb__popover pb__popover--${openPanel}`}
+            className={`absolute right-4 bottom-[calc(100%+10px)] z-50 flex max-h-[min(60vh,460px)] flex-col overflow-hidden rounded-panel border border-line-soft bg-[rgba(18,18,22,0.97)] shadow-app backdrop-blur-[20px] [animation:pb-pop_var(--motion-base)_var(--ease-out)] max-[1024px]:fixed max-[1024px]:inset-x-0 max-[1024px]:bottom-[var(--bottom-stack)] max-[1024px]:w-full max-[1024px]:max-w-full max-[1024px]:max-h-[72vh] max-[1024px]:rounded-b-none${openPanel === 'eq' ? ' w-[min(420px,calc(100vw-32px))]' : ' w-[min(360px,calc(100vw-32px))]'}`}
           >
-            <div className="pb__popover-head">
-              <span className="pb__popover-title">
+            <div className="flex items-center justify-between border-b border-line-soft px-3.5 py-3">
+              <span className="font-display text-sm font-bold">
                 {openPanel === 'queue' ? 'Hàng chờ' : 'Bộ cân bằng & tốc độ'}
               </span>
               <button
                 type="button"
-                className="pb__popover-close"
+                className="grid size-7 cursor-pointer place-items-center rounded-full border-0 bg-transparent text-[13px] text-muted transition-[color,background,transform] duration-[var(--motion-fast)] ease-spring hover:bg-white/[0.06] hover:text-ink active:scale-90"
                 onClick={() => setOpenPanel(null)}
                 aria-label="Đóng"
               >
                 <CloseIcon size={15} />
               </button>
             </div>
-            <div className="pb__popover-body">
+            <div className="overflow-y-auto px-3.5 py-3">
               {openPanel === 'eq' && (
                 <>
                   <TrackTrimmer />
@@ -782,11 +800,14 @@ export default function PlayerPanel({
                 </>
               )}
               {openPanel === 'queue' && (
-                <div className="np__queue">
+                <div className="max-h-[260px] w-full overflow-y-auto">
                   {currentTrack && (
-                    <div className="np__queue-now" aria-current="true">
+                    <div
+                      className="mb-2 flex items-center gap-2.5 rounded-control border border-accent-glow bg-accent-muted p-2 shadow-[inset_0_0_0_1px_var(--accent-glow)]"
+                      aria-current="true"
+                    >
                       <span
-                        className="np__queue-index np__queue-index--now"
+                        className="w-[18px] shrink-0 text-center font-mono text-base text-accent"
                         aria-hidden
                       >
                         ♪
@@ -795,13 +816,13 @@ export default function PlayerPanel({
                         src={currentTrack.cover}
                         alt={currentTrack.title}
                         subtitle={currentTrack.author}
-                        className="np__queue-cover"
+                        className="size-9 shrink-0 rounded-compact"
                       />
-                      <span className="np__queue-meta">
-                        <span className="np__queue-title">
+                      <span className="flex min-w-0 flex-1 flex-col gap-px">
+                        <span className="truncate text-[13px] font-semibold">
                           {currentTrack.title}
                         </span>
-                        <span className="np__queue-author">
+                        <span className="truncate font-mono text-[10px] text-muted">
                           {currentTrack.author}
                         </span>
                       </span>
@@ -816,32 +837,36 @@ export default function PlayerPanel({
                     </div>
                   )}
                   {upNext.length === 0 ? (
-                    <p className="np__queue-empty">
+                    <p className="px-2 py-5 text-center text-xs text-muted">
                       {shuffle
                         ? 'Bài tiếp theo sẽ được chọn ngẫu nhiên.'
                         : 'Đã hết danh sách phát.'}
                     </p>
                   ) : (
-                    <ul className="np__queue-list">
+                    <ul className="flex flex-col gap-1">
                       {upNext.map((track, i) => (
                         <li key={track.id}>
                           <button
                             type="button"
-                            className="np__queue-item"
-                            onClick={() => playTrack(track)}
+                            className="flex w-full cursor-pointer items-center gap-2.5 rounded-compact border-0 bg-transparent px-2 py-1.5 text-left transition-[background,transform] duration-[var(--motion-fast)] ease-spring hover:translate-x-0.5 hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                            onClick={() =>
+                              playQueuedTrack(track, playbackQueue)
+                            }
                           >
-                            <span className="np__queue-index">{i + 1}</span>
+                            <span className="w-[18px] shrink-0 text-center font-mono text-[11px] text-muted-2">
+                              {i + 1}
+                            </span>
                             <Cover
                               src={track.cover}
                               alt={track.title}
                               subtitle={track.author}
-                              className="np__queue-cover"
+                              className="size-9 shrink-0 rounded-compact"
                             />
-                            <span className="np__queue-meta">
-                              <span className="np__queue-title">
+                            <span className="flex min-w-0 flex-col gap-px">
+                              <span className="truncate text-[13px] font-semibold">
                                 {track.title}
                               </span>
-                              <span className="np__queue-author">
+                              <span className="truncate font-mono text-[10px] text-muted">
                                 {track.author}
                               </span>
                             </span>

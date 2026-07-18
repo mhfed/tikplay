@@ -71,10 +71,12 @@ export default function Home({ onOpenLibrary }: HomeProps) {
 
   if (tracks.length === 0) {
     return (
-      <div className="home">
-        <div className="home__empty">
-          <p className="home__empty-title">Chưa có bài hát nào</p>
-          <p className="home__empty-sub">
+      <div className="flex min-w-0 flex-1 flex-col gap-11 overflow-y-auto px-[clamp(24px,3vw,48px)] pb-14 pt-[calc(28px+env(safe-area-inset-top))] max-[640px]:gap-8 max-[640px]:px-4 max-[640px]:pb-[calc(var(--bottom-stack)+24px)] max-[640px]:pt-[calc(16px+env(safe-area-inset-top))]">
+        <div className="m-auto p-10 text-center">
+          <p className="mb-2 font-display text-xl font-extrabold">
+            Chưa có bài hát nào
+          </p>
+          <p className="text-sm text-muted">
             Dán một link TikTok ở tab Thư viện để bắt đầu vibe.
           </p>
         </div>
@@ -83,27 +85,37 @@ export default function Home({ onOpenLibrary }: HomeProps) {
   }
 
   return (
-    <div className="home">
+    <div className="flex min-w-0 flex-1 flex-col gap-11 overflow-y-auto px-[clamp(24px,3vw,48px)] pb-14 pt-[calc(28px+env(safe-area-inset-top))] max-[640px]:gap-8 max-[640px]:px-4 max-[640px]:pb-[calc(var(--bottom-stack)+24px)] max-[640px]:pt-[calc(16px+env(safe-area-inset-top))]">
       {heroTrack && (
-        <div className="home-hero-shell">
+        <div className="rounded-[26px] bg-[linear-gradient(145deg,rgba(255,255,255,0.1),rgba(255,255,255,0.025)_48%,rgba(0,221,214,0.1))] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_24px_70px_rgba(0,0,0,0.24)] max-[640px]:rounded-[21px] max-[640px]:p-1">
           <section
-            className="home-hero"
+            className="relative isolate flex min-h-80 items-end overflow-hidden rounded-[20px] bg-cover bg-center max-[640px]:min-h-[284px] max-[640px]:rounded-[17px]"
             style={{ backgroundImage: `url(${pickArt(heroTrack.title)})` }}
           >
-            <div className="home-hero__scrim" aria-hidden />
-            <div className="home-hero__content">
-              <span className="home-hero__eyebrow">
+            <div
+              className="absolute inset-0 z-0 bg-[linear-gradient(0deg,var(--bg)_8%,rgba(10,10,10,0.35)_55%,rgba(10,10,10,0.1)_100%)]"
+              aria-hidden
+            />
+            <div className="relative z-[1] max-w-[640px] p-[clamp(28px,4vw,48px)] max-[640px]:w-full max-[640px]:p-5">
+              <span className="mb-3.5 inline-block rounded-full bg-accent px-3 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-canvas">
                 {recentlyPlayed[0] ? 'Tiếp tục nghe' : 'Gợi ý hôm nay'}
               </span>
-              <h1 className="home-hero__title">{heroTrack.title}</h1>
-              <p className="home-hero__author">{heroTrack.author}</p>
-              <div className="home-hero__actions">
+              <h1 className="mb-1.5 line-clamp-2 font-display text-[32px] leading-[1.15] font-black text-white max-[640px]:text-2xl">
+                {heroTrack.title}
+              </h1>
+              <p className="mb-6 text-sm text-ink-secondary max-[640px]:mb-4">
+                {heroTrack.author}
+              </p>
+              <div className="flex flex-nowrap gap-2.5 max-[640px]:gap-2">
                 <button
                   type="button"
-                  className="home-hero__play"
+                  className="group inline-flex cursor-pointer items-center gap-[9px] rounded-full border-0 bg-linear-to-br from-accent to-tertiary py-[7px] pr-[18px] pl-2 text-sm font-bold text-[#00201e] shadow-accent transition-[filter,transform] duration-[420ms] ease-out-app hover:brightness-110 active:scale-[0.98] max-[640px]:gap-[7px] max-[640px]:py-1.5 max-[640px]:pr-3 max-[640px]:pl-1.5 max-[640px]:text-[12.5px] max-[640px]:whitespace-nowrap"
                   onClick={handlePlayHero}
                 >
-                  <span className="home-hero__action-icon" aria-hidden>
+                  <span
+                    className="grid size-8 shrink-0 place-items-center rounded-full bg-[rgba(0,32,30,0.12)] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] transition-transform duration-[480ms] ease-out-app group-hover:translate-x-0.5 group-hover:-translate-y-px group-hover:scale-[1.04] max-[640px]:size-[30px]"
+                    aria-hidden
+                  >
                     <PlayIcon size={15} />
                   </span>
                   {currentTrack?.id === heroTrack.id && isPlaying
@@ -112,10 +124,13 @@ export default function Home({ onOpenLibrary }: HomeProps) {
                 </button>
                 <button
                   type="button"
-                  className="home-hero__shuffle"
+                  className="group inline-flex cursor-pointer items-center gap-[9px] rounded-full border-0 bg-white/10 py-[7px] pr-[18px] pl-2 text-sm font-bold text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2),inset_0_1px_0_rgba(255,255,255,0.08)] transition-[filter,transform] duration-[420ms] ease-out-app hover:brightness-110 active:scale-[0.98] max-[640px]:gap-[7px] max-[640px]:py-1.5 max-[640px]:pr-3 max-[640px]:pl-1.5 max-[640px]:text-[12.5px] max-[640px]:whitespace-nowrap"
                   onClick={handleShuffleAll}
                 >
-                  <span className="home-hero__action-icon" aria-hidden>
+                  <span
+                    className="grid size-8 shrink-0 place-items-center rounded-full bg-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] transition-transform duration-[480ms] ease-out-app group-hover:translate-x-0.5 group-hover:-translate-y-px group-hover:scale-[1.04] max-[640px]:size-[30px]"
+                    aria-hidden
+                  >
                     <ShuffleIcon size={15} />
                   </span>
                   Phát ngẫu nhiên
@@ -145,11 +160,13 @@ export default function Home({ onOpenLibrary }: HomeProps) {
         </HomeRow>
       )}
 
-      <section className="home-section">
-        <div className="home-section__head">
-          <h2 className="home-section__title">Playlist của bạn</h2>
+      <section className="flex min-w-0 flex-col gap-4">
+        <div className="flex flex-wrap items-baseline gap-3">
+          <h2 className="inline-flex items-center gap-2 font-display text-lg font-extrabold text-accent">
+            Playlist của bạn
+          </h2>
         </div>
-        <div className="home-playlist-grid">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(240px,100%),1fr))] gap-4 max-[640px]:grid-cols-2 max-[640px]:gap-2.5">
           <PlaylistCard
             name="Tất cả bài hát"
             count={tracks.length}
@@ -189,15 +206,15 @@ export default function Home({ onOpenLibrary }: HomeProps) {
       )}
 
       {categories.length > 0 && (
-        <section className="home-section">
-          <div className="home-section__head">
-            <h2 className="home-section__title">
+        <section className="flex min-w-0 flex-col gap-4">
+          <div className="flex flex-wrap items-baseline gap-3">
+            <h2 className="inline-flex items-center gap-2 font-display text-lg font-extrabold text-accent">
               <TagIcon />
               Thể loại nhạc
             </h2>
-            <p className="home-section__subtitle">Khám phá theo thể loại</p>
+            <p className="text-xs text-muted">Khám phá theo thể loại</p>
           </div>
-          <div className="home-category-grid">
+          <div className="flex flex-wrap gap-2">
             {categories
               .filter((c) => c.count && c.count > 0)
               .slice(0, 10)
@@ -205,14 +222,14 @@ export default function Home({ onOpenLibrary }: HomeProps) {
                 <button
                   type="button"
                   key={c.slug}
-                  className="home-category-card"
+                  className="inline-flex min-w-0 cursor-pointer flex-col gap-0.5 rounded-control border-0 bg-surface px-[18px] py-3 text-left shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07),inset_0_1px_0_rgba(255,255,255,0.06)] transition-[background,box-shadow,transform] duration-[480ms] ease-out-app hover:-translate-y-0.5 hover:bg-surface-2 hover:shadow-[inset_0_0_0_1px_rgba(0,221,214,0.26),inset_0_1px_0_rgba(255,255,255,0.08),0_10px_28px_rgba(0,0,0,0.18)] active:scale-[0.97]"
                   onClick={() => {
                     withViewTransition(() => selectCategory(c.slug));
                     onOpenLibrary?.();
                   }}
                 >
-                  <span className="home-category-card__name">{c.name}</span>
-                  <span className="home-category-card__count">
+                  <span className="text-sm font-bold text-ink">{c.name}</span>
+                  <span className="font-mono text-[11px] text-muted">
                     {c.count} bài
                   </span>
                 </button>
@@ -253,15 +270,17 @@ function HomeRow({
   children: React.ReactNode;
 }) {
   return (
-    <section className="home-section">
-      <div className="home-section__head">
-        <h2 className="home-section__title">
+    <section className="flex min-w-0 flex-col gap-4">
+      <div className="flex flex-wrap items-baseline gap-3">
+        <h2 className="inline-flex items-center gap-2 font-display text-lg font-extrabold text-accent">
           {icon}
           {title}
         </h2>
-        {subtitle && <p className="home-section__subtitle">{subtitle}</p>}
+        {subtitle && <p className="text-xs text-muted">{subtitle}</p>}
       </div>
-      <div className="home-row">{children}</div>
+      <div className="-m-0.5 flex gap-4 overflow-x-auto p-0.5 pb-2">
+        {children}
+      </div>
     </section>
   );
 }
@@ -282,21 +301,28 @@ function TrackCard({
   return (
     <button
       type="button"
-      className={`track-card${active ? ' is-active' : ''}`}
+      className="home-card-reveal group flex w-[150px] shrink-0 cursor-pointer flex-col gap-[7px] border-0 bg-transparent p-0 text-left text-inherit"
       onClick={onPlay}
     >
-      <span className="track-card__shell">
+      <span
+        className={`block size-[150px] rounded-panel bg-[linear-gradient(145deg,rgba(255,255,255,0.1),rgba(255,255,255,0.025))] p-[5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.09),0_14px_34px_rgba(0,0,0,0.18)] transition-[box-shadow,transform] duration-[480ms] ease-out-app group-hover:-translate-y-1 group-hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_20px_44px_rgba(0,0,0,0.28)] group-active:-translate-y-px group-active:scale-[0.98]${active ? ' shadow-[inset_0_0_0_1px_rgba(0,221,214,0.7),0_0_0_1px_rgba(0,221,214,0.35),0_0_20px_var(--accent-glow)]' : ''}`}
+      >
         <span
-          className="track-card__art"
+          className="relative block size-full overflow-hidden rounded-control bg-surface-2 bg-cover bg-center shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
           style={{ backgroundImage: `url(${art})` }}
         >
-          <span className="track-card__play" aria-hidden>
+          <span
+            className={`absolute right-2 bottom-2 flex size-[34px] translate-y-1.5 items-center justify-center rounded-full bg-accent text-[#00201e] opacity-0 transition-[opacity,transform] duration-[420ms] ease-out-app group-hover:translate-y-0 group-hover:opacity-100${active ? ' translate-y-0 opacity-100' : ''}`}
+            aria-hidden
+          >
             {active && playing ? <EqDots /> : <PlayIcon size={18} />}
           </span>
         </span>
       </span>
-      <span className="track-card__title">{track.title}</span>
-      <span className="track-card__author">{track.author}</span>
+      <span className="truncate text-[13px] font-bold">{track.title}</span>
+      <span className="truncate font-mono text-[11px] text-muted">
+        {track.author}
+      </span>
     </button>
   );
 }
@@ -311,17 +337,27 @@ function PlaylistCard({
   href: string;
 }) {
   return (
-    <Link href={href} className="playlist-card">
-      <span className="playlist-card__inner">
+    <Link
+      href={href}
+      className="home-card-reveal group relative isolate block aspect-[16/7] cursor-pointer rounded-panel border-0 bg-[linear-gradient(145deg,rgba(255,255,255,0.1),rgba(255,255,255,0.025))] p-[5px] shadow-[inset_0_1px_0_rgba(255,255,255,0.09),0_18px_46px_rgba(0,0,0,0.2)] transition-[box-shadow,transform] duration-[550ms] ease-out-app hover:-translate-y-[3px] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_24px_56px_rgba(0,0,0,0.3)] active:-translate-y-px active:scale-[0.985] max-[640px]:aspect-[6/5] max-[640px]:rounded-[14px] max-[640px]:p-1"
+    >
+      <span className="relative block size-full overflow-hidden rounded-control shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] max-[640px]:rounded-[10px]">
         <span
-          className="playlist-card__art"
+          className="absolute inset-0 bg-cover bg-center transition-transform duration-[620ms] ease-out-app group-hover:scale-[1.06]"
           style={{ backgroundImage: `url(${pickArt(name)})` }}
         />
-        <span className="playlist-card__scrim" aria-hidden />
-        <span className="playlist-card__body">
-          <span className="playlist-card__name">{name}</span>
+        <span
+          className="absolute inset-0 bg-[linear-gradient(0deg,rgba(10,10,10,0.9)_15%,rgba(10,10,10,0.1)_70%)]"
+          aria-hidden
+        />
+        <span className="absolute inset-x-0 bottom-0 flex flex-col gap-0.5 p-3 text-left max-[640px]:p-2.5">
+          <span className="truncate text-sm font-bold text-white max-[640px]:text-[13px]">
+            {name}
+          </span>
           {count != null && (
-            <span className="playlist-card__count">{count} bài</span>
+            <span className="font-mono text-[11px] text-ink-secondary">
+              {count} bài
+            </span>
           )}
         </span>
       </span>

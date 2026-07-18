@@ -10,18 +10,17 @@ interface AudioEngineOptions {
   endTime?: number;
 }
 
+function releaseAudioElement(audio: HTMLAudioElement) {
+  audio.pause();
+  audio.removeAttribute('src');
+  audio.load();
+}
+
 export function useAudioEngine(opts: AudioEngineOptions = {}) {
-  const audioRefA = useRef<HTMLAudioElement | null>(null);
-  const audioRefB = useRef<HTMLAudioElement | null>(null);
-  const activeDeckRef = useRef<'A' | 'B'>('A');
-  // For external refs (like analyser), we expose the currently active audio
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  
+
   const ctxRef = useRef<AudioContext | null>(null);
-  const sourceARef = useRef<MediaElementAudioSourceNode | null>(null);
-  const sourceBRef = useRef<MediaElementAudioSourceNode | null>(null);
-  const gainARef = useRef<GainNode | null>(null);
-  const gainBRef = useRef<GainNode | null>(null);
+  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const filtersRef = useRef<BiquadFilterNode[]>([]);
   const gainRef = useRef<GainNode | null>(null);
   const limiterRef = useRef<DynamicsCompressorNode | null>(null);
@@ -32,7 +31,8 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
   const lastVolumeRef = useRef(0.8);
   // Desired volume (0–3): may be set before the audio graph exists.
   const desiredVolumeRef = useRef(0.8);
-  
+  const desiredSpeedRef = useRef(1);
+
   const optsRef = useRef(opts);
   useEffect(() => {
     optsRef.current = opts;
@@ -47,22 +47,14 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
   const [buffered, setBuffered] = useState(0);
 
   const getOrCreateAudio = useCallback(() => {
-    if (!audioRefA.current) {
-      const elA = new Audio();
-      elA.id = 'global-audio-A';
-      elA.crossOrigin = 'anonymous';
-      elA.preload = 'metadata';
-      audioRefA.current = elA;
-      
-      const elB = new Audio();
-      elB.id = 'global-audio-B';
-      elB.crossOrigin = 'anonymous';
-      elB.preload = 'metadata';
-      audioRefB.current = elB;
+    if (!audioRef.current) {
+      const audio = new Audio();
+      audio.id = 'global-audio';
+      audio.crossOrigin = 'anonymous';
+      audio.preload = 'metadata';
+      audioRef.current = audio;
     }
-    const currentAudio = activeDeckRef.current === 'A' ? audioRefA.current! : audioRefB.current!;
-    audioRef.current = currentAudio; // Update exported ref
-    return currentAudio;
+    return audioRef.current;
   }, []);
 
   // Mobile browsers suspend (iOS: "interrupted") the context on screen lock,
@@ -83,32 +75,14 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
     ctxRef.current = ctx;
 
     ctx.addEventListener('statechange', () => {
-      const el = activeDeckRef.current === 'A' ? audioRefA.current : audioRefB.current;
+      const el = audioRef.current;
       if (ctx.state !== 'running' && el && !el.paused) {
         ctx.resume().catch(() => {});
       }
     });
 
-    const sourceA = ctx.createMediaElementSource(audioRefA.current!);
-    const sourceB = ctx.createMediaElementSource(audioRefB.current!);
-    sourceARef.current = sourceA;
-    sourceBRef.current = sourceB;
-    
-    // Crossfade gain nodes (for fading out/in)
-    const fadeA = ctx.createGain();
-    const fadeB = ctx.createGain();
-    gainARef.current = fadeA;
-    gainBRef.current = fadeB;
-    fadeA.gain.value = 1;
-    fadeB.gain.value = 1;
-    
-    sourceA.connect(fadeA);
-    sourceB.connect(fadeB);
-    
-    // Mix them into a single track before hitting EQ
-    const mix = ctx.createGain();
-    fadeA.connect(mix);
-    fadeB.connect(mix);
+    const source = ctx.createMediaElementSource(audioRef.current!);
+    sourceRef.current = source;
 
     const filters: BiquadFilterNode[] = EQ_BANDS.map((freq, i) => {
       const filter = ctx.createBiquadFilter();
@@ -148,8 +122,8 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
     analyser.smoothingTimeConstant = 0.8;
     analyserRef.current = analyser;
 
-    // Chain: mix → filters → gain (boost) → limiter → analyser → destination
-    let prev: AudioNode = mix;
+    // Chain: source → filters → gain (boost) → limiter → analyser → destination
+    let prev: AudioNode = source;
     for (const f of filters) {
       prev.connect(f);
       prev = f;
@@ -162,45 +136,33 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
     connectedRef.current = true;
   }, [getOrCreateAudio]);
 
-  const crossfadeQueuedRef = useRef(false);
+  const endHandledRef = useRef(false);
+  const trackGenerationRef = useRef(0);
+  const playRequestRef = useRef(0);
 
   const loadTrack = useCallback(
     (audioUrl: string) => {
       if (lastUrlRef.current === audioUrl) return;
-      
-      // If we are playing, and it's a new track, swap decks and crossfade
-      const nextDeck = activeDeckRef.current === 'A' ? 'B' : 'A';
-      const newAudio = nextDeck === 'A' ? audioRefA.current! : audioRefB.current!;
-      const oldAudio = activeDeckRef.current === 'A' ? audioRefA.current! : audioRefB.current!;
-      const oldFade = activeDeckRef.current === 'A' ? gainARef.current : gainBRef.current;
-      const newFade = nextDeck === 'A' ? gainARef.current : gainBRef.current;
-      
-      activeDeckRef.current = nextDeck;
-      audioRef.current = newAudio;
+
+      getOrCreateAudio();
+
+      const audio = getOrCreateAudio();
+      audio.pause();
       lastUrlRef.current = audioUrl;
-      
-      newAudio.src = audioUrl;
+      trackGenerationRef.current += 1;
+      playRequestRef.current += 1;
+      recoveringRef.current = false;
+
+      audio.src = audioUrl;
+      audio.volume = Math.min(desiredVolumeRef.current, 1);
+      audio.playbackRate = desiredSpeedRef.current;
       setCurrentTime(0);
       setDuration(0);
       setBuffered(0);
       setIsReady(false);
-      crossfadeQueuedRef.current = false;
-      
-      if (ctxRef.current && oldFade && newFade && !oldAudio.paused) {
-        // Crossfade!
-        newFade.gain.setValueAtTime(0, ctxRef.current.currentTime);
-        newFade.gain.linearRampToValueAtTime(1, ctxRef.current.currentTime + 3);
-        
-        oldFade.gain.setValueAtTime(1, ctxRef.current.currentTime);
-        oldFade.gain.linearRampToValueAtTime(0, ctxRef.current.currentTime + 3);
-        
-        setTimeout(() => {
-           oldAudio.pause();
-           oldFade.gain.value = 1; // reset for next time
-        }, 3000);
-      }
+      endHandledRef.current = false;
     },
-    [],
+    [getOrCreateAudio],
   );
 
   // Recover from a network/decode error: if the element dies mid-playback
@@ -217,6 +179,7 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
     if (!audio || !url) return;
     if (recoveringRef.current || !wantsPlayingRef.current) return;
     recoveringRef.current = true;
+    const generation = trackGenerationRef.current;
     const resumeAt = audio.currentTime || 0;
     // Force a fresh load by clearing src first, then re-arming it.
     audio.removeAttribute('src');
@@ -225,9 +188,21 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
       audio.src = url;
       // Seek back to where we were once metadata is back, then play.
       const onReady = () => {
+        if (
+          audio !== audioRef.current ||
+          url !== lastUrlRef.current ||
+          generation !== trackGenerationRef.current ||
+          !wantsPlayingRef.current
+        ) {
+          recoveringRef.current = false;
+          return;
+        }
         let targetTime = resumeAt;
-        if (optsRef.current.startTime && targetTime < optsRef.current.startTime) {
-            targetTime = optsRef.current.startTime;
+        if (
+          optsRef.current.startTime &&
+          targetTime < optsRef.current.startTime
+        ) {
+          targetTime = optsRef.current.startTime;
         }
         if (
           targetTime > 0 &&
@@ -247,11 +222,21 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
 
   const play = useCallback(async () => {
     const audio = getOrCreateAudio();
+    const generation = trackGenerationRef.current;
+    const request = ++playRequestRef.current;
     ensureAudioGraph();
     if (ctxRef.current?.state === 'suspended') {
       await ctxRef.current.resume();
     }
+    if (
+      audio !== audioRef.current ||
+      request !== playRequestRef.current ||
+      generation !== trackGenerationRef.current
+    ) {
+      return;
+    }
     wantsPlayingRef.current = true;
+
     // If the element previously errored, clear that state so play() works.
     if (audio.error) {
       recover();
@@ -261,9 +246,9 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
   }, [getOrCreateAudio, ensureAudioGraph, recover]);
 
   const pause = useCallback(() => {
+    playRequestRef.current += 1;
     wantsPlayingRef.current = false;
-    if (audioRefA.current && !audioRefA.current.paused) audioRefA.current.pause();
-    if (audioRefB.current && !audioRefB.current.paused) audioRefB.current.pause();
+    if (audioRef.current && !audioRef.current.paused) audioRef.current.pause();
   }, []);
 
   const toggle = useCallback(async () => {
@@ -277,6 +262,8 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
     const audio = audioRef.current;
     if (audio) {
       audio.currentTime = time;
+      const targetEnd = optsRef.current.endTime || audio.duration;
+      if (!targetEnd || time < targetEnd) endHandledRef.current = false;
       setCurrentTime(time);
     }
   }, []);
@@ -291,6 +278,7 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
   }, []);
 
   const setSpeed = useCallback((s: number) => {
+    desiredSpeedRef.current = s;
     const audio = audioRef.current;
     if (audio) audio.playbackRate = s;
   }, []);
@@ -341,20 +329,24 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
     const handleTimeUpdate = (e: Event) => {
       if (e.target !== audioRef.current) return;
       resumeContext();
-      
+
       const el = e.target as HTMLAudioElement;
       const t = el.currentTime;
       const d = el.duration || 0;
-      
-      // Auto-skip or Crossfade logic
-      const targetEnd = optsRef.current.endTime || d;
-      
-      // If within 3 seconds of the end, trigger crossfade
-      if (targetEnd > 3 && t >= targetEnd - 3 && !crossfadeQueuedRef.current) {
-        crossfadeQueuedRef.current = true;
+
+      // A custom trim end needs an explicit stop; untrimmed tracks use the
+      // native `ended` event so their final seconds are never cut off.
+      const targetEnd = optsRef.current.endTime;
+      if (
+        targetEnd != null &&
+        targetEnd < d &&
+        t >= targetEnd &&
+        !endHandledRef.current
+      ) {
+        endHandledRef.current = true;
         optsRef.current.onEnded?.();
       }
-      
+
       setCurrentTime(t);
       setDuration(d);
       optsRef.current.onTimeUpdate?.(t, d);
@@ -362,6 +354,7 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
 
     const handleEnded = (e: Event) => {
       if (e.target !== audioRef.current) return;
+      endHandledRef.current = true;
       optsRef.current.onEnded?.();
     };
 
@@ -370,7 +363,10 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
       const el = e.target as HTMLAudioElement;
       setIsReady(true);
       setDuration(el.duration || 0);
-      if (optsRef.current.startTime && el.currentTime < optsRef.current.startTime) {
+      if (
+        optsRef.current.startTime &&
+        el.currentTime < optsRef.current.startTime
+      ) {
         el.currentTime = optsRef.current.startTime;
       }
     };
@@ -411,36 +407,51 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
     };
 
     getOrCreateAudio();
-    const elA = audioRefA.current!;
-    const elB = audioRefB.current!;
+    const audio = audioRef.current!;
 
-    [elA, elB].forEach(el => {
-      el.addEventListener('timeupdate', handleTimeUpdate);
-      el.addEventListener('ended', handleEnded);
-      el.addEventListener('canplay', handleCanPlay);
-      el.addEventListener('loadedmetadata', handleCanPlay);
-      el.addEventListener('progress', handleProgress);
-      el.addEventListener('error', handleError);
-      el.addEventListener('play', resumeContext);
-    });
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('canplay', handleCanPlay);
+    audio.addEventListener('loadedmetadata', handleCanPlay);
+    audio.addEventListener('progress', handleProgress);
+    audio.addEventListener('error', handleError);
+    audio.addEventListener('play', resumeContext);
     document.addEventListener('visibilitychange', handleVisible);
     window.addEventListener('pageshow', handleVisible);
 
     return () => {
-      [elA, elB].forEach(el => {
-        if (!el) return;
-        el.removeEventListener('timeupdate', handleTimeUpdate as any);
-        el.removeEventListener('ended', handleEnded as any);
-        el.removeEventListener('canplay', handleCanPlay as any);
-        el.removeEventListener('loadedmetadata', handleCanPlay as any);
-        el.removeEventListener('progress', handleProgress as any);
-        el.removeEventListener('error', handleError as any);
-        el.removeEventListener('play', resumeContext);
-      });
+      wantsPlayingRef.current = false;
+      recoveringRef.current = false;
+      trackGenerationRef.current += 1;
+      playRequestRef.current += 1;
+
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('canplay', handleCanPlay);
+      audio.removeEventListener('loadedmetadata', handleCanPlay);
+      audio.removeEventListener('progress', handleProgress);
+      audio.removeEventListener('error', handleError);
+      audio.removeEventListener('play', resumeContext);
+      releaseAudioElement(audio);
       document.removeEventListener('visibilitychange', handleVisible);
       window.removeEventListener('pageshow', handleVisible);
       document.removeEventListener('touchstart', unlock);
       document.removeEventListener('click', unlock);
+
+      sourceRef.current?.disconnect();
+      if (ctxRef.current?.state !== 'closed') {
+        ctxRef.current?.close().catch(() => {});
+      }
+
+      audioRef.current = null;
+      ctxRef.current = null;
+      sourceRef.current = null;
+      filtersRef.current = [];
+      gainRef.current = null;
+      limiterRef.current = null;
+      analyserRef.current = null;
+      connectedRef.current = false;
+      lastUrlRef.current = null;
     };
   }, [getOrCreateAudio, resumeContext, ensureAudioGraph, recover]); // eslint-disable-line react-hooks/exhaustive-deps
 

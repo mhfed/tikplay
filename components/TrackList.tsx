@@ -53,10 +53,12 @@ export default function TrackList() {
 
   if (tracks.length === 0 && pendingDownloads.length === 0) {
     return (
-      <div className="empty">
-        <span className="empty__icon">♪</span>
-        <p className="empty__text">Chưa có bài hát</p>
-        <p className="empty__sub">Dán liên kết TikTok để bắt đầu</p>
+      <div className="flex min-h-[240px] flex-col items-center justify-center gap-1.5 text-center text-muted">
+        <span className="mb-1 text-3xl text-muted-2">♪</span>
+        <p className="text-sm font-semibold text-ink-secondary">
+          Chưa có bài hát
+        </p>
+        <p className="text-xs text-muted">Dán liên kết TikTok để bắt đầu</p>
       </div>
     );
   }
@@ -71,47 +73,18 @@ export default function TrackList() {
         items={tracks.map((t) => t.id)}
         strategy={verticalListSortingStrategy}
       >
-        <ul className="track-list">
+        <ul className="flex list-none flex-col gap-0.5">
           {pendingDownloads.map((url) => (
             <li
               key={url}
-              className="track-row"
-              style={{ opacity: 0.6, pointerEvents: 'none' }}
+              className="flex pointer-events-none items-center gap-2.5 rounded-control border border-transparent border-l-2 bg-transparent px-2.5 py-2 opacity-60 max-[640px]:gap-3 max-[640px]:px-2 max-[640px]:py-3"
             >
-              <div
-                className="track-row__cover"
-                style={{
-                  background: 'rgba(255,255,255,0.1)',
-                  animation: 'pulse 1.5s infinite',
-                }}
-              ></div>
-              <div
-                className="track-row__info"
-                style={{ flex: 1, padding: '0 12px', minWidth: 0 }}
-              >
-                <p
-                  className="track-row__title"
-                  style={{
-                    fontSize: '15px',
-                    fontWeight: 500,
-                    color: '#fff',
-                    marginBottom: '4px',
-                  }}
-                >
+              <div className="size-10 shrink-0 animate-pulse rounded-compact bg-white/10 max-[640px]:size-11" />
+              <div className="min-w-0 flex-1 px-3">
+                <p className="mb-1 truncate text-[15px] font-medium text-white">
                   Đang tải & xử lý...
                 </p>
-                <p
-                  className="track-row__author"
-                  style={{
-                    fontSize: '13px',
-                    color: 'rgba(255,255,255,0.5)',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {url}
-                </p>
+                <p className="truncate text-[13px] text-white/50">{url}</p>
               </div>
             </li>
           ))}

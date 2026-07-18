@@ -34,9 +34,11 @@ export default function AppShell() {
 
   return (
     <>
-      <div className="app">
+      <div className="flex h-screen h-dvh overflow-hidden pb-[var(--player-bar-h)] max-[1024px]:pb-[var(--bottom-stack)]">
         <Sidebar />
-        <div className={`main-wrap${isContentTab ? '' : ' mobile-hidden'}`}>
+        <div
+          className={`flex min-w-0 flex-1 overflow-hidden [view-transition-name:main-content]${isContentTab ? '' : ' max-[1024px]:hidden'}`}
+        >
           {view === 'home' ? (
             <Home onOpenLibrary={() => setMobileTab('tracks')} />
           ) : (

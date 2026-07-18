@@ -30,14 +30,15 @@ export default function TrackTrimmer() {
   };
 
   return (
-    <div className="trimmer-panel">
-      <div className="trimmer-header">
-        <span className="trimmer-title">Cắt nhạc (Bỏ đoạn thừa)</span>
+    <div className="mb-4 rounded-panel bg-surface p-4">
+      <div className="mb-3 text-[13px] font-semibold text-ink">
+        <span>Cắt nhạc (Bỏ đoạn thừa)</span>
       </div>
-      <div className="trimmer-controls">
-        <label>
+      <div>
+        <label className="mb-2 flex items-center gap-3 text-xs text-ink-secondary">
           Bắt đầu (s):
           <input
+            className="flex-1"
             type="range"
             min="0"
             max={duration}
@@ -49,9 +50,10 @@ export default function TrackTrimmer() {
           />
           {startTime}s
         </label>
-        <label>
+        <label className="mb-2 flex items-center gap-3 text-xs text-ink-secondary">
           Kết thúc (s):
           <input
+            className="flex-1"
             type="range"
             min="0"
             max={duration}
@@ -64,17 +66,17 @@ export default function TrackTrimmer() {
           {endTime}s
         </label>
       </div>
-      <div className="trimmer-actions">
+      <div className="mt-3 flex justify-end gap-2">
         <button
           type="button"
-          className="btn btn--outline"
+          className="inline-flex cursor-pointer items-center justify-center rounded-control border border-line bg-surface-2 px-3 py-1.5 text-xs font-semibold text-ink transition-[background,border-color,transform] duration-[var(--motion-fast)] ease-spring hover:border-accent hover:bg-surface-3 active:scale-[0.97]"
           onClick={handleReset}
         >
           Đặt lại
         </button>
         <button
           type="button"
-          className="btn btn--primary"
+          className="inline-flex cursor-pointer items-center justify-center rounded-control border border-transparent bg-linear-to-br from-accent to-tertiary px-3 py-1.5 text-xs font-bold text-[#00201e] shadow-[0_0_20px_var(--accent-glow)] transition-[filter,transform] duration-[var(--motion-fast)] ease-spring hover:brightness-110 active:scale-[0.97]"
           onClick={handleApply}
         >
           Áp dụng
