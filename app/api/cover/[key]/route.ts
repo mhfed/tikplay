@@ -1,4 +1,4 @@
-import { promises as fs } from 'node:fs';
+import { createReadStream, promises as fs } from 'node:fs';
 import type { NextRequest } from 'next/server';
 import { FileCacheStore } from '@/lib/cache';
 import { isMediaBlocked } from '@/lib/db/queries';
@@ -9,9 +9,10 @@ export const runtime = 'nodejs';
 const KEY_RE = /^[a-f0-9]{64}$/;
 
 const cache = new FileCacheStore();
+const IMMUTABLE_MEDIA_CACHE = 'public, max-age=31536000, immutable';
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   props: { params: Promise<{ key: string }> },
 ) {
   const params = await props.params;
@@ -39,16 +40,31 @@ export async function GET(
       return new Response('Invalid cover (too small)', { status: 404 });
     }
 
-    const buffer = await fs.readFile(cover.path);
+    const etag = `"${key}"`;
+    const headers = {
+      'Cache-Control': IMMUTABLE_MEDIA_CACHE,
+      'Content-Length': String(stat.size),
+      'Content-Type': cover.contentType,
+      ETag: etag,
+      'X-Content-Type-Options': 'nosniff',
+    };
+    if (req.headers.get('if-none-match') === etag) {
+      return new Response(null, { status: 304, headers });
+    }
 
-    return new Response(buffer, {
-      status: 200,
-      headers: {
-        'Content-Type': cover.contentType,
-        'Content-Length': String(stat.size),
-        'Cache-Control': 'private, no-store',
+    const stream = createReadStream(cover.path);
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        stream.on('data', (chunk) => controller.enqueue(chunk as Buffer));
+        stream.on('end', () => controller.close());
+        stream.on('error', (error) => controller.error(error));
+      },
+      cancel() {
+        stream.destroy();
       },
     });
+
+    return new Response(body, { status: 200, headers });
   } catch {
     return new Response('Internal error reading file', { status: 500 });
   }

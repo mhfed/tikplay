@@ -3,6 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { EQ_BANDS } from '../lib/types';
 
+export type AudioLoadState =
+  | 'idle'
+  | 'loading'
+  | 'ready'
+  | 'playing'
+  | 'stalled'
+  | 'error';
+
 interface AudioEngineOptions {
   onTimeUpdate?: (currentTime: number, duration: number) => void;
   onEnded?: () => void;
@@ -42,6 +50,9 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isReady, setIsReady] = useState(false);
+  const [loadState, setLoadState] = useState<AudioLoadState>('idle');
+  const [startupMs, setStartupMs] = useState<number | null>(null);
+  const loadStartedAtRef = useRef(0);
   // Fraction of `duration` that the browser has buffered (0–1). Read from
   // audio.buffered on the `progress` event only — not on every `timeupdate` —
   // so the seek bar's "loaded" layer doesn't thrash while playing.
@@ -160,6 +171,9 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
       trackGenerationRef.current += 1;
       playRequestRef.current += 1;
       recoveringRef.current = false;
+      loadStartedAtRef.current = performance.now();
+      setLoadState('loading');
+      setStartupMs(null);
 
       audio.src = audioUrl;
       audio.volume = Math.min(desiredVolumeRef.current, 1);
@@ -372,6 +386,7 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
       if (e.target !== audioRef.current) return;
       const el = e.target as HTMLAudioElement;
       setIsReady(true);
+      setLoadState((state) => (state === 'playing' ? state : 'ready'));
       setDuration(el.duration || 0);
       const initialTime = pendingInitialTimeRef.current;
       if (
@@ -405,11 +420,31 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
       setBuffered(dur > 0 ? Math.min(1, end / dur) : 0);
     };
 
+    const handlePlaying = (e: Event) => {
+      if (e.target !== audioRef.current) return;
+      setLoadState('playing');
+      if (loadStartedAtRef.current > 0) {
+        const elapsed = performance.now() - loadStartedAtRef.current;
+        setStartupMs(elapsed);
+        if (process.env.NODE_ENV === 'development') {
+          console.debug(`[audio] startup ${Math.round(elapsed)}ms`);
+        }
+        loadStartedAtRef.current = 0;
+      }
+    };
+
+    const handleWaiting = (e: Event) => {
+      if (e.target !== audioRef.current || !wantsPlayingRef.current) return;
+      setLoadState('stalled');
+    };
+
     // Element errored (network drop while backgrounded, decode failure, etc).
-    // Try to recover once, then give up so we don't spin on a dead URL.
+    // Try to recover once, then expose an error if recovery cannot begin.
     const handleError = (e: Event) => {
       if (e.target !== audioRef.current) return;
-      recover();
+      const canRecover = wantsPlayingRef.current && !recoveringRef.current;
+      if (canRecover) recover();
+      else setLoadState('error');
     };
 
     const handleVisible = () => {
@@ -433,6 +468,9 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
     audio.addEventListener('canplay', handleCanPlay);
     audio.addEventListener('loadedmetadata', handleCanPlay);
     audio.addEventListener('progress', handleProgress);
+    audio.addEventListener('playing', handlePlaying);
+    audio.addEventListener('waiting', handleWaiting);
+    audio.addEventListener('stalled', handleWaiting);
     audio.addEventListener('error', handleError);
     audio.addEventListener('play', resumeContext);
     document.addEventListener('visibilitychange', handleVisible);
@@ -449,6 +487,9 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
       audio.removeEventListener('canplay', handleCanPlay);
       audio.removeEventListener('loadedmetadata', handleCanPlay);
       audio.removeEventListener('progress', handleProgress);
+      audio.removeEventListener('playing', handlePlaying);
+      audio.removeEventListener('waiting', handleWaiting);
+      audio.removeEventListener('stalled', handleWaiting);
       audio.removeEventListener('error', handleError);
       audio.removeEventListener('play', resumeContext);
       releaseAudioElement(audio);
@@ -488,6 +529,8 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
     currentTime,
     duration,
     isReady,
+    loadState,
+    startupMs,
     buffered,
     audioRef,
     analyserRef,

@@ -34,7 +34,18 @@ export function normalizeTikTokUrl(raw: string): string {
   const trimmed = raw.trim();
   try {
     const url = new URL(trimmed);
-    return `${url.protocol}//${url.host}${url.pathname}`;
+
+    // TikTok photo posts contain a regular audio track, but yt-dlp's TikTok
+    // extractor only recognizes the canonical `/video/:id` route. The video
+    // endpoint returns the same post metadata and exposes its audio-only format.
+    // Canonicalizing here also ensures validation, cache keys, metadata, and the
+    // download all use the extractor-compatible URL.
+    const pathname = url.pathname.replace(
+      /^(\/@[^/]+)\/photo\/(\d+)(\/?)$/,
+      '$1/video/$2$3',
+    );
+
+    return `${url.protocol}//${url.host}${pathname}`;
   } catch {
     return trimmed;
   }

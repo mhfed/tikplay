@@ -60,6 +60,16 @@ export default function TrackList() {
     reorderTracks(reordered.map((t) => t.id));
   };
 
+  const confirmRemoveTrack = (track: Track) => {
+    if (
+      window.confirm(
+        `Xóa “${track.title}” khỏi thư viện? Hành động này không thể hoàn tác.`,
+      )
+    ) {
+      removeTrack(track.id);
+    }
+  };
+
   const showJobs = importJobs.length > 0;
 
   if (tracks.length === 0 && !showJobs) {
@@ -163,7 +173,7 @@ export default function TrackList() {
                 currentTrack?.id === track.id ? togglePlay() : playTrack(track)
               }
               onFavorite={() => toggleFavorite(track.id)}
-              onRemove={() => removeTrack(track.id)}
+              onRemove={() => confirmRemoveTrack(track)}
               onActions={() => setActionTrack(track)}
             />
           ))}

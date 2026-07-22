@@ -210,6 +210,8 @@ export function AppStoreProvider({
   const [tracks, setTracks] = useState<Track[]>(initialData.tracks);
   const [importJobs, setImportJobs] = useState<ImportJob[]>([]);
   const importControllers = useRef(new Map<string, AbortController>());
+  const trackLoadController = useRef<AbortController | null>(null);
+  const trackLoadGeneration = useRef(0);
   const [playlists, setPlaylists] = useState<Playlist[]>(initialData.playlists);
   const [favorites, setFavorites] = useState<Set<number>>(
     () => new Set(initialData.favoriteIds),
@@ -262,23 +264,42 @@ export function AppStoreProvider({
   }, []);
 
   const loadTracks = useCallback(async (playlistId: number, q?: string) => {
+    trackLoadController.current?.abort();
+    const controller = new AbortController();
+    const generation = ++trackLoadGeneration.current;
+    trackLoadController.current = controller;
     const searchParam = q ? `?q=${encodeURIComponent(q)}` : '';
-    let data: { tracks: Track[] };
-    if (playlistId === 1) {
-      data = await api<{ tracks: Track[] }>(`/api/tracks${searchParam}`);
-    } else if (playlistId === -1) {
-      data = await api<{ tracks: Track[] }>('/api/favorites');
-    } else {
-      data = await api<{ tracks: Track[] }>(
-        `/api/playlists/${playlistId}/tracks`,
+    try {
+      let data: { tracks: Track[] };
+      if (playlistId === 1) {
+        data = await api<{ tracks: Track[] }>(`/api/tracks${searchParam}`, {
+          signal: controller.signal,
+        });
+      } else if (playlistId === -1) {
+        data = await api<{ tracks: Track[] }>('/api/favorites', {
+          signal: controller.signal,
+        });
+      } else {
+        data = await api<{ tracks: Track[] }>(
+          `/api/playlists/${playlistId}/tracks`,
+          { signal: controller.signal },
+        );
+      }
+      if (generation !== trackLoadGeneration.current) return [];
+      setTracks(data.tracks || []);
+      const favSet = new Set(
+        (data.tracks || []).filter((t) => t.isFavorite).map((t) => t.id),
       );
+      setFavorites(favSet);
+      return data.tracks || [];
+    } catch (error) {
+      if (controller.signal.aborted) return [];
+      throw error;
+    } finally {
+      if (trackLoadController.current === controller) {
+        trackLoadController.current = null;
+      }
     }
-    setTracks(data.tracks || []);
-    const favSet = new Set(
-      (data.tracks || []).filter((t) => t.isFavorite).map((t) => t.id),
-    );
-    setFavorites(favSet);
-    return data.tracks || [];
   }, []);
 
   const loadAutoRules = useCallback(async () => {
@@ -312,6 +333,17 @@ export function AppStoreProvider({
     loadSourcesFn,
     currentPlaylistId,
   ]);
+
+  useEffect(
+    () => () => {
+      trackLoadController.current?.abort();
+      for (const controller of importControllers.current.values()) {
+        controller.abort();
+      }
+      importControllers.current.clear();
+    },
+    [],
+  );
 
   // Hydrate "recently played" from localStorage once, on mount (client-only —
   // reading it in a useState initializer would desync client/server render).

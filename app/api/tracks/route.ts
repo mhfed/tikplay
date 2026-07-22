@@ -5,15 +5,41 @@ import {
   applyAutoRules,
   deleteTrack,
   getAllTracks,
+  getTrack,
   searchTracks,
   upsertTrack,
 } from '@/lib/db/queries';
 import { getFavoriteIds, toTrack } from './helpers';
 
+const MAX_BATCH_TRACK_IDS = 100;
+
 export async function GET(req: NextRequest) {
+  const idsParam = req.nextUrl.searchParams.get('ids');
+  const favIds = getFavoriteIds();
+  if (idsParam != null) {
+    const parts = idsParam.split(',').filter(Boolean);
+    if (parts.length > MAX_BATCH_TRACK_IDS) {
+      return NextResponse.json(
+        { ok: false, error: `Tối đa ${MAX_BATCH_TRACK_IDS} bài hát` },
+        { status: 400 },
+      );
+    }
+    const ids = parts.map(Number);
+    if (ids.some((id) => !Number.isInteger(id) || id < 1)) {
+      return NextResponse.json(
+        { ok: false, error: 'Danh sách ID bài hát không hợp lệ' },
+        { status: 400 },
+      );
+    }
+    const tracks = ids
+      .map((id) => getTrack(id))
+      .filter((track) => track != null)
+      .map((track) => toTrack(track, favIds));
+    return NextResponse.json({ ok: true, tracks });
+  }
+
   const q = req.nextUrl.searchParams.get('q');
   const rows = q ? searchTracks(q) : getAllTracks();
-  const favIds = getFavoriteIds();
   return NextResponse.json({
     ok: true,
     tracks: rows.map((r) => toTrack(r, favIds)),

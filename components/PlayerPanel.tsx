@@ -251,7 +251,17 @@ export default function PlayerPanel({
         case ' ':
         case 'Spacebar':
           e.preventDefault();
-          togglePlay();
+          if (!currentTrack) {
+            togglePlay();
+            return;
+          }
+          if (isPlaying) {
+            setPlaying(false);
+            engine.pause();
+          } else {
+            setPlaying(true);
+            engine.play();
+          }
           break;
         case 'ArrowRight':
           e.preventDefault();
@@ -294,10 +304,12 @@ export default function PlayerPanel({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [
     togglePlay,
+    isPlaying,
+    currentTrack,
+    setPlaying,
     next,
     prev,
     engine,
-    currentTrack,
     volume,
     setVolume,
     shuffle,

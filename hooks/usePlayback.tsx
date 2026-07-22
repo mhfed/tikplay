@@ -21,6 +21,7 @@ const DEFAULT_EQ_GAINS =
 type AudioEngine = ReturnType<typeof useAudioEngine>;
 
 const PLAYBACK_STORAGE_KEY = 'tikplay:playback:v1';
+const MAX_RESTORED_QUEUE_TRACKS = 100;
 
 interface SavedPlaybackSession {
   version: 1;
@@ -288,7 +289,10 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        const response = await fetch('/api/tracks');
+        const restoreIds = Array.from(
+          new Set([saved.currentTrackId, ...saved.queueIds]),
+        ).slice(0, MAX_RESTORED_QUEUE_TRACKS);
+        const response = await fetch(`/api/tracks?ids=${restoreIds.join(',')}`);
         if (!response.ok) return;
         const data = (await response.json()) as { tracks?: Track[] };
         const byId = new Map(
@@ -357,7 +361,12 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     const session: SavedPlaybackSession = {
       version: 1,
       currentTrackId: currentTrack?.id ?? null,
-      queueIds: queue.map((track) => track.id),
+      queueIds: queue
+        .slice(
+          Math.max(0, currentIndex - 20),
+          Math.max(0, currentIndex - 20) + MAX_RESTORED_QUEUE_TRACKS,
+        )
+        .map((track) => track.id),
       position: resumePositionRef.current ?? playbackPositionRef.current,
       shuffle,
       repeat,
@@ -378,6 +387,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     storageReady,
     currentTrack?.id,
     queue,
+    currentIndex,
     shuffle,
     repeat,
     volume,
