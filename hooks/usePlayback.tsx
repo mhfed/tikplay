@@ -20,6 +20,35 @@ const DEFAULT_EQ_GAINS =
 
 type AudioEngine = ReturnType<typeof useAudioEngine>;
 
+const PLAYBACK_STORAGE_KEY = 'tikplay:playback:v1';
+
+interface SavedPlaybackSession {
+  version: 1;
+  currentTrackId: number | null;
+  queueIds: number[];
+  position: number;
+  shuffle: boolean;
+  repeat: RepeatMode;
+  volume: number;
+  speed: number;
+  eqGains: number[];
+}
+
+function readSavedSession(): SavedPlaybackSession | null {
+  try {
+    const value = JSON.parse(
+      window.localStorage.getItem(PLAYBACK_STORAGE_KEY) || 'null',
+    );
+    if (value?.version !== 1) return null;
+    if (!Array.isArray(value.queueIds) || !Array.isArray(value.eqGains)) {
+      return null;
+    }
+    return value as SavedPlaybackSession;
+  } catch {
+    return null;
+  }
+}
+
 interface PlaybackController {
   currentTrack: Track | null;
   currentIndex: number;
@@ -42,10 +71,7 @@ interface PlaybackController {
   setEqGains: (gains: number[]) => void;
   setShuffle: (shuffle: boolean) => void;
   cycleRepeat: () => void;
-  updateTrack: (
-    trackId: number,
-    patch: Pick<Track, 'startTime' | 'endTime'>,
-  ) => void;
+  updateTrack: (trackId: number, patch: Partial<Omit<Track, 'id'>>) => void;
 }
 
 const PlaybackContext = createContext<PlaybackController | null>(null);
@@ -79,7 +105,12 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   const [volume, setVolume] = useState(0.8);
   const [speed, setSpeed] = useState(1);
   const [eqGains, setEqGains] = useState<number[]>([...DEFAULT_EQ_GAINS]);
+  const [storageReady, setStorageReady] = useState(false);
   const handleEndedRef = useRef<() => void>(() => {});
+  const restoredPositionRef = useRef<number | null>(null);
+  const resumePositionRef = useRef<number | null>(null);
+  const lastPositionWriteRef = useRef(0);
+  const playbackPositionRef = useRef(0);
 
   const resolveQueue = useCallback(
     (track: Track, nextQueue?: Track[]) => {
@@ -92,6 +123,8 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
 
   const selectTrack = useCallback(
     (track: Track, nextQueue: Track[], playing: boolean) => {
+      restoredPositionRef.current = null;
+      resumePositionRef.current = null;
       setQueue(nextQueue);
       setCurrentTrack(track);
       setCurrentIndex(nextQueue.findIndex((item) => item.id === track.id));
@@ -183,7 +216,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateTrack = useCallback(
-    (trackId: number, patch: Pick<Track, 'startTime' | 'endTime'>) => {
+    (trackId: number, patch: Partial<Omit<Track, 'id'>>) => {
       setCurrentTrack((track) =>
         track?.id === trackId ? { ...track, ...patch } : track,
       );
@@ -210,6 +243,79 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     setSpeed: applySpeed,
     setAllBands: applyEqGains,
   } = engine;
+  if (engine.currentTime > 0) {
+    playbackPositionRef.current = engine.currentTime;
+    resumePositionRef.current = null;
+  }
+
+  useEffect(() => {
+    const restore = async () => {
+      const saved = readSavedSession();
+      if (!saved) {
+        setStorageReady(true);
+        return;
+      }
+
+      setShuffle(Boolean(saved.shuffle));
+      if (
+        saved.repeat === 'off' ||
+        saved.repeat === 'all' ||
+        saved.repeat === 'one'
+      ) {
+        setRepeat(saved.repeat);
+      }
+      if (Number.isFinite(saved.volume)) {
+        setVolume(Math.min(3, Math.max(0, saved.volume)));
+      }
+      if (Number.isFinite(saved.speed)) {
+        setSpeed(Math.min(2, Math.max(0.5, saved.speed)));
+      }
+      if (
+        saved.eqGains.length === DEFAULT_EQ_GAINS.length &&
+        saved.eqGains.every(Number.isFinite)
+      ) {
+        setEqGains(
+          saved.eqGains.map((gain) => Math.min(12, Math.max(-12, gain))),
+        );
+      }
+
+      const sharedTrackId = new URLSearchParams(window.location.search).get(
+        'track',
+      );
+      if (!saved.currentTrackId || sharedTrackId) {
+        setStorageReady(true);
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/tracks');
+        if (!response.ok) return;
+        const data = (await response.json()) as { tracks?: Track[] };
+        const byId = new Map(
+          (data.tracks || []).map((track) => [track.id, track]),
+        );
+        const restoredQueue = saved.queueIds
+          .map((id) => byId.get(id))
+          .filter((track): track is Track => Boolean(track));
+        const restoredTrack = byId.get(saved.currentTrackId);
+        if (restoredTrack) {
+          const nextQueue = restoredQueue.some(
+            (track) => track.id === restoredTrack.id,
+          )
+            ? restoredQueue
+            : [restoredTrack, ...restoredQueue];
+          selectTrack(restoredTrack, nextQueue, false);
+          const position = Math.max(0, saved.position || 0);
+          restoredPositionRef.current = position;
+          resumePositionRef.current = position;
+        }
+      } finally {
+        setStorageReady(true);
+      }
+    };
+
+    restore();
+  }, [selectTrack]);
 
   handleEndedRef.current = () => {
     if (repeat === 'one' && currentTrack) {
@@ -228,7 +334,8 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    loadTrack(currentTrack.audioUrl);
+    loadTrack(currentTrack.audioUrl, restoredPositionRef.current ?? undefined);
+    restoredPositionRef.current = null;
     if (isPlaying) playAudio();
     else pauseAudio();
   }, [currentTrack, isPlaying, loadTrack, pauseAudio, playAudio]);
@@ -244,6 +351,81 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     applyEqGains(eqGains);
   }, [applyEqGains, eqGains]);
+
+  useEffect(() => {
+    if (!storageReady) return;
+    const session: SavedPlaybackSession = {
+      version: 1,
+      currentTrackId: currentTrack?.id ?? null,
+      queueIds: queue.map((track) => track.id),
+      position: resumePositionRef.current ?? playbackPositionRef.current,
+      shuffle,
+      repeat,
+      volume,
+      speed,
+      eqGains,
+    };
+    try {
+      window.localStorage.setItem(
+        PLAYBACK_STORAGE_KEY,
+        JSON.stringify(session),
+      );
+      lastPositionWriteRef.current = Date.now();
+    } catch {
+      // Storage can be unavailable in private mode or when quota is exhausted.
+    }
+  }, [
+    storageReady,
+    currentTrack?.id,
+    queue,
+    shuffle,
+    repeat,
+    volume,
+    speed,
+    eqGains,
+  ]);
+
+  useEffect(() => {
+    if (!storageReady || !currentTrack) return;
+    if (Date.now() - lastPositionWriteRef.current < 5_000) return;
+    const saved = readSavedSession();
+    if (!saved || saved.currentTrackId !== currentTrack.id) return;
+    try {
+      window.localStorage.setItem(
+        PLAYBACK_STORAGE_KEY,
+        JSON.stringify({
+          ...saved,
+          position: resumePositionRef.current ?? engine.currentTime,
+        }),
+      );
+      lastPositionWriteRef.current = Date.now();
+    } catch {
+      // Ignore browser storage failures during playback.
+    }
+  }, [storageReady, currentTrack?.id, engine.currentTime]);
+
+  // Record a meaningful play when the user listens to a track long enough.
+  const recordedPlayRef = useRef<Set<number>>(new Set());
+  useEffect(() => {
+    if (!currentTrack || !isPlaying) return;
+    const trackId = currentTrack.id;
+    if (recordedPlayRef.current.has(trackId)) return;
+    const dur = currentTrack.duration || 0;
+    if (dur <= 0) return;
+    const threshold = Math.min(30, dur * 0.5);
+    if (engine.currentTime < threshold) return;
+    if (recordedPlayRef.current.size > 200) {
+      recordedPlayRef.current.clear();
+    }
+    recordedPlayRef.current.add(trackId);
+    const durationListened = engine.currentTime;
+    const percentage = dur > 0 ? engine.currentTime / dur : 0;
+    fetch('/api/tracks/play', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trackId, durationListened, percentage }),
+    }).catch(() => {});
+  }, [currentTrack?.id, isPlaying, engine.currentTime]);
 
   const controller = useMemo<PlaybackController>(
     () => ({

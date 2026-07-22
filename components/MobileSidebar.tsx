@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import AddPlaylistDialog from './AddPlaylistDialog';
@@ -207,6 +208,22 @@ export default function MobileSidebar({
           >
             <RefreshCwIcon size={16} /> Refresh YouTube cookies
           </button>
+          <div className="mt-1 flex gap-4 px-2 pt-2 text-xs text-muted-2">
+            <Link
+              href="/terms"
+              onClick={onClose}
+              className="hover:text-ink-secondary"
+            >
+              Điều khoản
+            </Link>
+            <Link
+              href="/copyright"
+              onClick={onClose}
+              className="hover:text-ink-secondary"
+            >
+              Bản quyền
+            </Link>
+          </div>
         </div>
 
         {showAddPlaylist && (

@@ -32,6 +32,7 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
   // Desired volume (0–3): may be set before the audio graph exists.
   const desiredVolumeRef = useRef(0.8);
   const desiredSpeedRef = useRef(1);
+  const pendingInitialTimeRef = useRef<number | null>(null);
 
   const optsRef = useRef(opts);
   useEffect(() => {
@@ -141,8 +142,15 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
   const playRequestRef = useRef(0);
 
   const loadTrack = useCallback(
-    (audioUrl: string) => {
-      if (lastUrlRef.current === audioUrl) return;
+    (audioUrl: string, initialTime?: number) => {
+      if (lastUrlRef.current === audioUrl) {
+        if (initialTime != null && initialTime > 0) {
+          const audio = getOrCreateAudio();
+          audio.currentTime = initialTime;
+          setCurrentTime(initialTime);
+        }
+        return;
+      }
 
       getOrCreateAudio();
 
@@ -161,6 +169,8 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
       setBuffered(0);
       setIsReady(false);
       endHandledRef.current = false;
+      pendingInitialTimeRef.current =
+        initialTime != null && initialTime > 0 ? initialTime : null;
     },
     [getOrCreateAudio],
   );
@@ -363,7 +373,16 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
       const el = e.target as HTMLAudioElement;
       setIsReady(true);
       setDuration(el.duration || 0);
+      const initialTime = pendingInitialTimeRef.current;
       if (
+        initialTime != null &&
+        Number.isFinite(el.duration) &&
+        initialTime < el.duration
+      ) {
+        el.currentTime = initialTime;
+        setCurrentTime(initialTime);
+        pendingInitialTimeRef.current = null;
+      } else if (
         optsRef.current.startTime &&
         el.currentTime < optsRef.current.startTime
       ) {

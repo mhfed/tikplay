@@ -1,12 +1,13 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { FileCacheStore } from '@/lib/cache';
-import { applyAutoRules, upsertTrack } from '@/lib/db/queries';
+import { applyAutoRules, isMediaBlocked, upsertTrack } from '@/lib/db/queries';
 import { MediaProcessor, type TrackMeta } from '@/lib/media/processor';
 import {
   cacheKeyFromRaw,
   type MediaSource,
   validateMediaUrl,
 } from '@/lib/media/source';
+import { checkRateLimit, requestIp } from '@/lib/rateLimit';
 
 // Long-running yt-dlp jobs must run on the Node.js runtime, never Edge.
 export const runtime = 'nodejs';
@@ -21,6 +22,17 @@ interface ProcessBody {
 }
 
 export async function POST(req: NextRequest) {
+  const rateLimit = checkRateLimit(`process:${requestIp(req)}`, {
+    limit: 10,
+    windowMs: 10 * 60 * 1000,
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { ok: false, error: 'Bạn thao tác quá nhanh. Vui lòng thử lại sau.' },
+      { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter) } },
+    );
+  }
+
   let body: ProcessBody;
   try {
     body = await req.json();
@@ -32,6 +44,12 @@ export async function POST(req: NextRequest) {
   }
 
   const url = typeof body.url === 'string' ? body.url : '';
+  if (url.length > 2048) {
+    return NextResponse.json(
+      { ok: false, error: 'URL vượt quá độ dài cho phép' },
+      { status: 400 },
+    );
+  }
   const validation = validateMediaUrl(url);
   if (!validation.valid || !validation.normalized || !validation.source) {
     return NextResponse.json(
@@ -50,6 +68,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  if (isMediaBlocked(key)) {
+    return NextResponse.json(
+      { ok: false, error: 'Nội dung này không khả dụng do yêu cầu bản quyền.' },
+      { status: 451 },
+    );
+  }
+
   // Serve directly from cache when both audio + metadata are present.
   const cached = cache.get(key);
   const meta = cache.getMeta(key) as TrackMeta | null;
@@ -57,6 +82,7 @@ export async function POST(req: NextRequest) {
     const dbTrack = persistTrack(url, key, meta, validation.source);
     return NextResponse.json({
       ok: true,
+      existed: true,
       data: payload(key, meta, validation.source),
       trackId: dbTrack.id,
     });

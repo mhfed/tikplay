@@ -4,6 +4,7 @@ import './components.css';
 import type { Metadata, Viewport } from 'next';
 import { Hanken_Grotesk, JetBrains_Mono, Montserrat } from 'next/font/google';
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
+import TermsDialog from '@/components/TermsDialog';
 import { PlaybackProvider } from '@/hooks/usePlayback';
 
 const montserrat = Montserrat({
@@ -35,7 +36,7 @@ export const metadata: Metadata = {
     template: '%s | TikPlay',
   },
   description:
-    'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok hoặc YouTube. Tạo playlist, yêu thích bài hát, nghe offline.',
+    'Trình phát phi thương mại để quản lý và nghe nội dung âm thanh cá nhân từ liên kết TikTok hoặc YouTube.',
   keywords: [
     'tiktok music',
     'youtube music',
@@ -43,8 +44,6 @@ export const metadata: Metadata = {
     'nghe nhac',
     'music player',
     'tikplay',
-    'download nhac tiktok',
-    'download nhac youtube',
     'nhac tik tok',
     'phat nhac',
   ],
@@ -55,7 +54,7 @@ export const metadata: Metadata = {
     siteName: 'TikPlay',
     title: 'TikPlay — Nghe nhạc từ TikTok & YouTube',
     description:
-      'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok hoặc YouTube.',
+      'Trình phát phi thương mại để quản lý và nghe nội dung âm thanh cá nhân.',
     images: [
       {
         url: '/icons/icon-512.png',
@@ -69,7 +68,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'TikPlay — Nghe nhạc từ TikTok & YouTube',
     description:
-      'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok hoặc YouTube.',
+      'Trình phát phi thương mại để quản lý và nghe nội dung âm thanh cá nhân.',
     images: ['/icons/icon-512.png'],
   },
   robots: { index: true, follow: true },
@@ -104,7 +103,7 @@ const jsonLd = {
       name: 'TikPlay',
       url: SITE_URL,
       description:
-        'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok hoặc YouTube.',
+        'Trình phát phi thương mại để quản lý và nghe nội dung âm thanh cá nhân.',
       inLanguage: 'vi',
     },
     {
@@ -114,7 +113,7 @@ const jsonLd = {
       operatingSystem: 'Web',
       url: SITE_URL,
       description:
-        'Trình phát nhạc cá nhân — trích xuất và nghe audio từ TikTok hoặc YouTube.',
+        'Trình phát phi thương mại để quản lý và nghe nội dung âm thanh cá nhân.',
       offers: {
         '@type': 'Offer',
         price: '0',
@@ -144,6 +143,7 @@ export default function RootLayout({
         <PlaybackProvider>
           <ServiceWorkerRegister />
           {children}
+          <TermsDialog />
         </PlaybackProvider>
       </body>
     </html>

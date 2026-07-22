@@ -9,6 +9,7 @@ import {
   useEffect,
   useMemo,
   useOptimistic,
+  useRef,
   useState,
 } from 'react';
 import type { MediaSource } from '../lib/media/source';
@@ -23,6 +24,22 @@ import type {
 import { usePlayback } from './usePlayback';
 
 export type AppView = 'home' | 'library';
+export type TrackSort =
+  | 'playlist'
+  | 'added_desc'
+  | 'added_asc'
+  | 'title'
+  | 'author'
+  | 'duration'
+  | 'source'
+  | 'category';
+
+export interface ImportJob {
+  id: string;
+  url: string;
+  status: 'processing' | 'failed' | 'cancelled';
+  error?: string;
+}
 
 /** Seeded server-side (app/page.tsx) from the on-disk DB + `?pl=&track=&t=` — replaces the old mount-time client fetch. */
 export interface InitialAppData {
@@ -67,6 +84,8 @@ interface AppState {
   selectedCategory: string | null;
   /** Currently selected media source (null = all). */
   selectedSource: MediaSource | null;
+  trackSort: TrackSort;
+  importJobs: ImportJob[];
 }
 
 interface AppActions {
@@ -74,6 +93,9 @@ interface AppActions {
   selectPlaylist: (id: number) => void;
   addTrackFromUrl: (url: string) => Promise<void>;
   pendingDownloads: string[];
+  retryImport: (id: string) => Promise<void>;
+  cancelImport: (id: string) => void;
+  dismissImport: (id: string) => void;
   playTrack: (track: Track) => void;
   playAll: () => void;
   togglePlay: () => void;
@@ -87,6 +109,8 @@ interface AppActions {
   createPlaylist: (name: string) => Promise<void>;
   deletePlaylist: (id: number) => Promise<void>;
   renamePlaylist: (id: number, name: string) => Promise<void>;
+  reorderPlaylists: (ids: number[]) => Promise<void>;
+  addTrackToPlaylist: (trackId: number, playlistId: number) => Promise<void>;
   createAutoRule: (
     playlistId: number,
     keyword: string,
@@ -109,6 +133,26 @@ interface AppActions {
     startTime?: number,
     endTime?: number,
   ) => Promise<void>;
+  updateTrackMetadata: (
+    trackId: number,
+    updates: Pick<Track, 'title' | 'author' | 'cover' | 'category'>,
+  ) => Promise<void>;
+  setTrackSort: (sort: TrackSort) => void;
+  runHealthCheck: () => Promise<HealthResult | null>;
+  cleanupCache: () => Promise<{ removed: number } | null>;
+}
+
+export interface HealthIssue {
+  id: number;
+  title: string;
+  detail: string;
+  kind: string;
+}
+
+export interface HealthResult {
+  totalTracks: number;
+  missing: HealthIssue[];
+  unreferencedKeys: string[];
 }
 
 type AppStore = AppState & AppActions;
@@ -126,7 +170,11 @@ async function api<T = unknown>(path: string, opts?: RequestInit): Promise<T> {
     headers: { 'Content-Type': 'application/json' },
     ...opts,
   });
-  return res.json();
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Yêu cầu không thành công');
+  }
+  return data;
 }
 
 export function AppStoreProvider({
@@ -160,7 +208,8 @@ export function AppStoreProvider({
     updateTrack: updatePlaybackTrack,
   } = usePlayback();
   const [tracks, setTracks] = useState<Track[]>(initialData.tracks);
-  const [pendingDownloads, setPendingDownloads] = useState<string[]>([]);
+  const [importJobs, setImportJobs] = useState<ImportJob[]>([]);
+  const importControllers = useRef(new Map<string, AbortController>());
   const [playlists, setPlaylists] = useState<Playlist[]>(initialData.playlists);
   const [favorites, setFavorites] = useState<Set<number>>(
     () => new Set(initialData.favoriteIds),
@@ -179,7 +228,6 @@ export function AppStoreProvider({
     initialData.currentPlaylistId,
   );
   const [query, setQuery] = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingSeek, setPendingSeek] = useState<number | null>(
     initialData.pendingSeek,
@@ -195,6 +243,9 @@ export function AppStoreProvider({
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSource, setSelectedSource] = useState<MediaSource | null>(
     null,
+  );
+  const [trackSort, setTrackSort] = useState<TrackSort>(
+    initialData.currentPlaylistId > 1 ? 'playlist' : 'added_desc',
   );
 
   // A shared URL can seed global playback on the first route mount. Later
@@ -324,6 +375,7 @@ export function AppStoreProvider({
       setSelectedSource(null);
       setCurrentPlaylistId(id);
       setView('library');
+      setTrackSort(id > 1 ? 'playlist' : 'added_desc');
       loadTracks(id, query);
     },
     [loadTracks, query],
@@ -337,6 +389,7 @@ export function AppStoreProvider({
     setSelectedSource(null);
     setCurrentPlaylistId(1);
     setView('home');
+    setTrackSort('added_desc');
     loadTracks(1, query);
   }, [loadTracks, query]);
 
@@ -347,6 +400,7 @@ export function AppStoreProvider({
       if (slug) {
         setCurrentPlaylistId(1);
         setView('library');
+        setTrackSort('added_desc');
         const data = await api<{ tracks: Track[] }>(
           `/api/categories?slug=${encodeURIComponent(slug)}`,
         );
@@ -369,6 +423,7 @@ export function AppStoreProvider({
       if (source) {
         setCurrentPlaylistId(1);
         setView('library');
+        setTrackSort('added_desc');
         const data = await api<{ tracks: Track[] }>(
           `/api/sources?source=${encodeURIComponent(source)}`,
         );
@@ -386,9 +441,14 @@ export function AppStoreProvider({
 
   const addTrackFromUrl = useCallback(
     async (url: string) => {
+      const jobId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      setImportJobs((jobs) => [
+        ...jobs,
+        { id: jobId, url, status: 'processing' },
+      ]);
+      const controller = new AbortController();
+      importControllers.current.set(jobId, controller);
       setError(null);
-      setLoading(true);
-      setPendingDownloads((prev: string[]) => [...prev, url]);
       try {
         const res = await api<{
           ok: boolean;
@@ -398,8 +458,20 @@ export function AppStoreProvider({
         }>('/api/process', {
           method: 'POST',
           body: JSON.stringify({ url }),
+          signal: controller.signal,
         });
         if (!res.ok) {
+          setImportJobs((jobs) =>
+            jobs.map((job) =>
+              job.id === jobId
+                ? {
+                    ...job,
+                    status: 'failed',
+                    error: res.error || 'Failed to download',
+                  }
+                : job,
+            ),
+          );
           setError(res.error || 'Failed to download');
           return;
         }
@@ -431,13 +503,21 @@ export function AppStoreProvider({
             playGlobalTrack(newTrack, [...tracks, newTrack]);
           }
         }
-      } catch {
-        setError('Network error downloading track');
-      } finally {
-        setLoading(false);
-        setPendingDownloads((prev: string[]) =>
-          prev.filter((u: string) => u !== url),
+        setImportJobs((jobs) => jobs.filter((job) => job.id !== jobId));
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        const message =
+          error instanceof Error ? error.message : 'Lỗi mạng khi tải bài hát';
+        setError(message);
+        setImportJobs((jobs) =>
+          jobs.map((job) =>
+            job.id === jobId
+              ? { ...job, status: 'failed', error: message }
+              : job,
+          ),
         );
+      } finally {
+        importControllers.current.delete(jobId);
       }
     },
     [
@@ -455,6 +535,30 @@ export function AppStoreProvider({
       playGlobalTrack,
       tracks,
     ],
+  );
+
+  const cancelImport = useCallback((id: string) => {
+    importControllers.current.get(id)?.abort();
+    importControllers.current.delete(id);
+    setImportJobs((jobs) =>
+      jobs.map((job) =>
+        job.id === id ? { ...job, status: 'cancelled' } : job,
+      ),
+    );
+  }, []);
+
+  const dismissImport = useCallback((id: string) => {
+    setImportJobs((jobs) => jobs.filter((job) => job.id !== id));
+  }, []);
+
+  const retryImport = useCallback(
+    async (id: string) => {
+      const job = importJobs.find((item) => item.id === id);
+      if (!job) return;
+      dismissImport(id);
+      await addTrackFromUrl(job.url);
+    },
+    [addTrackFromUrl, dismissImport, importJobs],
   );
 
   const playTrack = useCallback(
@@ -581,6 +685,28 @@ export function AppStoreProvider({
     [loadPlaylists],
   );
 
+  const reorderPlaylistsAction = useCallback(
+    async (ids: number[]) => {
+      await api('/api/playlists', {
+        method: 'PUT',
+        body: JSON.stringify({ ids }),
+      });
+      await loadPlaylists();
+    },
+    [loadPlaylists],
+  );
+
+  const addTrackToPlaylistAction = useCallback(
+    async (trackId: number, playlistId: number) => {
+      await api(`/api/playlists/${playlistId}/tracks`, {
+        method: 'POST',
+        body: JSON.stringify({ trackId }),
+      });
+      await loadPlaylists();
+    },
+    [loadPlaylists],
+  );
+
   const createAutoRuleAction = useCallback(
     async (playlistId: number, keyword: string, matchMode: string) => {
       await api('/api/auto-rules', {
@@ -618,16 +744,77 @@ export function AppStoreProvider({
     [updatePlaybackTrack],
   );
 
+  const updateTrackMetadata = useCallback(
+    async (
+      trackId: number,
+      updates: Pick<Track, 'title' | 'author' | 'cover' | 'category'>,
+    ) => {
+      const data = await api<{ track: Track }>('/api/tracks', {
+        method: 'PATCH',
+        body: JSON.stringify({ id: trackId, ...updates }),
+      });
+      setTracks((prev) =>
+        prev.map((track) => (track.id === trackId ? data.track : track)),
+      );
+      updatePlaybackTrack(trackId, data.track);
+      await Promise.all([loadCategoriesFn(), loadSourcesFn()]);
+    },
+    [loadCategoriesFn, loadSourcesFn, updatePlaybackTrack],
+  );
+
   const clearPendingSeek = useCallback(() => setPendingSeek(null), []);
 
+  const runHealthCheck = useCallback(async () => {
+    try {
+      const data = await api<HealthResult>('/api/tracks/health');
+      return data;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const cleanupCache = useCallback(async () => {
+    try {
+      const data = await api<{ removed: number }>('/api/tracks/health', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'cleanup-cache' }),
+      });
+      return data;
+    } catch {
+      return null;
+    }
+  }, []);
+
   const filteredTracks = useMemo(() => {
-    if (!query.trim()) return tracks;
     const q = query.trim().toLowerCase();
-    return tracks.filter(
-      (t) =>
-        t.title.toLowerCase().includes(q) || t.author.toLowerCase().includes(q),
-    );
-  }, [tracks, query]);
+    const filtered = q
+      ? tracks.filter(
+          (track) =>
+            track.title.toLowerCase().includes(q) ||
+            track.author.toLowerCase().includes(q),
+        )
+      : tracks;
+    if (trackSort === 'playlist') return filtered;
+
+    return [...filtered].sort((a, b) => {
+      switch (trackSort) {
+        case 'added_asc':
+          return a.addedAt - b.addedAt;
+        case 'title':
+          return a.title.localeCompare(b.title, 'vi');
+        case 'author':
+          return a.author.localeCompare(b.author, 'vi');
+        case 'duration':
+          return b.duration - a.duration;
+        case 'source':
+          return a.source.localeCompare(b.source);
+        case 'category':
+          return (a.category || 'others').localeCompare(b.category || 'others');
+        default:
+          return b.addedAt - a.addedAt;
+      }
+    });
+  }, [tracks, query, trackSort]);
 
   // Only resolves ids against tracks already loaded into memory (typically the
   // full library, since that's what loads by default) — good enough for a
@@ -654,17 +841,24 @@ export function AppStoreProvider({
     speed,
     eqGains,
     query,
-    loading,
+    loading: importJobs.some((job) => job.status === 'processing'),
     error,
     pendingSeek,
     view,
     recentlyPlayed,
     selectedCategory,
     selectedSource,
+    trackSort,
+    importJobs,
     loadAll,
     selectPlaylist,
     addTrackFromUrl,
-    pendingDownloads,
+    pendingDownloads: importJobs
+      .filter((job) => job.status === 'processing')
+      .map((job) => job.url),
+    retryImport,
+    cancelImport,
+    dismissImport,
     playTrack,
     playAll,
     togglePlay,
@@ -677,9 +871,13 @@ export function AppStoreProvider({
     createPlaylist: createPlaylistAction,
     deletePlaylist: deletePlaylistAction,
     renamePlaylist: renamePlaylistAction,
+    reorderPlaylists: reorderPlaylistsAction,
+    addTrackToPlaylist: addTrackToPlaylistAction,
     createAutoRule: createAutoRuleAction,
     deleteAutoRule: deleteAutoRuleAction,
     updateTrackTiming,
+    updateTrackMetadata,
+    setTrackSort,
     setVolume,
     setSpeed,
     setEqGains,
@@ -691,6 +889,8 @@ export function AppStoreProvider({
     goHome,
     selectCategory,
     selectSource,
+    runHealthCheck,
+    cleanupCache,
   };
 
   return (

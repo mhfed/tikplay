@@ -4,7 +4,14 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Track } from '../lib/types';
 import Cover from './Cover';
-import { CloseIcon, GripIcon, HeartIcon, PauseIcon, PlayIcon } from './icons';
+import {
+  CloseIcon,
+  GripIcon,
+  HeartIcon,
+  PauseIcon,
+  PlayIcon,
+  SettingsIcon,
+} from './icons';
 
 interface TrackRowProps {
   track: Track;
@@ -15,6 +22,7 @@ interface TrackRowProps {
   onPlay: () => void;
   onFavorite: () => void;
   onRemove: () => void;
+  onActions: () => void;
 }
 
 export default function TrackRow({
@@ -26,6 +34,7 @@ export default function TrackRow({
   onPlay,
   onFavorite,
   onRemove,
+  onActions,
 }: TrackRowProps) {
   const {
     attributes,
@@ -81,6 +90,15 @@ export default function TrackRow({
             {isPlaying ? <PauseIcon size={12} /> : <PlayIcon size={12} />}
           </span>
         )}
+      </button>
+      <button
+        type="button"
+        className="flex size-[30px] shrink-0 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-muted-2 opacity-0 transition-[opacity,color,transform] duration-[var(--motion-fast)] group-hover:opacity-100 hover:scale-[1.08] hover:text-accent max-[640px]:opacity-100 [@media(hover:none)]:min-h-11 [@media(hover:none)]:min-w-9"
+        onClick={onActions}
+        aria-label="Tùy chọn bài hát"
+        title="Tùy chọn"
+      >
+        <SettingsIcon size={16} />
       </button>
       <button
         type="button"

@@ -54,7 +54,8 @@ test('opens a shared library track link with the track selected', async ({
   const db = JSON.parse(readFileSync('data/tikplay.json', 'utf8')) as {
     tracks: Array<{ id: number; title: string }>;
   };
-  const sharedTrack = db.tracks.find((track) => track.id === 36) ?? db.tracks[0];
+  const sharedTrack =
+    db.tracks.find((track) => track.id === 36) ?? db.tracks[0];
 
   expect(sharedTrack).toBeTruthy();
 

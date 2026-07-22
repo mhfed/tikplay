@@ -4,7 +4,7 @@ const SITE_URL = 'https://craw-music.fly.dev';
 
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: { userAgent: '*', allow: '/' },
+    rules: { userAgent: '*', allow: '/', disallow: '/admin/' },
     sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }

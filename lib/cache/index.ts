@@ -28,6 +28,8 @@ export interface CacheStore {
   get(key: string): string | null;
   /** Copy a source file into the cache under `key`. */
   set(key: string, srcPath: string): Promise<void>;
+  /** Remove audio and every sidecar associated with `key`. */
+  remove(key: string): Promise<void>;
   /** Drop expired files, then evict LRU until under the size cap. */
   evictOld(): Promise<void>;
 }
@@ -94,6 +96,12 @@ export class FileCacheStore implements CacheStore {
   async set(key: string, srcPath: string): Promise<void> {
     ensureCacheDir(this.dir);
     await fs.copyFile(srcPath, audioPath(this.dir, key));
+  }
+
+  async remove(key: string): Promise<void> {
+    const audio = audioPath(this.dir, key);
+    if (existsSync(audio)) await fs.unlink(audio);
+    this.removeSidecars(key);
   }
 
   /** Persist metadata alongside the audio file for fast reuse. */

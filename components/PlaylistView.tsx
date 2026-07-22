@@ -1,8 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import { categoryName } from '../lib/categories';
-import { CloseIcon, PlayIcon } from './icons';
+import { CloseIcon, PlayIcon, SettingsIcon } from './icons';
+import PlaylistManageDialog from './PlaylistManageDialog';
 import SearchBar from './SearchBar';
 import TrackList from './TrackList';
 import UrlInput from './UrlInput';
@@ -22,7 +24,10 @@ export default function PlaylistView() {
     selectSource,
     loading,
     error,
+    trackSort,
+    setTrackSort,
   } = useAppStore();
+  const [showPlaylistManager, setShowPlaylistManager] = useState(false);
 
   const currentPlaylist =
     currentPlaylistId === -1
@@ -71,6 +76,17 @@ export default function PlaylistView() {
             <PlayIcon size={14} /> Phát tất cả
           </button>
         )}
+        {currentPlaylistId > 1 && 'id' in currentPlaylist && (
+          <button
+            type="button"
+            className="grid size-8 shrink-0 place-items-center rounded-control border border-line bg-surface text-muted transition-colors hover:text-accent"
+            onClick={() => setShowPlaylistManager(true)}
+            aria-label="Quản lý danh sách phát"
+            title="Quản lý danh sách"
+          >
+            <SettingsIcon size={16} />
+          </button>
+        )}
         <UrlInput
           onAdd={addTrackFromUrl}
           loading={loading}
@@ -81,6 +97,27 @@ export default function PlaylistView() {
       <div className="flex-1 overflow-y-auto px-6 pb-6 pt-4 max-[1024px]:pb-[calc(var(--player-bar-h-mobile)+36px)] max-[640px]:px-4 max-[640px]:pb-[calc(var(--mini-h)+40px)] max-[640px]:pt-3">
         <div className="mb-4 flex w-full min-w-0 items-center gap-2 max-[640px]:mb-3 max-[640px]:flex-wrap">
           <SearchBar value={query} onChange={setQuery} />
+          <select
+            className="shrink-0 rounded-control border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink outline-none focus:border-accent"
+            value={trackSort}
+            onChange={(event) =>
+              setTrackSort(
+                event.target.value as Parameters<typeof setTrackSort>[0],
+              )
+            }
+            aria-label="Sắp xếp bài hát"
+          >
+            {currentPlaylistId > 1 && (
+              <option value="playlist">Tùy chỉnh</option>
+            )}
+            <option value="added_desc">Mới thêm</option>
+            <option value="added_asc">Cũ nhất</option>
+            <option value="title">Tên bài hát</option>
+            <option value="author">Nghệ sĩ</option>
+            <option value="duration">Thời lượng</option>
+            <option value="source">Nguồn</option>
+            <option value="category">Thể loại</option>
+          </select>
           {selectedCategory && (
             <button
               type="button"
@@ -104,6 +141,14 @@ export default function PlaylistView() {
         </div>
         <TrackList />
       </div>
+      {showPlaylistManager &&
+        currentPlaylistId > 1 &&
+        'id' in currentPlaylist && (
+          <PlaylistManageDialog
+            playlist={currentPlaylist}
+            onClose={() => setShowPlaylistManager(false)}
+          />
+        )}
     </div>
   );
 }

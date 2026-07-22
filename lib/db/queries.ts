@@ -9,6 +9,7 @@ import type {
   MusicSource,
   Playlist,
 } from '../types';
+import type { CopyrightReportStatus, DbCopyrightReportRow } from './index';
 import { type DbTrackRow, getDb, saveDb } from './index';
 
 function toDbTrack(row: DbTrackRow): DbTrack {
@@ -64,6 +65,110 @@ export function deleteTrack(id: number): void {
   db.playlistTracks = db.playlistTracks.filter((pt) => pt.track_id !== id);
   db.favorites = db.favorites.filter((fid) => fid !== id);
   saveDb();
+}
+
+export function deleteTracksByAudioKey(audioKey: string): void {
+  const db = getDb();
+  const ids = new Set(
+    db.tracks
+      .filter((track) => track.audio_key === audioKey)
+      .map((track) => track.id),
+  );
+  db.tracks = db.tracks.filter((track) => !ids.has(track.id));
+  db.playlistTracks = db.playlistTracks.filter(
+    (item) => !ids.has(item.track_id),
+  );
+  db.favorites = db.favorites.filter((id) => !ids.has(id));
+  saveDb();
+}
+
+// ── COPYRIGHT ───────────────────────────────────────────
+
+interface CreateCopyrightReportInput {
+  sourceUrl: string;
+  normalizedUrl: string;
+  audioKey: string;
+  reporterName: string;
+  reporterEmail: string;
+  rightsBasis: string;
+  details: string;
+}
+
+export function createCopyrightReport(
+  input: CreateCopyrightReportInput,
+): DbCopyrightReportRow {
+  const db = getDb();
+  const track = db.tracks.find((item) => item.audio_key === input.audioKey);
+  const now = Date.now();
+  const report: DbCopyrightReportRow = {
+    id: db.nextCopyrightReportId++,
+    source_url: input.sourceUrl,
+    normalized_url: input.normalizedUrl,
+    audio_key: input.audioKey,
+    track_id: track?.id,
+    track_title: track?.title,
+    track_author: track?.author,
+    reporter_name: input.reporterName,
+    reporter_email: input.reporterEmail,
+    rights_basis: input.rightsBasis,
+    details: input.details,
+    status: 'pending',
+    created_at: now,
+    updated_at: now,
+  };
+  db.copyrightReports.push(report);
+  saveDb();
+  return report;
+}
+
+export function getCopyrightReports(): DbCopyrightReportRow[] {
+  return getDb()
+    .copyrightReports.slice()
+    .sort((a, b) => b.created_at - a.created_at);
+}
+
+export function isMediaBlocked(audioKey: string): boolean {
+  return getDb().blockedMedia.some((item) => item.audio_key === audioKey);
+}
+
+export function moderateCopyrightReport(
+  id: number,
+  status: Exclude<CopyrightReportStatus, 'pending'>,
+  note: string,
+): DbCopyrightReportRow | null {
+  const db = getDb();
+  const report = db.copyrightReports.find((item) => item.id === id);
+  if (report?.status !== 'pending') return null;
+
+  report.status = status;
+  report.moderation_note = note || undefined;
+  report.updated_at = Date.now();
+
+  if (status === 'actioned') {
+    const ids = new Set(
+      db.tracks
+        .filter((track) => track.audio_key === report.audio_key)
+        .map((track) => track.id),
+    );
+    db.tracks = db.tracks.filter((track) => !ids.has(track.id));
+    db.playlistTracks = db.playlistTracks.filter(
+      (item) => !ids.has(item.track_id),
+    );
+    db.favorites = db.favorites.filter((trackId) => !ids.has(trackId));
+
+    if (!db.blockedMedia.some((item) => item.audio_key === report.audio_key)) {
+      db.blockedMedia.push({
+        audio_key: report.audio_key,
+        normalized_url: report.normalized_url,
+        report_id: report.id,
+        reason: note || 'Gỡ theo báo cáo bản quyền',
+        created_at: Date.now(),
+      });
+    }
+  }
+
+  saveDb();
+  return report;
 }
 
 export function searchTracks(q: string): DbTrack[] {
@@ -356,4 +461,82 @@ export function setYoutubeCookies(fileName: string | null, cookiesB64: string) {
   };
   saveDb();
   return getYoutubeCookiesInfo();
+}
+
+// ── LISTENING HISTORY ────────────────────────────────────
+
+export function recordPlay(
+  trackId: number,
+  durationListened: number,
+  percentage: number,
+): void {
+  const db = getDb();
+  const track = db.tracks.find((t) => t.id === trackId);
+  if (!track) return;
+  (track as DbTrackRow).play_count =
+    ((track as DbTrackRow).play_count || 0) + 1;
+  (track as DbTrackRow).last_played_at = Date.now();
+  db.listeningHistory.push({
+    id: db.nextListeningHistoryId++,
+    track_id: trackId,
+    played_at: Date.now(),
+    duration_listened: durationListened,
+    percentage,
+  });
+  // Keep history bounded to 5000 entries
+  if (db.listeningHistory.length > 5000) {
+    db.listeningHistory = db.listeningHistory.slice(-5000);
+  }
+  saveDb();
+}
+
+export function getMostPlayed(limit = 20): DbTrack[] {
+  return getDb()
+    .tracks.slice()
+    .filter(
+      (t) => (t as DbTrackRow).play_count && (t as DbTrackRow).play_count! > 0,
+    )
+    .sort(
+      (a, b) =>
+        ((b as DbTrackRow).play_count || 0) -
+        ((a as DbTrackRow).play_count || 0),
+    )
+    .slice(0, limit)
+    .map(toDbTrack);
+}
+
+export function getUnfinishedTracks(): DbTrack[] {
+  return getDb()
+    .tracks.filter((t) => {
+      const lastPlay = (t as DbTrackRow).last_played_at;
+      if (!lastPlay) return false;
+      const playCount = (t as DbTrackRow).play_count || 0;
+      if (playCount === 0) return false;
+      // Check the most recent history entry for this track
+      const history = getDb()
+        .listeningHistory.filter((h) => h.track_id === t.id)
+        .sort((a, b) => b.played_at - a.played_at);
+      return history.length > 0 && history[0].percentage < 0.9;
+    })
+    .slice()
+    .sort(
+      (a, b) =>
+        ((b as DbTrackRow).last_played_at || 0) -
+        ((a as DbTrackRow).last_played_at || 0),
+    )
+    .map(toDbTrack);
+}
+
+export function getLongUnplayed(limit = 20): DbTrack[] {
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000; // 30 days
+  return getDb()
+    .tracks.filter(
+      (t) =>
+        !(t as DbTrackRow).last_played_at ||
+        (t as DbTrackRow).last_played_at! < cutoff,
+    )
+    .slice()
+    .sort((a, b) => a.added_at - b.added_at)
+    .slice(0, limit)
+    .map(toDbTrack);
 }

@@ -203,6 +203,14 @@ export default function Sidebar() {
         >
           <RefreshCwIcon size={14} /> Refresh YouTube cookies
         </button>
+        <div className="mt-1 flex gap-3 px-1 pt-2 text-[11px] text-muted-2">
+          <Link href="/terms" className="hover:text-ink-secondary">
+            Điều khoản
+          </Link>
+          <Link href="/copyright" className="hover:text-ink-secondary">
+            Bản quyền
+          </Link>
+        </div>
       </div>
 
       {showAddPlaylist && (

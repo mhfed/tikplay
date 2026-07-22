@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import { pickArt, pickArtAt } from '../lib/artwork';
 import type { Track } from '../lib/types';
@@ -59,6 +59,25 @@ export default function Home({ onOpenLibrary }: HomeProps) {
     () => [...tracks].sort((a, b) => b.addedAt - a.addedAt).slice(0, 12),
     [tracks],
   );
+
+  const [mostPlayed, setMostPlayed] = useState<Track[]>([]);
+  const [unfinished, setUnfinished] = useState<Track[]>([]);
+  const [longUnplayed, setLongUnplayed] = useState<Track[]>([]);
+
+  useEffect(() => {
+    const fetchKind = async (kind: string, setter: (t: Track[]) => void) => {
+      try {
+        const res = await fetch(`/api/tracks/stats?kind=${kind}`);
+        const json = await res.json();
+        if (json.ok) setter(json.tracks);
+      } catch {
+        /* silent */
+      }
+    };
+    fetchKind('most-played', setMostPlayed);
+    fetchKind('unfinished', setUnfinished);
+    fetchKind('long-unplayed', setLongUnplayed);
+  }, []);
 
   const handlePlayHero = () => {
     if (heroTrack) playTrack(heroTrack);
@@ -236,6 +255,51 @@ export default function Home({ onOpenLibrary }: HomeProps) {
               ))}
           </div>
         </section>
+      )}
+
+      {mostPlayed.length > 0 && (
+        <HomeRow title="Nghe nhiều nhất" subtitle="Bài bạn nghe nhiều nhất">
+          {mostPlayed.map((t, i) => (
+            <TrackCard
+              key={t.id}
+              track={t}
+              art={pickArtAt(t.title, i + 15)}
+              active={currentTrack?.id === t.id}
+              playing={isPlaying}
+              onPlay={() => playTrack(t)}
+            />
+          ))}
+        </HomeRow>
+      )}
+
+      {unfinished.length > 0 && (
+        <HomeRow title="Chưa nghe hết" subtitle="Bài chưa nghe hết lần nào">
+          {unfinished.map((t, i) => (
+            <TrackCard
+              key={t.id}
+              track={t}
+              art={pickArtAt(t.title, i + 9)}
+              active={currentTrack?.id === t.id}
+              playing={isPlaying}
+              onPlay={() => playTrack(t)}
+            />
+          ))}
+        </HomeRow>
+      )}
+
+      {longUnplayed.length > 0 && (
+        <HomeRow title="Lâu không nghe" subtitle="Bài lâu rồi chưa mở lại">
+          {longUnplayed.map((t, i) => (
+            <TrackCard
+              key={t.id}
+              track={t}
+              art={pickArtAt(t.title, i + 12)}
+              active={currentTrack?.id === t.id}
+              playing={isPlaying}
+              onPlay={() => playTrack(t)}
+            />
+          ))}
+        </HomeRow>
       )}
 
       <HomeRow

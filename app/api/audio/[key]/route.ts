@@ -2,6 +2,7 @@ import { createReadStream, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import type { NextRequest } from 'next/server';
 import { getCacheDir } from '@/lib/cache';
+import { isMediaBlocked } from '@/lib/db/queries';
 
 // Audio files live on disk and are streamed; Node runtime required.
 export const runtime = 'nodejs';
@@ -37,6 +38,9 @@ export async function GET(
   if (!KEY_RE.test(key)) {
     return new Response('Bad key', { status: 400 });
   }
+  if (isMediaBlocked(key)) {
+    return new Response('Unavailable for legal reasons', { status: 451 });
+  }
 
   const file = join(getCacheDir(), `${key}.m4a`);
   if (!existsSync(file)) {
@@ -69,7 +73,7 @@ export async function GET(
         'Content-Type': 'audio/mp4',
         'Content-Length': String(size),
         'Accept-Ranges': 'bytes',
-        'Cache-Control': 'public, max-age=31536000, immutable',
+        'Cache-Control': 'private, no-store',
       },
     });
   }
@@ -96,7 +100,7 @@ export async function GET(
       'Content-Length': String(end - start + 1),
       'Content-Range': `bytes ${start}-${end}/${size}`,
       'Accept-Ranges': 'bytes',
-      'Cache-Control': 'public, max-age=31536000, immutable',
+      'Cache-Control': 'private, no-store',
     },
   });
 }

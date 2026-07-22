@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { CATEGORIES, DEFAULT_CATEGORY } from '@/lib/categories';
 import { getDb, saveDb } from '@/lib/db';
 import {
   applyAutoRules,
@@ -37,13 +38,89 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   const body = await req.json();
-  const { id, startTime, endTime } = body;
+  const { id, startTime, endTime, title, author, cover, category } = body;
+  if (!Number.isInteger(id) || id < 1) {
+    return NextResponse.json(
+      { ok: false, error: 'ID bài hát không hợp lệ' },
+      { status: 400 },
+    );
+  }
   const db = getDb();
   const track = db.tracks.find((t) => t.id === id);
-  if (!track) return NextResponse.json({ ok: false }, { status: 404 });
+  if (!track) {
+    return NextResponse.json(
+      { ok: false, error: 'Không tìm thấy bài hát' },
+      { status: 404 },
+    );
+  }
 
-  if (startTime !== undefined) track.start_time = startTime;
-  if (endTime !== undefined) track.end_time = endTime;
+  if (title !== undefined) {
+    if (
+      typeof title !== 'string' ||
+      !title.trim() ||
+      title.trim().length > 200
+    ) {
+      return NextResponse.json(
+        { ok: false, error: 'Tên bài hát phải có từ 1 đến 200 ký tự' },
+        { status: 400 },
+      );
+    }
+    track.title = title.trim();
+  }
+  if (author !== undefined) {
+    if (
+      typeof author !== 'string' ||
+      !author.trim() ||
+      author.trim().length > 120
+    ) {
+      return NextResponse.json(
+        { ok: false, error: 'Tên nghệ sĩ phải có từ 1 đến 120 ký tự' },
+        { status: 400 },
+      );
+    }
+    track.author = author.trim();
+  }
+  if (cover !== undefined) {
+    if (typeof cover !== 'string' || cover.length > 2000) {
+      return NextResponse.json(
+        { ok: false, error: 'Đường dẫn ảnh bìa không hợp lệ' },
+        { status: 400 },
+      );
+    }
+    track.cover = cover.trim();
+  }
+  if (category !== undefined) {
+    const validCategories = new Set([
+      DEFAULT_CATEGORY,
+      ...CATEGORIES.map((item) => item.slug),
+    ]);
+    if (typeof category !== 'string' || !validCategories.has(category)) {
+      return NextResponse.json(
+        { ok: false, error: 'Thể loại không hợp lệ' },
+        { status: 400 },
+      );
+    }
+    track.category = category;
+  }
+
+  if (startTime !== undefined) {
+    if (typeof startTime !== 'number' || startTime < 0) {
+      return NextResponse.json(
+        { ok: false, error: 'Thời điểm bắt đầu không hợp lệ' },
+        { status: 400 },
+      );
+    }
+    track.start_time = startTime;
+  }
+  if (endTime !== undefined) {
+    if (typeof endTime !== 'number' || endTime <= 0) {
+      return NextResponse.json(
+        { ok: false, error: 'Thời điểm kết thúc không hợp lệ' },
+        { status: 400 },
+      );
+    }
+    track.end_time = endTime;
+  }
 
   saveDb();
   return NextResponse.json({

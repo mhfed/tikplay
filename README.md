@@ -51,6 +51,8 @@ Dự án Next.js (App Router, TypeScript) làm cả frontend lẫn API. Phần b
 | `CACHE_TTL_DAYS` | `7`          | Xoá file cũ hơn số ngày này.                         |
 | `CACHE_MAX_GB`   | `5`          | Khi tổng dung lượng vượt mức, xoá theo LRU.          |
 | `YTDLP_PATH`     | `yt-dlp`     | Đường dẫn binary yt-dlp (phải có `curl_cffi` để impersonate TikTok). |
+| `DB_PATH`        | `./data/tikplay.json` | File dữ liệu thư viện, báo cáo và danh sách chặn. |
+| `ADMIN_TOKEN`    | Không có     | Token bắt buộc để truy cập API quản trị bản quyền. |
 
 Ví dụ:
 ```bash
@@ -58,8 +60,18 @@ export CACHE_DIR=/data/cache
 export CACHE_TTL_DAYS=7
 export CACHE_MAX_GB=5
 export YTDLP_PATH=yt-dlp
+export ADMIN_TOKEN='thay-bang-token-dai-ngau-nhien'
 npm run dev
 ```
+
+Trên Fly.io, đặt token bằng secret, không ghi trực tiếp vào `fly.toml`:
+
+```bash
+fly secrets set ADMIN_TOKEN='thay-bang-token-dai-ngau-nhien'
+```
+
+Màn hình xử lý báo cáo nằm tại `/admin/copyright`. Token chỉ được giữ trong
+`sessionStorage` của tab quản trị.
 
 ## API
 

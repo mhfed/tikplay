@@ -27,7 +27,19 @@ export async function POST(
 ) {
   const { id } = await params;
   const { trackId } = await req.json();
-  addTrackToPlaylist(Number(id), trackId);
+  const playlistId = Number(id);
+  if (
+    !Number.isInteger(playlistId) ||
+    playlistId <= 1 ||
+    !Number.isInteger(trackId) ||
+    trackId < 1
+  ) {
+    return NextResponse.json(
+      { ok: false, error: 'Bài hát hoặc danh sách không hợp lệ' },
+      { status: 400 },
+    );
+  }
+  addTrackToPlaylist(playlistId, trackId);
   return NextResponse.json({ ok: true });
 }
 

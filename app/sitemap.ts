@@ -25,6 +25,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'daily',
       priority: 0.8,
     },
+    {
+      url: `${SITE_URL}/terms`,
+      lastModified: new Date('2026-07-21'),
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
+    {
+      url: `${SITE_URL}/copyright`,
+      lastModified: new Date('2026-07-21'),
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
   ];
 
   const playlistPages: MetadataRoute.Sitemap = playlists

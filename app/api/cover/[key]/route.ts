@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs';
 import type { NextRequest } from 'next/server';
 import { FileCacheStore } from '@/lib/cache';
+import { isMediaBlocked } from '@/lib/db/queries';
 
 export const runtime = 'nodejs';
 
@@ -18,6 +19,9 @@ export async function GET(
 
   if (!KEY_RE.test(key)) {
     return new Response('Bad key', { status: 400 });
+  }
+  if (isMediaBlocked(key)) {
+    return new Response('Unavailable for legal reasons', { status: 451 });
   }
 
   const cover = cache.getCover(key);
@@ -42,7 +46,7 @@ export async function GET(
       headers: {
         'Content-Type': cover.contentType,
         'Content-Length': String(stat.size),
-        'Cache-Control': 'public, max-age=31536000, immutable',
+        'Cache-Control': 'private, no-store',
       },
     });
   } catch {

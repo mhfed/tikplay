@@ -8,10 +8,15 @@ export interface DbData {
   playlistTracks: DbPlaylistTrackRow[];
   favorites: number[];
   autoRules: DbAutoRuleRow[];
+  copyrightReports: DbCopyrightReportRow[];
+  blockedMedia: DbBlockedMediaRow[];
+  listeningHistory: DbListeningHistoryRow[];
   settings: DbSettingsRow;
   nextTrackId: number;
   nextPlaylistId: number;
   nextRuleId: number;
+  nextCopyrightReportId: number;
+  nextListeningHistoryId: number;
 }
 
 export interface DbSettingsRow {
@@ -33,6 +38,8 @@ export interface DbTrackRow {
   category?: string;
   start_time?: number;
   end_time?: number;
+  play_count?: number;
+  last_played_at?: number;
 }
 
 export interface DbPlaylistRow {
@@ -56,6 +63,42 @@ export interface DbAutoRuleRow {
   match_mode: string;
 }
 
+export type CopyrightReportStatus = 'pending' | 'actioned' | 'rejected';
+
+export interface DbCopyrightReportRow {
+  id: number;
+  source_url: string;
+  normalized_url: string;
+  audio_key: string;
+  track_id?: number;
+  track_title?: string;
+  track_author?: string;
+  reporter_name: string;
+  reporter_email: string;
+  rights_basis: string;
+  details: string;
+  status: CopyrightReportStatus;
+  moderation_note?: string;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface DbBlockedMediaRow {
+  audio_key: string;
+  normalized_url: string;
+  report_id: number;
+  reason: string;
+  created_at: number;
+}
+
+export interface DbListeningHistoryRow {
+  id: number;
+  track_id: number;
+  played_at: number;
+  duration_listened: number;
+  percentage: number;
+}
+
 const DB_PATH =
   process.env.DB_PATH || path.join(process.cwd(), 'data', 'tikplay.json');
 
@@ -67,10 +110,15 @@ const DEFAULT_DATA: DbData = {
   playlistTracks: [],
   favorites: [],
   autoRules: [],
+  copyrightReports: [],
+  blockedMedia: [],
+  listeningHistory: [],
   settings: {},
   nextTrackId: 1,
   nextPlaylistId: 2,
   nextRuleId: 1,
+  nextCopyrightReportId: 1,
+  nextListeningHistoryId: 1,
 };
 
 function normalizeDbData(data: Partial<DbData>): DbData {
@@ -80,10 +128,15 @@ function normalizeDbData(data: Partial<DbData>): DbData {
     playlistTracks: data.playlistTracks ?? [],
     favorites: data.favorites ?? [],
     autoRules: data.autoRules ?? [],
+    copyrightReports: data.copyrightReports ?? [],
+    blockedMedia: data.blockedMedia ?? [],
+    listeningHistory: data.listeningHistory ?? [],
     settings: data.settings ?? {},
     nextTrackId: data.nextTrackId ?? 1,
     nextPlaylistId: data.nextPlaylistId ?? 2,
     nextRuleId: data.nextRuleId ?? 1,
+    nextCopyrightReportId: data.nextCopyrightReportId ?? 1,
+    nextListeningHistoryId: data.nextListeningHistoryId ?? 1,
   };
 }
 
