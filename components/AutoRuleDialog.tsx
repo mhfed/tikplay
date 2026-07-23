@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAppStore } from '../hooks/useAppStore';
 import { CloseIcon } from './icons';
 
@@ -24,7 +25,13 @@ export default function AutoRuleDialog({ onClose }: Props) {
     setKeyword('');
   };
 
-  return (
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) return null;
+
+  return createPortal(
     <div className="fixed inset-0 z-[100] grid place-items-center">
       <button
         type="button"
@@ -131,6 +138,7 @@ export default function AutoRuleDialog({ onClose }: Props) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

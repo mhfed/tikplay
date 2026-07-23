@@ -1,64 +1,69 @@
-import { type NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 import {
-  addTrackToPlaylist,
-  getFavoriteIds,
-  getPlaylistTracks,
-  removeTrackFromPlaylist,
-  reorderPlaylistTracks,
-} from '@/lib/db/queries';
-import { toTrack } from '@/lib/types';
+  isUuid,
+  personalErrorResponse,
+  validationError,
+} from '@/lib/api/personal';
+import { privateJson, requireSession } from '@/lib/auth/session';
+import { playlistsRepository } from '@/lib/db/postgres/repositories';
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const { id } = await params;
-  const rows = getPlaylistTracks(Number(id));
-  const favIds = getFavoriteIds();
-  return NextResponse.json({
-    ok: true,
-    tracks: rows.map((r) => toTrack(r, favIds)),
-  });
-}
+type Context = { params: Promise<{ id: string }> };
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const { id } = await params;
-  const { trackId } = await req.json();
-  const playlistId = Number(id);
-  if (
-    !Number.isInteger(playlistId) ||
-    playlistId <= 1 ||
-    !Number.isInteger(trackId) ||
-    trackId < 1
-  ) {
-    return NextResponse.json(
-      { ok: false, error: 'Bài hát hoặc danh sách không hợp lệ' },
-      { status: 400 },
-    );
+export async function GET(req: NextRequest, { params }: Context) {
+  try {
+    const { user } = await requireSession(req.headers);
+    const { id } = await params;
+    if (!isUuid(id)) return validationError('Playlist id is invalid.');
+    const rows = await playlistsRepository.listTracks(user.id, id);
+    return privateJson({ ok: true, tracks: rows.map(({ track }) => track) });
+  } catch (error) {
+    return personalErrorResponse(error);
   }
-  addTrackToPlaylist(playlistId, trackId);
-  return NextResponse.json({ ok: true });
 }
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const { id } = await params;
-  const { trackId } = await req.json();
-  removeTrackFromPlaylist(Number(id), trackId);
-  return NextResponse.json({ ok: true });
+export async function POST(req: NextRequest, { params }: Context) {
+  try {
+    const { user } = await requireSession(req.headers);
+    const { id } = await params;
+    const body = await req.json();
+    if (!isUuid(id) || !isUuid(body.trackId))
+      return validationError('Playlist or track id is invalid.');
+    await playlistsRepository.addTrack(user.id, id, body.trackId);
+    return privateJson({ ok: true });
+  } catch (error) {
+    return personalErrorResponse(error);
+  }
 }
 
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const { id } = await params;
-  const { trackIds } = await req.json();
-  reorderPlaylistTracks(Number(id), trackIds);
-  return NextResponse.json({ ok: true });
+export async function DELETE(req: NextRequest, { params }: Context) {
+  try {
+    const { user } = await requireSession(req.headers);
+    const { id } = await params;
+    const body = await req.json();
+    if (!isUuid(id) || !isUuid(body.trackId))
+      return validationError('Playlist or track id is invalid.');
+    await playlistsRepository.removeTrack(user.id, id, body.trackId);
+    return privateJson({ ok: true });
+  } catch (error) {
+    return personalErrorResponse(error);
+  }
+}
+
+export async function PUT(req: NextRequest, { params }: Context) {
+  try {
+    const { user } = await requireSession(req.headers);
+    const { id } = await params;
+    const body = await req.json();
+    if (
+      !isUuid(id) ||
+      !Array.isArray(body.trackIds) ||
+      !body.trackIds.every(isUuid)
+    ) {
+      return validationError('Playlist track order is invalid.');
+    }
+    await playlistsRepository.reorderTracks(user.id, id, body.trackIds);
+    return privateJson({ ok: true });
+  } catch (error) {
+    return personalErrorResponse(error);
+  }
 }

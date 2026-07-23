@@ -6,6 +6,7 @@ import { useAppStore } from '../hooks/useAppStore';
 import { pickArt, pickArtAt } from '../lib/artwork';
 import type { Track } from '../lib/types';
 import { withViewTransition } from '../lib/viewTransition';
+import PersonalizedHome from './home/PersonalizedHome';
 import {
   ClockIcon,
   ListMusicIcon,
@@ -105,6 +106,7 @@ export default function Home({ onOpenLibrary }: HomeProps) {
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-11 overflow-y-auto px-[clamp(24px,3vw,48px)] pb-14 pt-[calc(28px+env(safe-area-inset-top))] max-[640px]:gap-8 max-[640px]:px-4 max-[640px]:pb-[calc(var(--bottom-stack)+24px)] max-[640px]:pt-[calc(16px+env(safe-area-inset-top))]">
+      <PersonalizedHome />
       {heroTrack && (
         <div className="rounded-[26px] bg-[linear-gradient(145deg,rgba(255,255,255,0.1),rgba(255,255,255,0.025)_48%,rgba(0,221,214,0.1))] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_24px_70px_rgba(0,0,0,0.24)] max-[640px]:rounded-[21px] max-[640px]:p-1">
           <section

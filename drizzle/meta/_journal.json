@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1784732859133,
+      "tag": "0000_rare_terror",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784735800000,
+      "tag": "0001_legacy_json_migration",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784736000000,
+      "tag": "0003_privacy_deletion",
+      "breakpoints": true
+    }
+  ]
+}
