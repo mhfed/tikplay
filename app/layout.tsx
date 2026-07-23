@@ -3,6 +3,9 @@ import './globals.css';
 import './components.css';
 import type { Metadata, Viewport } from 'next';
 import { Hanken_Grotesk, JetBrains_Mono, Montserrat } from 'next/font/google';
+import { AuthFlowProvider } from '@/components/auth/AuthFlowProvider';
+import AuthSessionProvider from '@/components/auth/AuthSessionProvider';
+import AuthSurfaceHost from '@/components/auth/AuthSurfaceHost';
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 import TermsDialog from '@/components/TermsDialog';
 import { PlaybackProvider } from '@/hooks/usePlayback';
@@ -141,9 +144,14 @@ export default function RootLayout({
       </head>
       <body>
         <PlaybackProvider>
-          <ServiceWorkerRegister />
-          {children}
-          <TermsDialog />
+          <AuthSessionProvider>
+            <AuthFlowProvider>
+              <ServiceWorkerRegister />
+              {children}
+              <AuthSurfaceHost />
+              <TermsDialog />
+            </AuthFlowProvider>
+          </AuthSessionProvider>
         </PlaybackProvider>
       </body>
     </html>

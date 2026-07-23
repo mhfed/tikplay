@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { useAuthFlow } from '@/components/auth/AuthFlowProvider';
+import { useAuthSession } from '@/components/auth/AuthSessionProvider';
 import { useAppStore } from '../hooks/useAppStore';
 import AddPlaylistDialog from './AddPlaylistDialog';
 import AutoRuleDialog from './AutoRuleDialog';
@@ -30,6 +32,8 @@ export default function Sidebar() {
     selectSource,
   } = useAppStore();
   const pathname = usePathname();
+  const { state, user, signOut } = useAuthSession();
+  const { openAuth } = useAuthFlow();
   const [showAddPlaylist, setShowAddPlaylist] = useState(false);
   const [showAutoRules, setShowAutoRules] = useState(false);
   const [showYoutubeCookies, setShowYoutubeCookies] = useState(false);
@@ -182,6 +186,36 @@ export default function Sidebar() {
       )}
 
       <div className="flex shrink-0 flex-col gap-1 border-t border-line-soft p-3">
+        {state === 'authenticated' && user ? (
+          <div className="account-slot account-slot--signed-in">
+            <div className="account-slot__identity">
+              <span>{user.name.slice(0, 1).toUpperCase()}</span>
+              <div>
+                <strong>{user.name}</strong>
+                <small>{user.email}</small>
+              </div>
+            </div>
+            <div className="account-slot__links">
+              <Link href="/account/profile">Tài khoản</Link>
+              <button type="button" onClick={() => void signOut()}>
+                Đăng xuất
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="account-slot"
+            onClick={() => openAuth({ source: 'sidebar' })}
+          >
+            <span className="account-slot__avatar">↗</span>
+            <span>
+              <strong>Đăng nhập</strong>
+              <small>Đồng bộ thư viện</small>
+            </span>
+            <span className="account-slot__arrow">→</span>
+          </button>
+        )}
         <button
           type="button"
           className={actionClass}

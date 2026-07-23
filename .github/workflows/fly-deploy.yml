@@ -18,23 +18,50 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  check:
-    name: Lint (Biome)
+  quality:
+    name: Quality Gates (Wave 5)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: '20'
           cache: npm
 
       - run: npm ci
-      - run: npm run lint
+
+      # Gate Q5 — Repository/Build gate
+      - name: Lint (Biome)
+        run: npm run lint
+
+      # Gate Q1 — Security gate: typecheck catches injection/type-safety issues
+      - name: TypeScript strict check
+        run: npx tsc --noEmit
+
+      # Gate Q0 — Contract gate: verify legacy JSON contract
+      - name: Legacy JSON contract
+        run: npx tsx --test scripts/legacy-json-contract.test.ts
+
+      # Gate Q0 — Security regression (test hooks production guard)
+      - name: Test hooks production guard
+        run: npx tsx --test scripts/test-hooks-production-guard.test.ts
+
+      # Gate Q1 — Security regression suite
+      - name: Security regression tests
+        run: npx tsx --test scripts/security-regression.test.ts
+
+      # Gate Q2 — Migration rehearsal suite
+      - name: Migration rehearsal tests
+        run: npx tsx --test scripts/migration-rehearsal.test.ts
+
+      # Gate Q4 — Build check (next build with typecheck)
+      - name: Build
+        run: npm run build
 
   deploy:
     name: Fly deploy
-    # Không `needs: check` — lint fail không được chặn deploy.
+    needs: [quality]
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -45,7 +72,7 @@ jobs:
       - name: Setup flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
         with:
-          version: "0.3.85"
+          version: '0.3.85'
 
       - name: Deploy
         # Build trên remote builder của Fly → runner GH không cần DinD.

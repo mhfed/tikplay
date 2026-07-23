@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAppStore } from '../hooks/useAppStore';
 
 interface Props {
@@ -19,7 +20,13 @@ export default function AddPlaylistDialog({ onClose }: Props) {
     onClose();
   };
 
-  return (
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) return null;
+
+  return createPortal(
     <div className="fixed inset-0 z-[100] grid place-items-center">
       <button
         type="button"
@@ -65,6 +72,7 @@ export default function AddPlaylistDialog({ onClose }: Props) {
           </button>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -1,65 +1,82 @@
-import { type NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 import {
-  createPlaylist,
-  deletePlaylist,
-  getAllPlaylists,
-  renamePlaylist,
-  reorderPlaylists,
-} from '@/lib/db/queries';
+  isUuid,
+  personalErrorResponse,
+  validationError,
+} from '@/lib/api/personal';
+import { privateJson, requireSession } from '@/lib/auth/session';
+import {
+  type PlaylistVisibility,
+  playlistsRepository,
+} from '@/lib/db/postgres/repositories';
 
-export async function GET() {
-  return NextResponse.json({ ok: true, playlists: getAllPlaylists() });
+const VISIBILITIES = new Set<PlaylistVisibility>([
+  'private',
+  'unlisted',
+  'public',
+]);
+
+export async function GET(req: NextRequest) {
+  try {
+    const { user } = await requireSession(req.headers);
+    return privateJson({
+      ok: true,
+      playlists: await playlistsRepository.listOwned(user.id),
+    });
+  } catch (error) {
+    return personalErrorResponse(error);
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const { name } = await req.json();
-  const normalizedName = typeof name === 'string' ? name.trim() : '';
-  if (!normalizedName || normalizedName.length > 80) {
-    return NextResponse.json(
-      { ok: false, error: 'Tên danh sách phải có từ 1 đến 80 ký tự' },
-      { status: 400 },
+  try {
+    const { user } = await requireSession(req.headers);
+    const body = await req.json();
+    const name = typeof body.name === 'string' ? body.name.trim() : '';
+    const visibility = body.visibility ?? 'private';
+    if (!name || name.length > 80 || !VISIBILITIES.has(visibility)) {
+      return validationError('Playlist name or visibility is invalid.');
+    }
+    const playlist = await playlistsRepository.create(
+      user.id,
+      name,
+      visibility,
     );
+    return privateJson({ ok: true, playlist }, { status: 201 });
+  } catch (error) {
+    return personalErrorResponse(error);
   }
-  const playlist = createPlaylist(normalizedName);
-  return NextResponse.json({ ok: true, playlist });
 }
 
 export async function PUT(req: NextRequest) {
-  const body = await req.json();
-  if (Array.isArray(body.ids)) {
-    if (!body.ids.every((id: unknown) => Number.isInteger(id))) {
-      return NextResponse.json(
-        { ok: false, error: 'Thứ tự danh sách không hợp lệ' },
-        { status: 400 },
-      );
+  try {
+    const { user } = await requireSession(req.headers);
+    const body = await req.json();
+    if (Array.isArray(body.ids)) {
+      if (!body.ids.every(isUuid))
+        return validationError('Playlist order is invalid.');
+      await playlistsRepository.reorder(user.id, body.ids);
+      return privateJson({ ok: true });
     }
-    reorderPlaylists(body.ids);
-  } else if (Number.isInteger(body.id)) {
     const name = typeof body.name === 'string' ? body.name.trim() : '';
-    if (body.id === 1 || !name || name.length > 80) {
-      return NextResponse.json(
-        { ok: false, error: 'Không thể đổi tên danh sách này' },
-        { status: 400 },
-      );
+    if (!isUuid(body.id) || !name || name.length > 80) {
+      return validationError('Playlist update is invalid.');
     }
-    renamePlaylist(body.id, name);
-  } else {
-    return NextResponse.json(
-      { ok: false, error: 'Dữ liệu cập nhật không hợp lệ' },
-      { status: 400 },
-    );
+    const playlist = await playlistsRepository.rename(user.id, body.id, name);
+    return privateJson({ ok: true, playlist });
+  } catch (error) {
+    return personalErrorResponse(error);
   }
-  return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(req: NextRequest) {
-  const { id } = await req.json();
-  if (!Number.isInteger(id) || id <= 1) {
-    return NextResponse.json(
-      { ok: false, error: 'Không thể xóa danh sách này' },
-      { status: 400 },
-    );
+  try {
+    const { user } = await requireSession(req.headers);
+    const body = await req.json();
+    if (!isUuid(body.id)) return validationError('Playlist id is invalid.');
+    await playlistsRepository.remove(user.id, body.id);
+    return privateJson({ ok: true });
+  } catch (error) {
+    return personalErrorResponse(error);
   }
-  deletePlaylist(id);
-  return NextResponse.json({ ok: true });
 }
