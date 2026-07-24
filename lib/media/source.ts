@@ -56,6 +56,20 @@ export const MEDIA_SOURCE_LABELS: Record<MediaSource, string> = {
   soundcloud: 'SoundCloud',
 };
 
+/** Platform brand colors for source badges.
+ *  Each entry uses a tinted background (10% opacity) and a vivid text color so
+ *  they read well on the dark theme. */
+export const SOURCE_BADGE_COLORS: Record<
+  MediaSource,
+  { bg: string; text: string }
+> = {
+  tiktok: { bg: 'rgba(255,0,80,0.15)', text: '#ff3377' },
+  youtube: { bg: 'rgba(255,0,0,0.15)', text: '#ff4444' },
+  instagram: { bg: 'rgba(228,64,95,0.15)', text: '#e4405f' },
+  facebook: { bg: 'rgba(24,119,242,0.15)', text: '#4d8bf5' },
+  soundcloud: { bg: 'rgba(255,119,0,0.15)', text: '#ff8800' },
+};
+
 export function normalizeTikTokUrl(raw: string): string {
   const trimmed = raw.trim();
   try {

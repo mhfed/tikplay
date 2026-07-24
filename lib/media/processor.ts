@@ -149,6 +149,12 @@ export class MediaProcessor {
         // ffmpeg pass that extracts the audio.
         '--postprocessor-args',
         'ExtractAudio:-c:a aac -af loudnorm=I=-9:TP=-1:LRA=11',
+        // Skip .part files to avoid "File name too long" errors on sources with
+        // extremely long titles (e.g. Facebook/Instagram Reels). When the output
+        // template uses a .m4a extension but yt-dlp first downloads the video as
+        // .mp4, it falls back to the video title for the .part temp filename
+        // which can easily exceed the 255-char macOS limit.
+        '--no-part',
         url,
         '-o',
         outputTemplate,
@@ -217,7 +223,16 @@ export class MediaProcessor {
 
   /** Run `yt-dlp --dump-json` and map the response to our TrackMeta shape. */
   private async fetchMetadata(url: string): Promise<TrackMeta> {
-    const out = await this.execYtDlp(['--dump-json', url]);
+    // Some URLs (SoundCloud discover/sets, YouTube playlists, etc.) are treated
+    // as playlists by yt-dlp. Without --playlist-items 1, --dump-json outputs one
+    // JSON line per entry, which JSON.parse cannot handle. Limit to the first
+    // track so we always get a single valid JSON object.
+    const out = await this.execYtDlp([
+      '--dump-json',
+      '--playlist-items',
+      '1',
+      url,
+    ]);
     let json: Record<string, unknown>;
     try {
       json = JSON.parse(out);

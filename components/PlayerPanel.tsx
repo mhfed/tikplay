@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import { useGlobalAudioEngine, usePlayback } from '../hooks/usePlayback';
+import { MEDIA_SOURCE_LABELS, SOURCE_BADGE_COLORS } from '../lib/media/source';
 import Cover from './Cover';
 import Equalizer from './Equalizer';
 import {
@@ -18,6 +19,7 @@ import {
   ShareIcon,
   ShuffleIcon,
   SlidersIcon,
+  SourceIcon,
   SpinnerIcon,
   VolumeIcon,
   VolumeLowIcon,
@@ -512,9 +514,22 @@ export default function PlayerPanel({
                   {currentTrack.title}
                 </span>
                 <span
-                  className={`mt-0.5 truncate text-xs text-muted${isMobileVisible ? ' max-[1024px]:text-sm' : ''}`}
+                  className={`mt-0.5 flex items-center gap-1.5${isMobileVisible ? ' max-[1024px]:justify-center' : ''}`}
                 >
-                  {currentTrack.author}
+                  <span className="truncate text-xs text-muted">
+                    {currentTrack.author}
+                  </span>
+                  <span
+                    className="inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-[1px] text-[10px] font-medium leading-normal"
+                    style={{
+                      backgroundColor:
+                        SOURCE_BADGE_COLORS[currentTrack.source].bg,
+                      color: SOURCE_BADGE_COLORS[currentTrack.source].text,
+                    }}
+                  >
+                    <SourceIcon source={currentTrack.source} size={10} />
+                    {MEDIA_SOURCE_LABELS[currentTrack.source]}
+                  </span>
                 </span>
               </>
             ) : (
@@ -839,8 +854,22 @@ export default function PlayerPanel({
                         <span className="truncate text-[13px] font-semibold">
                           {currentTrack.title}
                         </span>
-                        <span className="truncate font-mono text-[10px] text-muted">
-                          {currentTrack.author}
+                        <span className="flex items-center gap-1.5 truncate">
+                          <span className="truncate font-mono text-[10px] text-muted">
+                            {currentTrack.author}
+                          </span>
+                          <span
+                            className="inline-flex shrink-0 items-center gap-1 rounded-full px-1 py-[1px] text-[9px] font-medium leading-normal"
+                            style={{
+                              backgroundColor:
+                                SOURCE_BADGE_COLORS[currentTrack.source].bg,
+                              color:
+                                SOURCE_BADGE_COLORS[currentTrack.source].text,
+                            }}
+                          >
+                            <SourceIcon source={currentTrack.source} size={8} />
+                            {MEDIA_SOURCE_LABELS[currentTrack.source]}
+                          </span>
                         </span>
                       </span>
                       <span
@@ -883,8 +912,22 @@ export default function PlayerPanel({
                               <span className="truncate text-[13px] font-semibold">
                                 {track.title}
                               </span>
-                              <span className="truncate font-mono text-[10px] text-muted">
-                                {track.author}
+                              <span className="flex items-center gap-1.5 truncate">
+                                <span className="truncate font-mono text-[10px] text-muted">
+                                  {track.author}
+                                </span>
+                                <span
+                                  className="inline-flex shrink-0 items-center gap-1 rounded-full px-1 py-[1px] text-[9px] font-medium leading-normal"
+                                  style={{
+                                    backgroundColor:
+                                      SOURCE_BADGE_COLORS[track.source].bg,
+                                    color:
+                                      SOURCE_BADGE_COLORS[track.source].text,
+                                  }}
+                                >
+                                  <SourceIcon source={track.source} size={8} />
+                                  {MEDIA_SOURCE_LABELS[track.source]}
+                                </span>
                               </span>
                             </span>
                           </button>

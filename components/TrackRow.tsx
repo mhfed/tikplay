@@ -2,6 +2,7 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { MEDIA_SOURCE_LABELS, SOURCE_BADGE_COLORS } from '../lib/media/source';
 import type { Track } from '../lib/types';
 import Cover from './Cover';
 import {
@@ -11,6 +12,7 @@ import {
   PauseIcon,
   PlayIcon,
   SettingsIcon,
+  SourceIcon,
 } from './icons';
 
 interface TrackRowProps {
@@ -81,8 +83,20 @@ export default function TrackRow({
           <span className="block max-w-full truncate text-sm font-semibold text-ink max-[640px]:text-[15px]">
             {track.title}
           </span>
-          <span className="mt-px block max-w-full truncate text-xs text-muted">
-            {track.author}
+          <span className="mt-px flex items-center gap-1.5">
+            <span className="block max-w-full truncate text-xs text-muted">
+              {track.author}
+            </span>
+            <span
+              className="inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-[1px] text-[10px] font-medium leading-normal"
+              style={{
+                backgroundColor: SOURCE_BADGE_COLORS[track.source].bg,
+                color: SOURCE_BADGE_COLORS[track.source].text,
+              }}
+            >
+              <SourceIcon source={track.source} size={10} />
+              {MEDIA_SOURCE_LABELS[track.source]}
+            </span>
           </span>
         </span>
         {isActive && (
