@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { DialogOverlay } from './DialogOverlay';
 import { CheckIcon, CloseIcon, RefreshCwIcon, SpinnerIcon } from './icons';
 
 interface Props {
@@ -66,13 +67,7 @@ export default function YouTubeCookiesDialog({ onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] grid place-items-center">
-      <button
-        type="button"
-        className="absolute inset-0 cursor-default border-0 bg-black/60 [animation:modal-backdrop-in_var(--motion-base)_var(--ease-out)]"
-        onClick={onClose}
-        aria-label="Đóng hộp thoại"
-      />
+    <DialogOverlay onClose={onClose}>
       <div
         className="relative z-10 min-w-[440px] max-w-[520px] rounded-panel border border-line-soft bg-[var(--glass-bg)] p-6 shadow-app backdrop-blur-[20px] [animation:modal-panel-in_var(--motion-base)_var(--ease-spring)] max-[640px]:mx-4 max-[640px]:min-w-0 max-[640px]:max-w-[calc(100vw-32px)]"
         role="dialog"
@@ -155,6 +150,6 @@ export default function YouTubeCookiesDialog({ onClose }: Props) {
           </button>
         </div>
       </div>
-    </div>
+    </DialogOverlay>
   );
 }

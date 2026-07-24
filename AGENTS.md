@@ -15,6 +15,8 @@
 - Build/start standalone: `npm run build`, then `npm run start`.
 - E2E: `npm run test:e2e`; focused runs use Playwright directly, e.g. `npx playwright test e2e/global-playback.spec.ts`.
 
+- Dev: `npm run dev` uses Turbopack by default (Next.js 16); `next.config.mjs` has `turbopack: {}` to silence the warning about missing turbopack config — do not remove it.
+
 ## Runtime Prereqs
 
 - Local TikTok processing needs `ffmpeg` and `yt-dlp` with `curl_cffi`; without `curl_cffi`, TikTok commonly fails with `Requested format is not available`.
