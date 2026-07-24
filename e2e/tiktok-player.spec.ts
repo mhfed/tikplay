@@ -5,28 +5,34 @@ const TIKTOK_URL =
   'https://www.tiktok.com/@longvumrcapcut01/video/7651599963360693512';
 
 test('clone a TikTok URL and play the extracted audio', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?pl=1'); // Go to library view to see the UrlInput
 
   // 1. Input the URL and submit.
-  const input = page.locator('.url-input__field');
+  const input = page
+    .getByRole('textbox', { name: 'Liên kết bài hát/video' })
+    .or(page.getByPlaceholder('Dán link TikTok'));
   await expect(input).toBeVisible();
   await input.fill(TIKTOK_URL);
-  await page.locator('.btn--primary').click();
+  await page.getByRole('button', { name: 'Thêm' }).click();
 
   // 2. Wait until either a track loaded into the player or an error appeared.
-  const player = page.locator('.player--active');
-  const error = page.locator('.url-input__error');
-  await expect(player.or(error)).toBeVisible({ timeout: 120_000 });
+  await expect(input).toBeDisabled();
+  await expect(input).toBeEnabled({ timeout: 120_000 });
 
-  if (await error.isVisible()) {
-    const msg = await error.innerText();
-    throw new Error(`Backend failed to process TikTok URL: ${msg}`);
+  const errorAlert = page.locator('#tiktok-url-error');
+  if (await errorAlert.isVisible()) {
+    const msg = await errorAlert.innerText();
+    throw new Error(`Backend failed to process URL: ${msg}`);
   }
 
   // 3. Title must be populated (not the empty placeholder).
-  const title = (await page.locator('.player__title').innerText()).trim();
+  const playerTitle = page
+    .locator('button[aria-label="Mở trình phát"]')
+    .locator('span.font-bold')
+    .first();
+  const title = (await playerTitle.innerText()).trim();
   expect(title.length).toBeGreaterThan(0);
-  expect(title).not.toContain('Nothing playing');
+  expect(title).not.toContain('Chưa phát bài nào');
 
   // 4. The audio element should point at our streaming endpoint.
   const audioSrc = await page.locator('audio').getAttribute('src');
@@ -49,7 +55,10 @@ test('clone a TikTok URL and play the extracted audio', async ({ page }) => {
   );
 
   // 7. Press play and confirm the media is buffered & ready (HAVE_CURRENT_DATA+).
-  await page.locator('.btn--play').click();
+  await page
+    .getByRole('button', { name: /Phát|Tạm dừng/ })
+    .first()
+    .click();
   await page.waitForFunction(
     () => {
       const a = document.querySelector('audio') as HTMLAudioElement | null;
@@ -73,5 +82,6 @@ test('clone a TikTok URL and play the extracted audio', async ({ page }) => {
   expect(seekedTo).toBeGreaterThan(0);
 
   // 9. The track should also appear in the playlist list.
-  await expect(page.locator('.track-item').first()).toBeVisible();
+  const trackRow = page.locator('button[role="button"]:has(.font-bold)');
+  await expect(trackRow.first()).toBeVisible();
 });

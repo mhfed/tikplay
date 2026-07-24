@@ -1,10 +1,23 @@
 import { execFile } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ensureCacheDir, FileCacheStore, getCacheDir } from '../cache';
 import { getDb } from '../db';
-import { cacheKeyFromRaw, type MediaSource, validateMediaUrl } from './source';
+import { type MediaSource, validateMediaUrl } from './source';
+
+export function cacheKey(normalizedUrl: string): string {
+  // Use MD5 to comfortably fit within filesystem filename limits. Since these
+  // are only used as lookup keys for public media, collisions/security aren't
+  // concerns.
+  return createHash('md5').update(normalizedUrl).digest('hex');
+}
+
+export function cacheKeyFromRaw(rawUrl: string): string {
+  const result = validateMediaUrl(rawUrl);
+  return cacheKey(result.normalized || rawUrl);
+}
 
 export interface TrackMeta {
   title: string;
@@ -136,11 +149,17 @@ export class MediaProcessor {
         // ffmpeg pass that extracts the audio.
         '--postprocessor-args',
         'ExtractAudio:-c:a aac -af loudnorm=I=-9:TP=-1:LRA=11',
+        // Skip .part files to avoid "File name too long" errors on sources with
+        // extremely long titles (e.g. Facebook/Instagram Reels). When the output
+        // template uses a .m4a extension but yt-dlp first downloads the video as
+        // .mp4, it falls back to the video title for the .part temp filename
+        // which can easily exceed the 255-char macOS limit.
+        '--no-part',
         url,
         '-o',
         outputTemplate,
       ]),
-      this.downloadCover(meta.cover),
+      this.downloadCover(meta.cover, source),
     ]);
 
     // Some cover URLs are signed and expire; re-host them under our own
@@ -161,19 +180,34 @@ export class MediaProcessor {
     return { audioKey: key, source, meta };
   }
 
-  /** Best-effort fetch of the cover image; TikTok gates the CDN on Referer. */
+  /** Best-effort fetch of the cover image; some networks gate their CDN on Referer. */
   private async downloadCover(
     url: string,
+    source: MediaSource,
   ): Promise<{ buffer: Buffer; contentType: string } | null> {
     if (!url) return null;
+
+    // Most sources need a matching referer or they block hotlinking the thumbnail
+    const referers: Record<MediaSource, string | undefined> = {
+      tiktok: 'https://www.tiktok.com/',
+      instagram: 'https://www.instagram.com/',
+      facebook: 'https://www.facebook.com/',
+      youtube: 'https://www.youtube.com/',
+      soundcloud: undefined,
+    };
+
+    const headers: Record<string, string> = {
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    };
+
+    const referer = referers[source];
+    if (referer) {
+      headers.Referer = referer;
+    }
+
     try {
-      const res = await fetch(url, {
-        headers: {
-          Referer: 'https://www.tiktok.com/',
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        },
-      });
+      const res = await fetch(url, { headers });
       if (!res.ok) return null;
       const contentType = res.headers.get('content-type') || 'image/jpeg';
       const buffer = Buffer.from(await res.arrayBuffer());
@@ -189,7 +223,16 @@ export class MediaProcessor {
 
   /** Run `yt-dlp --dump-json` and map the response to our TrackMeta shape. */
   private async fetchMetadata(url: string): Promise<TrackMeta> {
-    const out = await this.execYtDlp(['--dump-json', url]);
+    // Some URLs (SoundCloud discover/sets, YouTube playlists, etc.) are treated
+    // as playlists by yt-dlp. Without --playlist-items 1, --dump-json outputs one
+    // JSON line per entry, which JSON.parse cannot handle. Limit to the first
+    // track so we always get a single valid JSON object.
+    const out = await this.execYtDlp([
+      '--dump-json',
+      '--playlist-items',
+      '1',
+      url,
+    ]);
     let json: Record<string, unknown>;
     try {
       json = JSON.parse(out);
@@ -225,10 +268,16 @@ export class MediaProcessor {
   }
 
   private static formatYtDlpError(msg: string): string {
+    if (/login.*required|private|Sign in to view/i.test(msg)) {
+      return 'Nội dung riêng tư hoặc yêu cầu đăng nhập — hiện chỉ hỗ trợ nội dung công khai.';
+    }
     if (
       /Sign in to confirm.*not a bot|cookies-from-browser|--cookies/i.test(msg)
     ) {
-      return 'YouTube đang chặn bot-check. Hãy refresh cookies YouTube trong admin surface rồi thử lại.';
+      if (/youtube|youtu\.be/i.test(msg)) {
+        return 'YouTube đang chặn bot-check. Hãy refresh cookies trong admin surface rồi thử lại.';
+      }
+      return 'Nền tảng yêu cầu đăng nhập hoặc bot-check — hiện chỉ hỗ trợ video công khai không yêu cầu tài khoản.';
     }
     return `yt-dlp thất bại: ${msg.slice(0, 500)}`;
   }

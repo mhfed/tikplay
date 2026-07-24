@@ -100,7 +100,8 @@ export default function Home({ onOpenLibrary }: HomeProps) {
             Chưa có bài hát nào
           </p>
           <p className="text-sm text-muted">
-            Dán một link TikTok hoặc YouTube ở tab Thư viện để bắt đầu.
+            Dán một link TikTok, YouTube, Instagram, Facebook, SoundCloud... ở
+            tab Thư viện để bắt đầu.
           </p>
         </div>
       </div>
