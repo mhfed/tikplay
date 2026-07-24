@@ -1,10 +1,10 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import { useGlobalAudioEngine, usePlayback } from '../hooks/usePlayback';
 import Cover from './Cover';
-import Equalizer from './Equalizer';
 import {
   CheckIcon,
   CloseIcon,
@@ -23,9 +23,13 @@ import {
   VolumeLowIcon,
   VolumeMuteIcon,
 } from './icons';
-import SpectrumAnalyzer from './SpectrumAnalyzer';
-import SpeedControl from './SpeedControl';
-import TrackTrimmer from './TrackTrimmer';
+
+const Equalizer = dynamic(() => import('./Equalizer'), { ssr: false });
+const SpectrumAnalyzer = dynamic(() => import('./SpectrumAnalyzer'), {
+  ssr: false,
+});
+const SpeedControl = dynamic(() => import('./SpeedControl'), { ssr: false });
+const TrackTrimmer = dynamic(() => import('./TrackTrimmer'), { ssr: false });
 
 type PopoverPanel = 'queue' | 'eq' | null;
 

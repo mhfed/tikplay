@@ -1,7 +1,6 @@
 'use client';
 
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import type { CSSProperties, HTMLAttributes, Ref } from 'react';
 import { memo } from 'react';
 import type { Track } from '../lib/types';
 import Cover from './Cover';
@@ -14,16 +13,19 @@ import {
   SettingsIcon,
 } from './icons';
 
-interface TrackRowProps {
+export interface TrackRowProps {
   track: Track;
   isActive: boolean;
   isPlaying: boolean;
   isFavorite: boolean;
-  isDraggable: boolean;
   onPlay: (track: Track) => void;
   onFavorite: (trackId: number) => void;
   onRemove: (track: Track) => void;
   onActions: (track: Track) => void;
+  dragHandleProps?: HTMLAttributes<HTMLSpanElement>;
+  rowRef?: Ref<HTMLLIElement>;
+  rowStyle?: CSSProperties;
+  isDragging?: boolean;
 }
 
 function TrackRow({
@@ -31,38 +33,26 @@ function TrackRow({
   isActive,
   isPlaying,
   isFavorite,
-  isDraggable,
   onPlay,
   onFavorite,
   onRemove,
   onActions,
+  dragHandleProps,
+  rowRef,
+  rowStyle,
+  isDragging = false,
 }: TrackRowProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: track.id, disabled: !isDraggable });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
   return (
     <li
-      ref={setNodeRef}
-      style={style}
+      ref={rowRef}
+      style={rowStyle}
       data-track-row
       className={`group flex items-center gap-2.5 rounded-control border border-transparent border-l-2 bg-transparent px-2.5 py-2 transition-[background,border-color,transform] duration-[var(--motion-fast)] ease-spring hover:border-l-secondary hover:bg-surface max-[640px]:gap-3 max-[640px]:px-2 max-[640px]:py-3 [@media(hover:none)]:gap-2.5${isActive ? ' border-l-accent bg-accent-muted shadow-[inset_0_0_0_1px_var(--accent-glow)]' : ''}${isDragging ? ' z-10 bg-surface-2 shadow-app' : ''}`}
     >
-      {isDraggable && (
+      {dragHandleProps && (
         <span
           className="flex cursor-grab touch-none p-0.5 text-muted-2 opacity-0 transition-opacity duration-[var(--motion-fast)] ease-out-app group-hover:opacity-100 active:cursor-grabbing max-[640px]:hidden [@media(hover:none)]:px-1 [@media(hover:none)]:py-2.5 [@media(hover:none)]:opacity-60"
-          {...attributes}
-          {...listeners}
+          {...dragHandleProps}
         >
           <GripIcon size={14} />
         </span>

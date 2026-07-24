@@ -1,10 +1,9 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
-import AddPlaylistDialog from './AddPlaylistDialog';
-import AutoRuleDialog from './AutoRuleDialog';
 import {
   ClockIcon,
   CloseIcon,
@@ -15,7 +14,16 @@ import {
   SettingsIcon,
   TagIcon,
 } from './icons';
-import YouTubeCookiesDialog from './YouTubeCookiesDialog';
+
+const AddPlaylistDialog = dynamic(() => import('./AddPlaylistDialog'), {
+  ssr: false,
+});
+const AutoRuleDialog = dynamic(() => import('./AutoRuleDialog'), {
+  ssr: false,
+});
+const YouTubeCookiesDialog = dynamic(() => import('./YouTubeCookiesDialog'), {
+  ssr: false,
+});
 
 interface MobileSidebarProps {
   visible: boolean;

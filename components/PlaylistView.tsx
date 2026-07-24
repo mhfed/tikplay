@@ -1,13 +1,17 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import { categoryName } from '../lib/categories';
 import { CloseIcon, PlayIcon, SettingsIcon } from './icons';
-import PlaylistManageDialog from './PlaylistManageDialog';
 import SearchBar from './SearchBar';
 import TrackList from './TrackList';
 import UrlInput from './UrlInput';
+
+const PlaylistManageDialog = dynamic(() => import('./PlaylistManageDialog'), {
+  ssr: false,
+});
 
 export default function PlaylistView() {
   const {
