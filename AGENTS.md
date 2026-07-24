@@ -9,6 +9,8 @@
 
 ## Commands
 
+- Node version: 20.x (`>=20 <21`). Docker builds from `node:20-slim`; `.nvmrc` contains `20` and `package.json` `engines` enforces it. Use `nvm use` (or `fnm use`) before `npm install` if another version is active.
+
 - Install/run: `npm install`, then `npm run dev`.
 - Lint/format: `npm run lint` runs Biome, `npm run format` writes Biome formatting. Do not use ESLint or Prettier.
 - Typecheck: `npx tsc --noEmit` is required; `npm run build` does not enforce TS errors because `next.config.mjs` sets `typescript.ignoreBuildErrors: true` for TS7 native compiler compatibility.
