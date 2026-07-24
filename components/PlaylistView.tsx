@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import { categoryName } from '../lib/categories';
 import { CloseIcon, PlayIcon, SettingsIcon } from './icons';
@@ -23,11 +23,31 @@ export default function PlaylistView() {
     selectCategory,
     selectSource,
     loading,
+    pageLoading,
+    hasMoreTracks,
+    totalTracks,
+    loadMoreTracks,
     error,
     trackSort,
     setTrackSort,
   } = useAppStore();
   const [showPlaylistManager, setShowPlaylistManager] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    if (!target || !hasMoreTracks) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting) && !pageLoading) {
+          void loadMoreTracks();
+        }
+      },
+      { rootMargin: '600px 0px' },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [hasMoreTracks, loadMoreTracks, pageLoading]);
 
   const currentPlaylist =
     currentPlaylistId === -1
@@ -57,14 +77,14 @@ export default function PlaylistView() {
           </h1>
           <p className="truncate font-mono text-[11px] text-muted">
             {sourceLabel
-              ? `${tracks.length} bài từ ${sourceLabel}`
+              ? `${totalTracks} bài từ ${sourceLabel}`
               : categoryLabel
-                ? `${tracks.length} bài hát`
+                ? `${totalTracks} bài hát`
                 : currentPlaylistId === 1
                   ? 'Nhạc đã tải về của bạn'
                   : currentPlaylistId === -1
                     ? 'Những bài bạn đã thích'
-                    : `${tracks.length} bài hát`}
+                    : `${totalTracks} bài hát`}
           </p>
         </div>
         {tracks.length > 0 && (
@@ -140,6 +160,23 @@ export default function PlaylistView() {
           )}
         </div>
         <TrackList />
+        <div
+          ref={loadMoreRef}
+          className="flex min-h-12 items-center justify-center"
+        >
+          {hasMoreTracks && (
+            <button
+              type="button"
+              className="rounded-control border border-line bg-surface px-4 py-2 text-xs font-semibold text-muted transition-colors hover:border-accent hover:text-accent disabled:cursor-wait disabled:opacity-60"
+              onClick={() => void loadMoreTracks()}
+              disabled={pageLoading}
+            >
+              {pageLoading
+                ? 'Đang tải thêm…'
+                : `Tải thêm (${tracks.length}/${totalTracks})`}
+            </button>
+          )}
+        </div>
       </div>
       {showPlaylistManager &&
         currentPlaylistId > 1 &&

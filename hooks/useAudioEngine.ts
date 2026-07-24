@@ -11,6 +11,12 @@ export type AudioLoadState =
   | 'stalled'
   | 'error';
 
+export interface AudioMetrics {
+  startupMs: number | null;
+  stallCount: number;
+  stallMs: number;
+}
+
 interface AudioEngineOptions {
   onTimeUpdate?: (currentTime: number, duration: number) => void;
   onEnded?: () => void;
@@ -52,7 +58,13 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
   const [isReady, setIsReady] = useState(false);
   const [loadState, setLoadState] = useState<AudioLoadState>('idle');
   const [startupMs, setStartupMs] = useState<number | null>(null);
+  const [stallCount, setStallCount] = useState(0);
+  const [stallMs, setStallMs] = useState(0);
+  const [errorCode, setErrorCode] = useState<number | null>(null);
   const loadStartedAtRef = useRef(0);
+  const stalledAtRef = useRef(0);
+  const recoveryAttemptsRef = useRef(0);
+  const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Fraction of `duration` that the browser has buffered (0–1). Read from
   // audio.buffered on the `progress` event only — not on every `timeupdate` —
   // so the seek bar's "loaded" layer doesn't thrash while playing.
@@ -171,9 +183,14 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
       trackGenerationRef.current += 1;
       playRequestRef.current += 1;
       recoveringRef.current = false;
+      recoveryAttemptsRef.current = 0;
+      stalledAtRef.current = 0;
       loadStartedAtRef.current = performance.now();
       setLoadState('loading');
       setStartupMs(null);
+      setStallCount(0);
+      setStallMs(0);
+      setErrorCode(null);
 
       audio.src = audioUrl;
       audio.volume = Math.min(desiredVolumeRef.current, 1);
@@ -197,12 +214,21 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
   // overridden.
   const wantsPlayingRef = useRef(false);
   const recoveringRef = useRef(false);
-  const recover = useCallback(() => {
+  const recover = useCallback((force = false) => {
     const audio = audioRef.current;
     const url = lastUrlRef.current;
     if (!audio || !url) return;
-    if (recoveringRef.current || !wantsPlayingRef.current) return;
+    if (recoveringRef.current || (!force && !wantsPlayingRef.current)) return;
+    if (!force && recoveryAttemptsRef.current >= 1) {
+      setErrorCode(audio.error?.code ?? 0);
+      setLoadState('error');
+      return;
+    }
+    recoveryAttemptsRef.current += 1;
     recoveringRef.current = true;
+    if (force) wantsPlayingRef.current = true;
+    setErrorCode(null);
+    setLoadState('loading');
     const generation = trackGenerationRef.current;
     const resumeAt = audio.currentTime || 0;
     // Force a fresh load by clearing src first, then re-arming it.
@@ -243,6 +269,11 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
     };
     reload();
   }, []);
+
+  const retry = useCallback(() => {
+    recoveryAttemptsRef.current = 0;
+    recover(true);
+  }, [recover]);
 
   const play = useCallback(async () => {
     const audio = getOrCreateAudio();
@@ -420,8 +451,20 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
       setBuffered(dur > 0 ? Math.min(1, end / dur) : 0);
     };
 
+    const finishStall = () => {
+      if (!stalledAtRef.current) return;
+      const elapsed = performance.now() - stalledAtRef.current;
+      stalledAtRef.current = 0;
+      setStallMs((total) => total + elapsed);
+      if (process.env.NODE_ENV === 'development') {
+        console.debug(`[audio] stall ${Math.round(elapsed)}ms`);
+      }
+    };
+
     const handlePlaying = (e: Event) => {
       if (e.target !== audioRef.current) return;
+      finishStall();
+      if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
       setLoadState('playing');
       if (loadStartedAtRef.current > 0) {
         const elapsed = performance.now() - loadStartedAtRef.current;
@@ -435,16 +478,34 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
 
     const handleWaiting = (e: Event) => {
       if (e.target !== audioRef.current || !wantsPlayingRef.current) return;
+      if (!stalledAtRef.current) {
+        stalledAtRef.current = performance.now();
+        setStallCount((count) => count + 1);
+      }
       setLoadState('stalled');
+      if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
+      loadingTimeoutRef.current = setTimeout(() => {
+        if (stalledAtRef.current && wantsPlayingRef.current) {
+          setErrorCode(0);
+          setLoadState('error');
+        }
+      }, 15_000);
     };
 
     // Element errored (network drop while backgrounded, decode failure, etc).
     // Try to recover once, then expose an error if recovery cannot begin.
     const handleError = (e: Event) => {
       if (e.target !== audioRef.current) return;
-      const canRecover = wantsPlayingRef.current && !recoveringRef.current;
+      finishStall();
+      const canRecover =
+        wantsPlayingRef.current &&
+        !recoveringRef.current &&
+        recoveryAttemptsRef.current < 1;
       if (canRecover) recover();
-      else setLoadState('error');
+      else {
+        setErrorCode(audioRef.current?.error?.code ?? 0);
+        setLoadState('error');
+      }
     };
 
     const handleVisible = () => {
@@ -478,6 +539,7 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
 
     return () => {
       wantsPlayingRef.current = false;
+      if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
       recoveringRef.current = false;
       trackGenerationRef.current += 1;
       playRequestRef.current += 1;
@@ -518,6 +580,7 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
   return {
     loadTrack,
     play,
+    retry,
     pause,
     toggle,
     seek,
@@ -530,7 +593,8 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
     duration,
     isReady,
     loadState,
-    startupMs,
+    errorCode,
+    metrics: { startupMs, stallCount, stallMs } satisfies AudioMetrics,
     buffered,
     audioRef,
     analyserRef,

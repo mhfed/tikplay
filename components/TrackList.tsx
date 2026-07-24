@@ -15,12 +15,16 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import type { Track } from '../lib/types';
 import { CloseIcon, RefreshCwIcon, SpinnerIcon } from './icons';
 import TrackActionsDialog from './TrackActionsDialog';
 import TrackRow from './TrackRow';
+
+const VIRTUALIZE_AFTER = 80;
+const ESTIMATED_ROW_HEIGHT = 57;
+const OVERSCAN_ROWS = 8;
 
 export default function TrackList() {
   const {
@@ -41,8 +45,18 @@ export default function TrackList() {
     dismissImport,
   } = useAppStore();
   const [actionTrack, setActionTrack] = useState<Track | null>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  const [virtualViewport, setVirtualViewport] = useState({
+    scrollTop: 0,
+    height: 0,
+    rowStride: ESTIMATED_ROW_HEIGHT,
+    rowGap: 0,
+  });
 
+  const showJobs = importJobs.length > 0;
   const isDraggable = currentPlaylistId > 1 && trackSort === 'playlist';
+  const isVirtualized =
+    tracks.length > VIRTUALIZE_AFTER && !isDraggable && !showJobs;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -60,17 +74,111 @@ export default function TrackList() {
     reorderTracks(reordered.map((t) => t.id));
   };
 
-  const confirmRemoveTrack = (track: Track) => {
-    if (
-      window.confirm(
-        `Xóa “${track.title}” khỏi thư viện? Hành động này không thể hoàn tác.`,
-      )
-    ) {
-      removeTrack(track.id);
-    }
-  };
+  const handlePlay = useCallback(
+    (track: Track) => {
+      if (currentTrack?.id === track.id) togglePlay();
+      else playTrack(track);
+    },
+    [currentTrack?.id, playTrack, togglePlay],
+  );
 
-  const showJobs = importJobs.length > 0;
+  const handleFavorite = useCallback(
+    (trackId: number) => toggleFavorite(trackId),
+    [toggleFavorite],
+  );
+
+  const handleActions = useCallback(
+    (track: Track) => setActionTrack(track),
+    [],
+  );
+
+  const confirmRemoveTrack = useCallback(
+    (track: Track) => {
+      if (
+        window.confirm(
+          `Xóa “${track.title}” khỏi thư viện? Hành động này không thể hoàn tác.`,
+        )
+      ) {
+        removeTrack(track.id);
+      }
+    },
+    [removeTrack],
+  );
+
+  useEffect(() => {
+    if (!isVirtualized) return;
+    const list = listRef.current;
+    const scroller = list?.parentElement;
+    if (!list || !scroller) return;
+
+    let frame = 0;
+    const measure = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const row = list.querySelector<HTMLElement>('[data-track-row]');
+        const listStyles = getComputedStyle(list);
+        const parsedGap = Number.parseFloat(listStyles.rowGap);
+        const rowGap = Number.isFinite(parsedGap) ? parsedGap : 0;
+        const rowHeight = row?.getBoundingClientRect().height;
+        const rowStride = rowHeight ? rowHeight + rowGap : ESTIMATED_ROW_HEIGHT;
+        const listTop = list.offsetTop;
+        const nextViewport = {
+          scrollTop: Math.max(0, scroller.scrollTop - listTop),
+          height: scroller.clientHeight,
+          rowStride,
+          rowGap,
+        };
+        setVirtualViewport((current) =>
+          current.scrollTop === nextViewport.scrollTop &&
+          current.height === nextViewport.height &&
+          current.rowStride === nextViewport.rowStride &&
+          current.rowGap === nextViewport.rowGap
+            ? current
+            : nextViewport,
+        );
+      });
+    };
+
+    measure();
+    scroller.addEventListener('scroll', measure, { passive: true });
+    const observer = new ResizeObserver(measure);
+    observer.observe(scroller);
+    observer.observe(list);
+    return () => {
+      cancelAnimationFrame(frame);
+      scroller.removeEventListener('scroll', measure);
+      observer.disconnect();
+    };
+  }, [isVirtualized]);
+
+  const virtualRange = useMemo(() => {
+    if (!isVirtualized) return { start: 0, end: tracks.length };
+    const start = Math.max(
+      0,
+      Math.floor(virtualViewport.scrollTop / virtualViewport.rowStride) -
+        OVERSCAN_ROWS,
+    );
+    const visibleRows = Math.ceil(
+      virtualViewport.height / virtualViewport.rowStride,
+    );
+    return {
+      start,
+      end: Math.min(tracks.length, start + visibleRows + OVERSCAN_ROWS * 2),
+    };
+  }, [isVirtualized, tracks.length, virtualViewport]);
+
+  const visibleTracks = isVirtualized
+    ? tracks.slice(virtualRange.start, virtualRange.end)
+    : tracks;
+  const topSpacer = Math.max(
+    0,
+    virtualRange.start * virtualViewport.rowStride - virtualViewport.rowGap,
+  );
+  const bottomSpacer = Math.max(
+    0,
+    (tracks.length - virtualRange.end) * virtualViewport.rowStride -
+      virtualViewport.rowGap,
+  );
 
   if (tracks.length === 0 && !showJobs) {
     return (
@@ -96,7 +204,11 @@ export default function TrackList() {
         items={tracks.map((t) => t.id)}
         strategy={verticalListSortingStrategy}
       >
-        <ul className="flex list-none flex-col gap-0.5">
+        <ul
+          ref={listRef}
+          className="flex list-none flex-col gap-0.5"
+          data-virtualized={isVirtualized || undefined}
+        >
           {importJobs.map((job) => (
             <li
               key={job.id}
@@ -161,7 +273,14 @@ export default function TrackList() {
               </div>
             </li>
           ))}
-          {tracks.map((track) => (
+          {topSpacer > 0 && (
+            <li
+              aria-hidden
+              className="pointer-events-none shrink-0"
+              style={{ height: topSpacer }}
+            />
+          )}
+          {visibleTracks.map((track) => (
             <TrackRow
               key={track.id}
               track={track}
@@ -169,14 +288,19 @@ export default function TrackList() {
               isPlaying={currentTrack?.id === track.id && isPlaying}
               isFavorite={favorites.has(track.id)}
               isDraggable={isDraggable}
-              onPlay={() =>
-                currentTrack?.id === track.id ? togglePlay() : playTrack(track)
-              }
-              onFavorite={() => toggleFavorite(track.id)}
-              onRemove={() => confirmRemoveTrack(track)}
-              onActions={() => setActionTrack(track)}
+              onPlay={handlePlay}
+              onFavorite={handleFavorite}
+              onRemove={confirmRemoveTrack}
+              onActions={handleActions}
             />
           ))}
+          {bottomSpacer > 0 && (
+            <li
+              aria-hidden
+              className="pointer-events-none shrink-0"
+              style={{ height: bottomSpacer }}
+            />
+          )}
         </ul>
       </SortableContext>
       {actionTrack && (

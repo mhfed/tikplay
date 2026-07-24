@@ -4,12 +4,12 @@ import { getDb, saveDb } from '@/lib/db';
 import {
   applyAutoRules,
   deleteTrack,
-  getAllTracks,
   getTrack,
-  searchTracks,
+  getTrackPage,
   upsertTrack,
 } from '@/lib/db/queries';
 import { getFavoriteIds, toTrack } from './helpers';
+import { parseTrackPageQuery } from './pagination';
 
 const MAX_BATCH_TRACK_IDS = 100;
 
@@ -38,12 +38,24 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, tracks });
   }
 
-  const q = req.nextUrl.searchParams.get('q');
-  const rows = q ? searchTracks(q) : getAllTracks();
-  return NextResponse.json({
-    ok: true,
-    tracks: rows.map((r) => toTrack(r, favIds)),
-  });
+  try {
+    const page = getTrackPage(
+      parseTrackPageQuery(req, { type: 'library' }, 'added_desc'),
+    );
+    return NextResponse.json({
+      ok: true,
+      ...page,
+      tracks: page.tracks.map((r) => toTrack(r, favIds)),
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: error instanceof Error ? error.message : 'Trang không hợp lệ',
+      },
+      { status: 400 },
+    );
+  }
 }
 
 export async function POST(req: NextRequest) {

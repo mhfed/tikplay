@@ -1,5 +1,15 @@
 import type { MediaSource } from './media/source';
 
+export type TrackSort =
+  | 'playlist'
+  | 'added_desc'
+  | 'added_asc'
+  | 'title'
+  | 'author'
+  | 'duration'
+  | 'source'
+  | 'category';
+
 /** A track row as stored in SQLite. */
 export interface DbTrack {
   id: number;

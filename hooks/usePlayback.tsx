@@ -50,6 +50,8 @@ function readSavedSession(): SavedPlaybackSession | null {
   }
 }
 
+export type QueueExtension = () => Promise<Track[]>;
+
 interface PlaybackController {
   currentTrack: Track | null;
   currentIndex: number;
@@ -63,6 +65,7 @@ interface PlaybackController {
   initializeTrack: (track: Track, queue: Track[]) => void;
   playTrack: (track: Track, queue?: Track[]) => void;
   playAll: (queue: Track[]) => void;
+  setQueueExtension: (extension: QueueExtension | null) => void;
   togglePlay: (fallbackQueue?: Track[]) => void;
   setPlaying: (playing: boolean) => void;
   next: () => void;
@@ -108,6 +111,8 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   const [eqGains, setEqGains] = useState<number[]>([...DEFAULT_EQ_GAINS]);
   const [storageReady, setStorageReady] = useState(false);
   const handleEndedRef = useRef<() => void>(() => {});
+  const queueExtensionRef = useRef<QueueExtension | null>(null);
+  const queueExtensionPromiseRef = useRef<Promise<Track[]> | null>(null);
   const restoredPositionRef = useRef<number | null>(null);
   const resumePositionRef = useRef<number | null>(null);
   const lastPositionWriteRef = useRef(0);
@@ -176,6 +181,11 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     return index;
   }, [currentIndex, queue.length]);
 
+  const setQueueExtension = useCallback((extension: QueueExtension | null) => {
+    queueExtensionRef.current = extension;
+    queueExtensionPromiseRef.current = null;
+  }, []);
+
   const next = useCallback(() => {
     if (!queue.length) return;
 
@@ -186,13 +196,40 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     }
 
     const nextIndex = currentIndex + 1;
-    if (nextIndex >= queue.length) {
+    if (nextIndex < queue.length) {
+      selectTrack(queue[nextIndex], queue, true);
+      return;
+    }
+
+    const extension = queueExtensionRef.current;
+    if (!extension) {
       if (repeat === 'all') selectTrack(queue[0], queue, true);
       else setIsPlaying(false);
       return;
     }
 
-    selectTrack(queue[nextIndex], queue, true);
+    const request = queueExtensionPromiseRef.current ?? extension();
+    queueExtensionPromiseRef.current = request;
+    void request
+      .then((additionalTracks) => {
+        const knownIds = new Set(queue.map((track) => track.id));
+        const uniqueTracks = additionalTracks.filter(
+          (track) => !knownIds.has(track.id),
+        );
+        if (!uniqueTracks.length) {
+          if (repeat === 'all') selectTrack(queue[0], queue, true);
+          else setIsPlaying(false);
+          return;
+        }
+        const extendedQueue = [...queue, ...uniqueTracks];
+        selectTrack(uniqueTracks[0], extendedQueue, true);
+      })
+      .catch(() => setIsPlaying(false))
+      .finally(() => {
+        if (queueExtensionPromiseRef.current === request) {
+          queueExtensionPromiseRef.current = null;
+        }
+      });
   }, [chooseRandomIndex, currentIndex, queue, repeat, selectTrack, shuffle]);
 
   const prev = useCallback(() => {
@@ -451,6 +488,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
       initializeTrack,
       playTrack,
       playAll,
+      setQueueExtension,
       togglePlay,
       setPlaying: setIsPlaying,
       next,
@@ -475,6 +513,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
       initializeTrack,
       playTrack,
       playAll,
+      setQueueExtension,
       togglePlay,
       next,
       prev,

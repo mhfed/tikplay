@@ -1,5 +1,7 @@
-import { createReadStream, existsSync, statSync } from 'node:fs';
+import { createReadStream } from 'node:fs';
+import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
+import { Readable } from 'node:stream';
 import type { NextRequest } from 'next/server';
 import { getCacheDir } from '@/lib/cache';
 import { isMediaBlocked } from '@/lib/db/queries';
@@ -46,19 +48,22 @@ export async function GET(
     return new Response('Unavailable for legal reasons', { status: 451 });
   }
 
+  const startedAt = performance.now();
   const file = join(getCacheDir(), `${key}.m4a`);
-  if (!existsSync(file)) {
+  let size: number;
+  try {
+    size = (await stat(file)).size;
+  } catch {
     return new Response('Not found', { status: 404 });
   }
-
-  const stat = statSync(file);
-  const size = stat.size;
   const etag = `"${key}"`;
+  const lookupMs = performance.now() - startedAt;
   const baseHeaders = {
     'Accept-Ranges': 'bytes',
     'Cache-Control': IMMUTABLE_MEDIA_CACHE,
     'Content-Type': 'audio/mp4',
     ETag: etag,
+    'Server-Timing': `audio-file;dur=${lookupMs.toFixed(1)}`,
     'X-Content-Type-Options': 'nosniff',
   };
 
@@ -76,17 +81,10 @@ export async function GET(
 
   // Full file when no Range header was supplied.
   if (range === undefined) {
-    const stream = createReadStream(file);
-    const body = new ReadableStream<Uint8Array>({
-      start(controller) {
-        stream.on('data', (chunk) => controller.enqueue(chunk as Buffer));
-        stream.on('end', () => controller.close());
-        stream.on('error', (err) => controller.error(err));
-      },
-      cancel() {
-        stream.destroy();
-      },
-    });
+    // `Readable.toWeb` preserves backpressure. A manual `data` listener puts
+    // the Node stream in flowing mode and can buffer an entire file in memory
+    // when the client/network consumes the response slowly.
+    const body = Readable.toWeb(createReadStream(file)) as ReadableStream;
 
     return new Response(body, {
       status: 200,
@@ -97,17 +95,9 @@ export async function GET(
   // Partial content — this is what the <audio> element uses to seek and to
   // resume after a network hiccup without restarting from byte 0.
   const { start, end } = range;
-  const stream = createReadStream(file, { start, end });
-  const body = new ReadableStream<Uint8Array>({
-    start(controller) {
-      stream.on('data', (chunk) => controller.enqueue(chunk as Buffer));
-      stream.on('end', () => controller.close());
-      stream.on('error', (err) => controller.error(err));
-    },
-    cancel() {
-      stream.destroy();
-    },
-  });
+  const body = Readable.toWeb(
+    createReadStream(file, { start, end }),
+  ) as ReadableStream;
 
   return new Response(body, {
     status: 206,

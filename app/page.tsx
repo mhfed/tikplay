@@ -5,12 +5,10 @@ import {
   getAllCategories,
   getAllPlaylists,
   getAllSources,
-  getAllTracks,
   getAutoRules,
   getFavoriteIds,
-  getFavoriteTracks,
-  getPlaylistTracks,
   getTrack,
+  getTrackPage,
 } from '@/lib/db/queries';
 import { type Track, toTrack } from '@/lib/types';
 
@@ -91,16 +89,6 @@ export async function generateMetadata({
   };
 }
 
-function tracksForPlaylist(playlistId: number, favIds: Set<number>): Track[] {
-  const rows =
-    playlistId === 1
-      ? getAllTracks()
-      : playlistId === -1
-        ? getFavoriteTracks()
-        : getPlaylistTracks(playlistId);
-  return rows.map((r) => toTrack(r, favIds));
-}
-
 export default async function Page({
   searchParams,
 }: {
@@ -112,22 +100,29 @@ export default async function Page({
   const seekTime = Number(sp.t) || 0;
 
   const favIds = getFavoriteIds();
-  const tracks = tracksForPlaylist(pl, favIds);
-
-  let currentTrack: Track | null = null;
-  if (sharedTrackId) {
-    currentTrack = tracks.find((t) => t.id === sharedTrackId) ?? null;
-    if (!currentTrack && pl !== 1) {
-      // Fall back to the full library in case the track left the playlist.
-      currentTrack =
-        getAllTracks()
-          .map((r) => toTrack(r, favIds))
-          .find((t) => t.id === sharedTrackId) ?? null;
-    }
-  }
+  const scope =
+    pl === 1
+      ? ({ type: 'library' } as const)
+      : pl === -1
+        ? ({ type: 'favorites' } as const)
+        : ({ type: 'playlist', playlistId: pl } as const);
+  const page = getTrackPage({
+    scope,
+    sort: pl > 1 ? 'playlist' : 'added_desc',
+  });
+  const tracks = page.tracks.map((row) => toTrack(row, favIds));
+  const sharedRow = sharedTrackId ? getTrack(sharedTrackId) : undefined;
+  const currentTrack: Track | null = sharedRow
+    ? toTrack(sharedRow, favIds)
+    : null;
 
   const initialData: InitialAppData = {
     tracks,
+    trackPage: {
+      nextCursor: page.nextCursor,
+      hasMore: page.hasMore,
+      total: page.total,
+    },
     playlists: getAllPlaylists(),
     categories: getAllCategories(),
     sources: getAllSources(),

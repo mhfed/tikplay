@@ -17,6 +17,7 @@ test('keeps one audio source playing across route navigation', async ({
   request,
 }) => {
   const timestamp = Date.now();
+  const titlePrefix = `Global Playback ${timestamp}`;
   const tracks: CreatedTrack[] = [];
   for (const index of [1, 2, 3]) {
     const audioKey = `${timestamp.toString(16).padStart(16, '0')}${index.toString(16).padStart(48, '0')}`;
@@ -24,7 +25,7 @@ test('keeps one audio source playing across route navigation', async ({
       data: {
         url: `https://example.com/global-playback-${timestamp}-${index}`,
         audioKey,
-        title: `Global Playback Track ${index}`,
+        title: `${titlePrefix} Track ${index}`,
         author: 'E2E Artist',
         cover: '',
         duration: 120,
@@ -45,6 +46,17 @@ test('keeps one audio source playing across route navigation', async ({
     // biome-ignore lint/complexity/useArrowFunction: Constructor shim must support `new Audio()`.
     const TrackedAudio = function (src?: string) {
       const audio = new NativeAudio(src);
+      const nativeAddEventListener = audio.addEventListener.bind(audio);
+      audio.addEventListener = ((
+        type: string,
+        listener: EventListenerOrEventListenerObject,
+        options?: boolean | AddEventListenerOptions,
+      ) => {
+        // Created E2E tracks intentionally have no cache file. Keep this shim
+        // deterministic by excluding native network errors; tests dispatch the
+        // media lifecycle events they need explicitly.
+        if (type !== 'error') nativeAddEventListener(type, listener, options);
+      }) as typeof audio.addEventListener;
       states.set(audio, { paused: true, startedAt: 0, elapsed: 0 });
       Object.defineProperties(audio, {
         currentSrc: { configurable: true, get: () => audio.src },
@@ -97,14 +109,34 @@ test('keeps one audio source playing across route navigation', async ({
   });
 
   try {
-    await page.goto('/');
-    await page.getByRole('button', { name: 'Phát ngay' }).click();
+    await page.goto('/library');
+    await page
+      .getByRole('button', { name: `Phát ${tracks[0].title}`, exact: true })
+      .click();
     await page.waitForFunction(
       () =>
         window.__audioInstances.length === 1 &&
         !window.__audioInstances[0].paused &&
         window.__audioInstances[0].currentTime > 0,
     );
+    await expect(
+      page.getByRole('button', { name: 'Tạm dừng', exact: true }),
+    ).toBeVisible();
+
+    // A slow/interrupted network must expose buffering, then clear it as soon
+    // as playback resumes without creating another media element.
+    await page.evaluate(() => {
+      window.__audioInstances[0].dispatchEvent(new Event('waiting'));
+    });
+    await expect(
+      page.getByRole('button', { name: 'Đang chờ mạng' }),
+    ).toBeVisible();
+    await page.evaluate(() => {
+      window.__audioInstances[0].dispatchEvent(new Event('playing'));
+    });
+    await expect(
+      page.getByRole('button', { name: 'Tạm dừng', exact: true }),
+    ).toBeVisible();
 
     const beforeRoute = await page.evaluate(() => ({
       count: window.__audioInstances.length,
@@ -134,7 +166,10 @@ test('keeps one audio source playing across route navigation', async ({
     );
     expect(nextTrack).toBeTruthy();
     await page
-      .getByRole('button', { name: `Phát ${nextTrack!.title}` })
+      .getByRole('button', {
+        name: `Phát ${nextTrack!.title}`,
+        exact: true,
+      })
       .click();
     await page.waitForFunction(
       (previousSrc) =>
@@ -143,6 +178,29 @@ test('keeps one audio source playing across route navigation', async ({
         window.__audioInstances[0].currentSrc !== previousSrc,
       beforeRoute.src,
     );
+
+    // Rapid source changes should reuse the global element and settle on only
+    // the latest intent instead of leaving stale loads active.
+    const currentSrc = await page.evaluate(
+      () => window.__audioInstances[0].currentSrc,
+    );
+    const rapidTargets = tracks.filter(
+      (track) => !currentSrc.endsWith(track.audioUrl),
+    );
+    for (const target of rapidTargets) {
+      await page
+        .getByRole('button', { name: `Phát ${target.title}`, exact: true })
+        .click();
+    }
+    const expectedLastSrc = rapidTargets.at(-1)?.audioUrl;
+    if (expectedLastSrc) {
+      await page.waitForFunction(
+        (audioUrl) =>
+          window.__audioInstances.length === 1 &&
+          window.__audioInstances[0].currentSrc.endsWith(audioUrl),
+        expectedLastSrc,
+      );
+    }
 
     const afterSwitch = await page.evaluate(() => ({
       count: window.__audioInstances.length,
