@@ -1,6 +1,9 @@
-import { createHash } from 'node:crypto';
-
-export type MediaSource = 'tiktok' | 'youtube';
+export type MediaSource =
+  | 'tiktok'
+  | 'youtube'
+  | 'instagram'
+  | 'facebook'
+  | 'soundcloud';
 
 export interface MediaValidationResult {
   valid: boolean;
@@ -25,9 +28,32 @@ const YOUTUBE_HOSTS = new Set([
   'youtu.be',
 ]);
 
+const INSTAGRAM_HOSTS = new Set([
+  'instagram.com',
+  'www.instagram.com',
+  'm.instagram.com',
+]);
+
+const FACEBOOK_HOSTS = new Set([
+  'facebook.com',
+  'www.facebook.com',
+  'm.facebook.com',
+  'fb.watch',
+]);
+
+const SOUNDCLOUD_HOSTS = new Set([
+  'soundcloud.com',
+  'www.soundcloud.com',
+  'm.soundcloud.com',
+  'on.soundcloud.com',
+]);
+
 export const MEDIA_SOURCE_LABELS: Record<MediaSource, string> = {
   tiktok: 'TikTok',
   youtube: 'YouTube',
+  instagram: 'Instagram',
+  facebook: 'Facebook',
+  soundcloud: 'SoundCloud',
 };
 
 export function normalizeTikTokUrl(raw: string): string {
@@ -78,6 +104,66 @@ export function normalizeYouTubeUrl(raw: string): string {
   }
 }
 
+export function normalizeInstagramUrl(raw: string): string {
+  const trimmed = raw.trim();
+  try {
+    const url = new URL(trimmed);
+    const protocol = url.protocol === 'http:' ? 'http:' : 'https:';
+
+    // Remove tracking parameters
+    url.search = '';
+    url.hash = '';
+
+    return `${protocol}//www.instagram.com${url.pathname}`;
+  } catch {
+    return trimmed;
+  }
+}
+
+export function normalizeFacebookUrl(raw: string): string {
+  const trimmed = raw.trim();
+  try {
+    const url = new URL(trimmed);
+    const host = url.hostname.toLowerCase();
+    const protocol = url.protocol === 'http:' ? 'http:' : 'https:';
+
+    if (host === 'fb.watch') {
+      return `${protocol}//fb.watch${url.pathname}`;
+    }
+
+    // Keep ?v= parameter for Facebook video URLs, remote other tracking params
+    const videoId = url.searchParams.get('v');
+    if (videoId) {
+      return `${protocol}//www.facebook.com${url.pathname}?v=${videoId}`;
+    }
+
+    url.search = '';
+    url.hash = '';
+    return `${protocol}//www.facebook.com${url.pathname}`;
+  } catch {
+    return trimmed;
+  }
+}
+
+export function normalizeSoundCloudUrl(raw: string): string {
+  const trimmed = raw.trim();
+  try {
+    const url = new URL(trimmed);
+    const host = url.hostname.toLowerCase();
+    const protocol = url.protocol === 'http:' ? 'http:' : 'https:';
+
+    if (host === 'on.soundcloud.com') {
+      return `${protocol}//on.soundcloud.com${url.pathname}`;
+    }
+
+    url.search = '';
+    url.hash = '';
+    return `${protocol}//soundcloud.com${url.pathname}`;
+  } catch {
+    return trimmed;
+  }
+}
+
 export function validateMediaUrl(raw: string): MediaValidationResult {
   if (!raw || typeof raw !== 'string') {
     return { valid: false, error: 'URL không được để trống' };
@@ -113,17 +199,38 @@ export function validateMediaUrl(raw: string): MediaValidationResult {
     };
   }
 
-  return { valid: false, error: 'Chỉ hỗ trợ URL từ TikTok hoặc YouTube' };
-}
-
-export function cacheKey(normalizedUrl: string): string {
-  return createHash('sha256').update(normalizedUrl).digest('hex');
-}
-
-export function cacheKeyFromRaw(raw: string): string {
-  const res = validateMediaUrl(raw);
-  if (!res.valid || !res.normalized) {
-    throw new Error(res.error ?? 'URL không hợp lệ');
+  const isInstagram =
+    INSTAGRAM_HOSTS.has(host) || host.endsWith('.instagram.com');
+  if (isInstagram) {
+    return {
+      valid: true,
+      source: 'instagram',
+      normalized: normalizeInstagramUrl(raw),
+    };
   }
-  return cacheKey(res.normalized);
+
+  const isFacebook = FACEBOOK_HOSTS.has(host) || host.endsWith('.facebook.com');
+  if (isFacebook) {
+    return {
+      valid: true,
+      source: 'facebook',
+      normalized: normalizeFacebookUrl(raw),
+    };
+  }
+
+  const isSoundCloud =
+    SOUNDCLOUD_HOSTS.has(host) || host.endsWith('.soundcloud.com');
+  if (isSoundCloud) {
+    return {
+      valid: true,
+      source: 'soundcloud',
+      normalized: normalizeSoundCloudUrl(raw),
+    };
+  }
+
+  return {
+    valid: false,
+    error:
+      'Chỉ hỗ trợ URL từ TikTok, YouTube, Instagram, Facebook hoặc SoundCloud',
+  };
 }

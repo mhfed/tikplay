@@ -13,6 +13,7 @@ import {
   PlusIcon,
   RefreshCwIcon,
   SettingsIcon,
+  SourceIcon,
   TagIcon,
 } from './icons';
 import YouTubeCookiesDialog from './YouTubeCookiesDialog';
@@ -174,7 +175,7 @@ export default function MobileSidebar({
                         onClose();
                       }}
                     >
-                      <ListMusicIcon size={18} />
+                      <SourceIcon source={s.slug} size={18} />
                       {s.name}
                       <span className="ml-auto text-xs text-muted-2">
                         {s.count}

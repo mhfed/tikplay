@@ -1,0 +1,50 @@
+
+Running 2 tests using 2 workers
+
+  ✘  1 e2e/multi-platform-import.spec.ts:5:5 › clone a SoundCloud track and play the extracted audio (2.5m)
+  ✘  2 e2e/tiktok-player.spec.ts:7:5 › clone a TikTok URL and play the extracted audio (2.5m)
+
+
+  1) e2e/multi-platform-import.spec.ts:5:5 › clone a SoundCloud track and play the extracted audio ─
+
+    Test timeout of 150000ms exceeded.
+
+    Error: locator.getAttribute: Test timeout of 150000ms exceeded.
+    Call log:
+      - waiting for locator('audio')
+
+
+      37 |
+      38 |   // 4. The audio element should point at our streaming endpoint.
+    > 39 |   const audioSrc = await page.locator('audio').getAttribute('src');
+         |                                                ^
+      40 |   expect(audioSrc).toMatch(/\/api\/audio\/.+/);
+      41 |
+      42 |   // 5. The audio endpoint must serve real audio bytes.
+        at /Users/dongvi/Workspace/tikplay/e2e/multi-platform-import.spec.ts:39:48
+
+    Error Context: test-results/multi-platform-import-clon-f6026-nd-play-the-extracted-audio/error-context.md
+
+  2) e2e/tiktok-player.spec.ts:7:5 › clone a TikTok URL and play the extracted audio ───────────────
+
+    Test timeout of 150000ms exceeded.
+
+    Error: locator.getAttribute: Test timeout of 150000ms exceeded.
+    Call log:
+      - waiting for locator('audio')
+
+
+      36 |
+      37 |   // 4. The audio element should point at our streaming endpoint.
+    > 38 |   const audioSrc = await page.locator('audio').getAttribute('src');
+         |                                                ^
+      39 |   expect(audioSrc).toMatch(/\/api\/audio\/.+/);
+      40 |
+      41 |   // 5. The audio endpoint must serve real audio bytes.
+        at /Users/dongvi/Workspace/tikplay/e2e/tiktok-player.spec.ts:38:48
+
+    Error Context: test-results/tiktok-player-clone-a-TikT-c1f80-nd-play-the-extracted-audio/error-context.md
+
+  2 failed
+    e2e/multi-platform-import.spec.ts:5:5 › clone a SoundCloud track and play the extracted audio ──
+    e2e/tiktok-player.spec.ts:7:5 › clone a TikTok URL and play the extracted audio ────────────────

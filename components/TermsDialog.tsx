@@ -110,7 +110,8 @@ export default function TermsDialog() {
             <p>
               TikPlay là công cụ miễn phí, phi thương mại, phục vụ nhu cầu cá
               nhân. TikPlay không liên kết, đại diện hoặc được bảo trợ bởi
-              TikTok, YouTube hay bất kỳ chủ sở hữu nội dung nào.
+              TikTok, YouTube, Instagram, Facebook, SoundCloud hay bất kỳ nền
+              tảng/chủ sở hữu nội dung nào.
             </p>
           </section>
 

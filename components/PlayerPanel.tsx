@@ -523,7 +523,8 @@ export default function PlayerPanel({
                   Chưa phát bài nào
                 </span>
                 <span className="mt-0.5 truncate text-xs text-muted">
-                  Dán URL TikTok hoặc YouTube để bắt đầu
+                  Dán URL TikTok, YouTube, Instagram, Facebook hoặc SoundCloud
+                  để bắt đầu
                 </span>
               </>
             )}

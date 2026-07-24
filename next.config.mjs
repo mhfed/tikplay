@@ -25,6 +25,11 @@ const nextConfig = {
     };
     return config;
   },
+  turbopack: {
+    resolveAlias: {
+      '@': __dirname,
+    },
+  },
 };
 
 export default nextConfig;
