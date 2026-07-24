@@ -8,6 +8,7 @@ import {
   getAutoRules,
   getFavoriteIds,
   getTrack,
+  getTrackBySlug,
   getTrackPage,
 } from '@/lib/db/queries';
 import { type Track, toTrack } from '@/lib/types';
@@ -31,8 +32,12 @@ export async function generateMetadata({
   searchParams: Promise<{ track?: string; pl?: string; t?: string }>;
 }): Promise<Metadata> {
   const sp = await searchParams;
+  const trackSlug = sp.track?.trim() || '';
   const sharedTrackId = Number(sp.track) || 0;
-  if (!sharedTrackId) {
+  const row = trackSlug
+    ? (getTrackBySlug(trackSlug) ?? getTrack(sharedTrackId))
+    : undefined;
+  if (!row) {
     return {
       title: DEFAULT_TITLE,
       description: DEFAULT_DESCRIPTION,
@@ -44,25 +49,12 @@ export async function generateMetadata({
     };
   }
 
-  const row = getTrack(sharedTrackId);
-  if (!row) {
-    return {
-      title: 'Bài hát không tìm thấy',
-      description: DEFAULT_DESCRIPTION,
-      robots: { index: false, follow: true },
-    };
-  }
-
   const track = toTrack(row);
   const title = `${track.title} - ${track.author}`;
   const description = shareDescription(track);
   const image = track.cover || DEFAULT_IMAGE;
-  const canonicalUrl = `/?track=${track.id}`;
-  const shareParams = new URLSearchParams();
-  if (sp.pl) shareParams.set('pl', sp.pl);
-  shareParams.set('track', String(track.id));
-  if (sp.t) shareParams.set('t', sp.t);
-  const shareUrl = `/?${shareParams}`;
+  const canonicalUrl = `/track/${track.slug}`;
+  const shareUrl = `/track/${track.slug}${sp.t ? `?t=${sp.t}` : ''}`;
 
   return {
     title,
@@ -96,6 +88,7 @@ export default async function Page({
 }) {
   const sp = await searchParams;
   const pl = Number(sp.pl) || 1;
+  const trackSlug = sp.track?.trim() || '';
   const sharedTrackId = Number(sp.track) || 0;
   const seekTime = Number(sp.t) || 0;
 
@@ -111,7 +104,9 @@ export default async function Page({
     sort: pl > 1 ? 'playlist' : 'added_desc',
   });
   const tracks = page.tracks.map((row) => toTrack(row, favIds));
-  const sharedRow = sharedTrackId ? getTrack(sharedTrackId) : undefined;
+  const sharedRow = trackSlug
+    ? (getTrackBySlug(trackSlug) ?? getTrack(sharedTrackId))
+    : undefined;
   const currentTrack: Track | null = sharedRow
     ? toTrack(sharedRow, favIds)
     : null;

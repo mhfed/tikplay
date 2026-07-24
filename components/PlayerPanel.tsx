@@ -324,11 +324,10 @@ export default function PlayerPanel({
   const shareTrack = async () => {
     if (!currentTrack) return;
     const params = new URLSearchParams();
-    if (currentPlaylistId !== 1) params.set('pl', String(currentPlaylistId));
-    params.set('track', String(currentTrack.id));
     if (engine.currentTime > 1)
       params.set('t', String(Math.floor(engine.currentTime)));
-    const url = `${window.location.origin}${window.location.pathname}?${params}`;
+    const qs = params.toString();
+    const url = `${window.location.origin}/track/${currentTrack.slug}${qs ? `?${qs}` : ''}`;
     // Native share sheet only on touch devices — on desktop, copying the link
     // is what people actually want.
     const isTouch = window.matchMedia('(pointer: coarse)').matches;

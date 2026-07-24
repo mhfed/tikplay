@@ -425,31 +425,28 @@ export function AppStoreProvider({
     });
   }, [currentTrack?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Keep the URL in sync with what's selected/playing so the address bar is
-  // always shareable. Uses path-based routing (/library, /library/3, etc.)
-  // instead of query params.
+  // Sync the address bar with the currently selected track using a clean
+  // path-based URL (/track/<slug>) that's SEO-friendly and shareable.
   useEffect(() => {
-    const basePath =
-      currentPlaylistId === 1
+    const path = window.location.pathname;
+
+    // During initial hydration on /track/<slug>, wait for currentTrack
+    // to be initialized before touching the URL.
+    if (!currentTrack && path.startsWith('/track/')) return;
+
+    const slug = currentTrack?.slug || String(currentTrack?.id || '');
+    const href = slug
+      ? `/track/${slug}`
+      : currentPlaylistId === 1
         ? '/library'
         : currentPlaylistId === -1
           ? '/library/favorites'
           : `/library/${currentPlaylistId}`;
 
-    const params = new URLSearchParams();
-    if (currentTrack) params.set('track', String(currentTrack.id));
-    const qs = params.toString();
-    const href = qs ? `${basePath}?${qs}` : basePath;
-
-    // Only update if the path part differs to avoid infinite loops with
-    // router.replace triggering re-renders.
-    if (
-      window.location.pathname !== basePath ||
-      window.location.search !== (qs ? `?${qs}` : '')
-    ) {
+    if (path + window.location.search !== href) {
       window.history.replaceState(null, '', href);
     }
-  }, [currentPlaylistId, currentTrack?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentPlaylistId, currentTrack?.slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const selectPlaylist = useCallback(
     (id: number) => {
@@ -520,6 +517,7 @@ export function AppStoreProvider({
           error?: string;
           data?: Track;
           trackId?: number;
+          slug?: string;
         }>('/api/process', {
           method: 'POST',
           body: JSON.stringify({ url }),
@@ -557,6 +555,7 @@ export function AppStoreProvider({
         if (res.data && res.trackId) {
           const newTrack: Track = {
             id: res.trackId,
+            slug: res.slug || String(res.trackId),
             url,
             audioUrl: res.data.audioUrl,
             title: res.data.title,

@@ -4,10 +4,12 @@ import { getDb, saveDb } from '@/lib/db';
 import {
   applyAutoRules,
   deleteTrack,
+  generateTrackSlug,
   getTrack,
   getTrackPage,
   upsertTrack,
 } from '@/lib/db/queries';
+import type { DbTrack } from '@/lib/types';
 import { getFavoriteIds, toTrack } from './helpers';
 import { parseTrackPageQuery } from './pagination';
 
@@ -118,6 +120,9 @@ export async function PATCH(req: NextRequest) {
     }
     track.author = author.trim();
   }
+  if (title !== undefined || author !== undefined) {
+    track.slug = generateTrackSlug(track.title, track.author, track.id);
+  }
   if (cover !== undefined) {
     if (typeof cover !== 'string' || cover.length > 2000) {
       return NextResponse.json(
@@ -163,7 +168,7 @@ export async function PATCH(req: NextRequest) {
   saveDb();
   return NextResponse.json({
     ok: true,
-    track: toTrack(track, getFavoriteIds()),
+    track: toTrack(track as DbTrack, getFavoriteIds()),
   });
 }
 

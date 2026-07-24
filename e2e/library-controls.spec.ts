@@ -52,15 +52,15 @@ test('opens a shared library track link with the track selected', async ({
   page,
 }) => {
   const db = JSON.parse(readFileSync('data/tikplay.json', 'utf8')) as {
-    tracks: Array<{ id: number; title: string }>;
+    tracks: Array<{ id: number; title: string; slug?: string }>;
   };
-  const sharedTrack =
-    db.tracks.find((track) => track.id === 36) ?? db.tracks[0];
+  const sharedTrack = db.tracks.find((track) => track.slug) ?? db.tracks[0];
 
   expect(sharedTrack).toBeTruthy();
 
-  await page.goto('/library?track=36');
+  const slug = sharedTrack!.slug || String(sharedTrack!.id);
+  await page.goto(`/track/${slug}`);
 
   await expect(page.locator('.np__title')).toHaveText(sharedTrack!.title);
-  expect(page.url()).toContain('track=36');
+  expect(page.url()).toContain(`/track/${slug}`);
 });

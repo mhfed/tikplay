@@ -40,6 +40,7 @@ export interface DbTrackRow {
   end_time?: number;
   play_count?: number;
   last_played_at?: number;
+  slug?: string;
 }
 
 export interface DbPlaylistRow {

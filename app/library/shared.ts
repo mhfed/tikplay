@@ -3,13 +3,19 @@ import type { Track } from '@/lib/types';
 export function resolveSharedTrack(
   tracks: Track[],
   allTracks: Track[],
-  sharedTrackId: number,
+  sharedTrackSlug: string,
 ): Track | null {
-  if (!sharedTrackId) return null;
+  if (!sharedTrackSlug) return null;
 
   return (
-    tracks.find((track) => track.id === sharedTrackId) ??
-    allTracks.find((track) => track.id === sharedTrackId) ??
+    tracks.find(
+      (track) =>
+        track.slug === sharedTrackSlug || String(track.id) === sharedTrackSlug,
+    ) ??
+    allTracks.find(
+      (track) =>
+        track.slug === sharedTrackSlug || String(track.id) === sharedTrackSlug,
+    ) ??
     null
   );
 }

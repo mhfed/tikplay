@@ -20,8 +20,52 @@ import type {
 import type { CopyrightReportStatus, DbCopyrightReportRow } from './index';
 import { type DbTrackRow, getDb, saveDb } from './index';
 
+export function slugify(text: string): string {
+  return (
+    text
+      .toLowerCase()
+      .trim()
+      .replace(/đ/g, 'd')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 100) || 'untitled'
+  );
+}
+
+export function generateTrackSlug(
+  title: string,
+  author: string,
+  id: number,
+): string {
+  const base = slugify(`${title} ${author}`);
+  if (!base || base === 'untitled') return String(id);
+  const db = getDb();
+  const collision = db.tracks.find((t) => t.id !== id && t.slug === base);
+  return collision ? `${base}-${id}` : base;
+}
+
 function toDbTrack(row: DbTrackRow): DbTrack {
-  return row as DbTrack;
+  return {
+    id: row.id,
+    url: row.url,
+    audio_key: row.audio_key,
+    title: row.title,
+    author: row.author,
+    cover: row.cover,
+    duration: row.duration,
+    added_at: row.added_at,
+    source: row.source,
+    category: row.category,
+    start_time: row.start_time,
+    end_time: row.end_time,
+    slug:
+      row.slug ??
+      `${slugify(`${row.title} ${row.author}`) || 'untitled'}-${row.id}`,
+  };
 }
 
 function trackSource(row: Pick<DbTrackRow, 'source'>): MediaSource {
@@ -38,14 +82,30 @@ export function getAllTracks(): DbTrack[] {
 }
 
 export function getTrack(id: number): DbTrack | undefined {
-  return getDb().tracks.find((t) => t.id === id) as DbTrack | undefined;
+  const row = getDb().tracks.find((t) => t.id === id);
+  return row ? toDbTrack(row) : undefined;
+}
+
+export function getTrackBySlug(slug: string): DbTrack | undefined {
+  const db = getDb();
+  const exact = db.tracks.find((t) => t.slug === slug);
+  if (exact) return toDbTrack(exact);
+  const legacy = db.tracks.find((t) => {
+    if (t.slug) return false;
+    if (!t.title && !t.author) return false;
+    return (
+      `${slugify(`${t.title} ${t.author}`) || 'untitled'}-${t.id}` === slug
+    );
+  });
+  return legacy ? toDbTrack(legacy) : undefined;
 }
 
 export function getTrackByUrl(url: string): DbTrack | undefined {
-  return getDb().tracks.find((t) => t.url === url) as DbTrack | undefined;
+  const row = getDb().tracks.find((t) => t.url === url);
+  return row ? toDbTrack(row) : undefined;
 }
 
-export function upsertTrack(t: Omit<DbTrack, 'id'>): DbTrack {
+export function upsertTrack(t: Omit<DbTrack, 'id' | 'slug'>): DbTrack {
   const db = getDb();
   const existing = db.tracks.find(
     (r) => r.url === t.url || r.audio_key === t.audio_key,
@@ -56,12 +116,14 @@ export function upsertTrack(t: Omit<DbTrack, 'id'>): DbTrack {
     existing.cover = t.cover;
     existing.duration = t.duration;
     existing.source = t.source ?? trackSource(existing);
+    existing.slug = generateTrackSlug(t.title, t.author, existing.id);
     saveDb();
     return toDbTrack(existing);
   }
   const id = db.nextTrackId++;
   const category = t.category || detectCategory(t.title, t.author);
-  const row: DbTrackRow = { id, ...t, category };
+  const slug = generateTrackSlug(t.title, t.author, id);
+  const row: DbTrackRow = { id, ...t, category, slug };
   db.tracks.push(row);
   saveDb();
   return toDbTrack(row);

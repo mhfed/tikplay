@@ -8,6 +8,7 @@ import {
   getAutoRules,
   getFavoriteIds,
   getTrack,
+  getTrackBySlug,
   getTrackPage,
 } from '@/lib/db/queries';
 import { toTrack } from '@/lib/types';
@@ -35,9 +36,12 @@ export default async function FavoritesPage({
     sort: 'added_desc',
   });
   const tracks = page.tracks.map((r) => toTrack(r, favIds));
+  const trackSlug = sp.track?.trim() || '';
   const sharedTrackId = Number(sp.track) || 0;
   const seekTime = Number(sp.t) || 0;
-  const sharedRow = sharedTrackId ? getTrack(sharedTrackId) : undefined;
+  const sharedRow = trackSlug
+    ? (getTrackBySlug(trackSlug) ?? getTrack(sharedTrackId))
+    : undefined;
   const currentTrack = sharedRow ? toTrack(sharedRow, favIds) : null;
 
   const initialData: InitialAppData = {

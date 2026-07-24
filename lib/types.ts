@@ -10,7 +10,7 @@ export type TrackSort =
   | 'source'
   | 'category';
 
-/** A track row as stored in SQLite. */
+/** A track row as stored in the DB. */
 export interface DbTrack {
   id: number;
   url: string;
@@ -24,6 +24,7 @@ export interface DbTrack {
   category?: string;
   start_time?: number;
   end_time?: number;
+  slug: string;
 }
 
 /** Frontend-facing track (camelCase, includes computed fields). */
@@ -41,6 +42,7 @@ export interface Track {
   category?: string;
   startTime?: number;
   endTime?: number;
+  slug: string;
 }
 
 /** A music genre/category definition. */
@@ -72,6 +74,7 @@ export function toTrack(row: DbTrack, favIds?: Set<number>): Track {
     category: row.category,
     startTime: row.start_time,
     endTime: row.end_time,
+    slug: row.slug ?? `track-${row.id}`,
     isFavorite: favIds ? favIds.has(row.id) : undefined,
   };
 }
