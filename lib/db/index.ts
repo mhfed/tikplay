@@ -2,6 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { MediaSource } from '@/lib/media/source';
 
+export interface DbShortLinkRow {
+  code: string;
+  target_type: 'track' | 'playlist';
+  target_id: number;
+  created_at: number;
+}
+
 export interface DbData {
   tracks: DbTrackRow[];
   playlists: DbPlaylistRow[];
@@ -12,6 +19,7 @@ export interface DbData {
   blockedMedia: DbBlockedMediaRow[];
   listeningHistory: DbListeningHistoryRow[];
   settings: DbSettingsRow;
+  shortLinks: DbShortLinkRow[];
   nextTrackId: number;
   nextPlaylistId: number;
   nextRuleId: number;
@@ -115,6 +123,7 @@ const DEFAULT_DATA: DbData = {
   blockedMedia: [],
   listeningHistory: [],
   settings: {},
+  shortLinks: [],
   nextTrackId: 1,
   nextPlaylistId: 2,
   nextRuleId: 1,
@@ -133,6 +142,7 @@ function normalizeDbData(data: Partial<DbData>): DbData {
     blockedMedia: data.blockedMedia ?? [],
     listeningHistory: data.listeningHistory ?? [],
     settings: data.settings ?? {},
+    shortLinks: data.shortLinks ?? [],
     nextTrackId: data.nextTrackId ?? 1,
     nextPlaylistId: data.nextPlaylistId ?? 2,
     nextRuleId: data.nextRuleId ?? 1,

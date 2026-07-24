@@ -325,11 +325,33 @@ export default function PlayerPanel({
 
   const shareTrack = async () => {
     if (!currentTrack) return;
+    // Generate (or reuse) a short link via the API
+    let url: string;
+    try {
+      const res = await fetch('/api/shorten', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target_type: 'track',
+          target_id: currentTrack.id,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok && data.url) {
+        url = data.url;
+      } else {
+        // Fallback: build the long URL
+        url = `${window.location.origin}/track/${currentTrack.slug}`;
+      }
+    } catch {
+      url = `${window.location.origin}/track/${currentTrack.slug}`;
+    }
+    // Append seek time if applicable
     const params = new URLSearchParams();
     if (engine.currentTime > 1)
       params.set('t', String(Math.floor(engine.currentTime)));
-    const qs = params.toString();
-    const url = `${window.location.origin}/track/${currentTrack.slug}${qs ? `?${qs}` : ''}`;
+    if (params.toString()) url += `?${params.toString()}`;
+
     // Native share sheet only on touch devices — on desktop, copying the link
     // is what people actually want.
     const isTouch = window.matchMedia('(pointer: coarse)').matches;

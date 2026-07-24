@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import { categoryName } from '../lib/categories';
 import { MEDIA_SOURCE_LABELS } from '../lib/media/source';
-import { CloseIcon, PlayIcon, SettingsIcon } from './icons';
+import { CloseIcon, PlayIcon, SettingsIcon, ShareIcon } from './icons';
 import SearchBar from './SearchBar';
 import TrackList from './TrackList';
 import UrlInput from './UrlInput';
@@ -37,6 +37,7 @@ export default function PlaylistView() {
     setTrackSort,
   } = useAppStore();
   const [showPlaylistManager, setShowPlaylistManager] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -60,6 +61,33 @@ export default function PlaylistView() {
       : playlists.find((p) => p.id === currentPlaylistId) || {
           name: 'Tất cả bài hát',
         };
+
+  const sharePlaylist = async () => {
+    const targetId = currentPlaylistId ?? 1;
+    try {
+      const res = await fetch('/api/shorten', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target_type: 'playlist', target_id: targetId }),
+      });
+      const data = await res.json();
+      if (!data.ok || !data.url) throw new Error('Failed');
+
+      const isTouch = window.matchMedia('(pointer: coarse)').matches;
+      if (isTouch && navigator.share) {
+        try {
+          await navigator.share({
+            title: playlistTitle,
+            url: data.url,
+          });
+          return;
+        } catch {}
+      }
+      await navigator.clipboard.writeText(data.url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    } catch {}
+  };
 
   const categoryLabel = selectedCategory
     ? categoryName(selectedCategory)
@@ -97,6 +125,20 @@ export default function PlaylistView() {
             onClick={playAll}
           >
             <PlayIcon size={14} /> Phát tất cả
+          </button>
+        )}
+        {tracks.length > 0 && (
+          <button
+            type="button"
+            className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-control border border-line bg-surface px-3 py-[7px] text-[13px] font-semibold text-ink-secondary transition-colors hover:text-accent max-[640px]:px-2.5 max-[640px]:py-1.5 max-[640px]:text-xs"
+            onClick={sharePlaylist}
+            aria-label="Chia sẻ"
+            title={shareCopied ? 'Đã copy link!' : 'Chia sẻ'}
+          >
+            <ShareIcon size={15} />
+            <span className="max-[640px]:hidden">
+              {shareCopied ? 'Đã copy' : 'Chia sẻ'}
+            </span>
           </button>
         )}
         {currentPlaylistId > 1 && 'id' in currentPlaylist && (

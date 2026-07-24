@@ -5,7 +5,7 @@ import { useAppStore } from '../hooks/useAppStore';
 import { CATEGORIES, DEFAULT_CATEGORY } from '../lib/categories';
 import type { Track } from '../lib/types';
 import { DialogOverlay } from './DialogOverlay';
-import { CheckIcon, PlusIcon } from './icons';
+import { CheckIcon, PlusIcon, ShareIcon } from './icons';
 
 interface Props {
   track: Track;
@@ -23,6 +23,7 @@ export default function TrackActionsDialog({ track, onClose }: Props) {
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
 
   const saveMetadata = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -55,6 +56,33 @@ export default function TrackActionsDialog({ track, onClose }: Props) {
         cause instanceof Error ? cause.message : 'Không thể thêm vào danh sách',
       );
     }
+  };
+
+  const shareTrackLink = async () => {
+    try {
+      const res = await fetch('/api/shorten', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target_type: 'track', target_id: track.id }),
+      });
+      const data = await res.json();
+      if (!data.ok || !data.url) throw new Error('Failed');
+
+      const isTouch = window.matchMedia('(pointer: coarse)').matches;
+      if (isTouch && navigator.share) {
+        try {
+          await navigator.share({
+            title: `${track.title} - ${track.author}`,
+            text: `Nghe "${track.title}" của ${track.author} trên TikPlay.`,
+            url: data.url,
+          });
+          return;
+        } catch {}
+      }
+      await navigator.clipboard.writeText(data.url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    } catch {}
   };
 
   const fieldClass =
@@ -157,6 +185,19 @@ export default function TrackActionsDialog({ track, onClose }: Props) {
           </div>
         </div>
 
+        <div className="mt-5 border-t border-line-soft pt-4">
+          <h3 className="mb-2 text-sm font-bold">Chia sẻ</h3>
+          <button
+            type="button"
+            className="flex w-full cursor-pointer items-center gap-2 rounded-control border-0 bg-transparent px-3 py-2.5 text-left text-sm text-ink-secondary transition-colors hover:bg-surface"
+            onClick={shareTrackLink}
+          >
+            <ShareIcon size={16} />
+            <span>
+              {shareCopied ? 'Đã copy link!' : 'Sao chép link chia sẻ'}
+            </span>
+          </button>
+        </div>
         {error && <p className="mt-3 text-xs text-danger">{error}</p>}
         <div className="mt-5 flex justify-end gap-2">
           <button
