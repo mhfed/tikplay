@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import { categoryName } from '../lib/categories';
+import { MEDIA_SOURCE_LABELS } from '../lib/media/source';
 import { CloseIcon, PlayIcon, SettingsIcon } from './icons';
 import SearchBar from './SearchBar';
 import TrackList from './TrackList';
@@ -64,9 +65,7 @@ export default function PlaylistView() {
     ? categoryName(selectedCategory)
     : null;
   const sourceLabel = selectedSource
-    ? selectedSource === 'youtube'
-      ? 'YouTube'
-      : 'TikTok'
+    ? MEDIA_SOURCE_LABELS[selectedSource]
     : null;
   const playlistTitle =
     currentPlaylistId === 1 ? 'Tất cả bài hát' : currentPlaylist.name;

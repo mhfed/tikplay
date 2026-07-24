@@ -1,5 +1,4 @@
 import {
-  cacheKey,
   normalizeTikTokUrl,
   type MediaValidationResult as ValidationResult,
   validateMediaUrl,
@@ -24,15 +23,4 @@ export function validateTikTokUrl(raw: string): ValidationResult {
     return { valid: false, error: 'Chỉ hỗ trợ URL từ TikTok' };
   }
   return res;
-}
-
-export { cacheKey };
-
-/** Convenience: validate + normalize + hash in one call. */
-export function cacheKeyFromRaw(raw: string): string {
-  const res = validateTikTokUrl(raw);
-  if (!res.valid || !res.normalized) {
-    throw new Error(res.error ?? 'URL không hợp lệ');
-  }
-  return cacheKey(res.normalized);
 }

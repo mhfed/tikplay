@@ -14,6 +14,7 @@ import {
   PlusIcon,
   RefreshCwIcon,
   SettingsIcon,
+  SourceIcon,
   TagIcon,
 } from './icons';
 
@@ -66,7 +67,7 @@ export default function Sidebar() {
               TikPlay
             </span>
             <span className="truncate font-mono text-[10px] tracking-[0.04em] text-muted-2">
-              Nhạc từ TikTok & YouTube
+              TikTok, YouTube & more
             </span>
           </Link>
         </div>
@@ -176,7 +177,7 @@ export default function Sidebar() {
                     onClick={() => selectSource(s.slug)}
                   >
                     <span className={iconClass}>
-                      <MusicIcon size={16} />
+                      <SourceIcon source={s.slug} size={16} />
                     </span>
                     {s.name}
                     <span className="ml-auto text-xs text-muted-2 tabular-nums">

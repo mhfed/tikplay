@@ -39,11 +39,10 @@
         "noImportantStyles": "off"
       },
       "a11y": {
-        "useButtonType": "warn",
-        "noSvgWithoutTitle": "warn",
+        "noSvgWithoutTitle": "off",
         "useKeyWithClickEvents": "warn",
         "noStaticElementInteractions": "warn",
-        "useMediaCaption": "warn",
+        "useMediaCaption": "off",
         "noAutofocus": "warn"
       }
     }

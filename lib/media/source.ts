@@ -1,6 +1,11 @@
 import { createHash } from 'node:crypto';
 
-export type MediaSource = 'tiktok' | 'youtube';
+export type MediaSource =
+  | 'tiktok'
+  | 'youtube'
+  | 'instagram'
+  | 'facebook'
+  | 'soundcloud';
 
 export interface MediaValidationResult {
   valid: boolean;
@@ -25,9 +30,46 @@ const YOUTUBE_HOSTS = new Set([
   'youtu.be',
 ]);
 
+const INSTAGRAM_HOSTS = new Set([
+  'instagram.com',
+  'www.instagram.com',
+  'm.instagram.com',
+]);
+
+const FACEBOOK_HOSTS = new Set([
+  'facebook.com',
+  'www.facebook.com',
+  'm.facebook.com',
+  'fb.watch',
+]);
+
+const SOUNDCLOUD_HOSTS = new Set([
+  'soundcloud.com',
+  'www.soundcloud.com',
+  'm.soundcloud.com',
+  'on.soundcloud.com',
+]);
+
 export const MEDIA_SOURCE_LABELS: Record<MediaSource, string> = {
   tiktok: 'TikTok',
   youtube: 'YouTube',
+  instagram: 'Instagram',
+  facebook: 'Facebook',
+  soundcloud: 'SoundCloud',
+};
+
+/** Platform brand colors for source badges.
+ *  Each entry uses a tinted background (10% opacity) and a vivid text color so
+ *  they read well on the dark theme. */
+export const SOURCE_BADGE_COLORS: Record<
+  MediaSource,
+  { bg: string; text: string }
+> = {
+  tiktok: { bg: 'rgba(255,0,80,0.15)', text: '#ff3377' },
+  youtube: { bg: 'rgba(255,0,0,0.15)', text: '#ff4444' },
+  instagram: { bg: 'rgba(228,64,95,0.15)', text: '#e4405f' },
+  facebook: { bg: 'rgba(24,119,242,0.15)', text: '#4d8bf5' },
+  soundcloud: { bg: 'rgba(255,119,0,0.15)', text: '#ff8800' },
 };
 
 export function normalizeTikTokUrl(raw: string): string {
@@ -78,6 +120,66 @@ export function normalizeYouTubeUrl(raw: string): string {
   }
 }
 
+export function normalizeInstagramUrl(raw: string): string {
+  const trimmed = raw.trim();
+  try {
+    const url = new URL(trimmed);
+    const protocol = url.protocol === 'http:' ? 'http:' : 'https:';
+
+    // Remove tracking parameters
+    url.search = '';
+    url.hash = '';
+
+    return `${protocol}//www.instagram.com${url.pathname}`;
+  } catch {
+    return trimmed;
+  }
+}
+
+export function normalizeFacebookUrl(raw: string): string {
+  const trimmed = raw.trim();
+  try {
+    const url = new URL(trimmed);
+    const host = url.hostname.toLowerCase();
+    const protocol = url.protocol === 'http:' ? 'http:' : 'https:';
+
+    if (host === 'fb.watch') {
+      return `${protocol}//fb.watch${url.pathname}`;
+    }
+
+    // Keep ?v= parameter for Facebook video URLs, remove other tracking params
+    const videoId = url.searchParams.get('v');
+    if (videoId) {
+      return `${protocol}//www.facebook.com${url.pathname}?v=${videoId}`;
+    }
+
+    url.search = '';
+    url.hash = '';
+    return `${protocol}//www.facebook.com${url.pathname}`;
+  } catch {
+    return trimmed;
+  }
+}
+
+export function normalizeSoundCloudUrl(raw: string): string {
+  const trimmed = raw.trim();
+  try {
+    const url = new URL(trimmed);
+    const host = url.hostname.toLowerCase();
+    const protocol = url.protocol === 'http:' ? 'http:' : 'https:';
+
+    if (host === 'on.soundcloud.com') {
+      return `${protocol}//on.soundcloud.com${url.pathname}`;
+    }
+
+    url.search = '';
+    url.hash = '';
+    return `${protocol}//soundcloud.com${url.pathname}`;
+  } catch {
+    return trimmed;
+  }
+}
+
 export function validateMediaUrl(raw: string): MediaValidationResult {
   if (!raw || typeof raw !== 'string') {
     return { valid: false, error: 'URL không được để trống' };
@@ -113,17 +215,52 @@ export function validateMediaUrl(raw: string): MediaValidationResult {
     };
   }
 
-  return { valid: false, error: 'Chỉ hỗ trợ URL từ TikTok hoặc YouTube' };
+  const isInstagram =
+    INSTAGRAM_HOSTS.has(host) || host.endsWith('.instagram.com');
+  if (isInstagram) {
+    return {
+      valid: true,
+      source: 'instagram',
+      normalized: normalizeInstagramUrl(raw),
+    };
+  }
+
+  const isFacebook = FACEBOOK_HOSTS.has(host) || host.endsWith('.facebook.com');
+  if (isFacebook) {
+    return {
+      valid: true,
+      source: 'facebook',
+      normalized: normalizeFacebookUrl(raw),
+    };
+  }
+
+  const isSoundCloud =
+    SOUNDCLOUD_HOSTS.has(host) || host.endsWith('.soundcloud.com');
+  if (isSoundCloud) {
+    return {
+      valid: true,
+      source: 'soundcloud',
+      normalized: normalizeSoundCloudUrl(raw),
+    };
+  }
+
+  return {
+    valid: false,
+    error:
+      'Chỉ hỗ trợ URL từ TikTok, YouTube, Instagram, Facebook hoặc SoundCloud',
+  };
 }
 
 export function cacheKey(normalizedUrl: string): string {
+  // SHA-256 (64 chars) is well within macOS filename limits (255 chars).
+  // Cached data on disk uses this as the key, so the algorithm is stable.
   return createHash('sha256').update(normalizedUrl).digest('hex');
 }
 
-export function cacheKeyFromRaw(raw: string): string {
-  const res = validateMediaUrl(raw);
-  if (!res.valid || !res.normalized) {
-    throw new Error(res.error ?? 'URL không hợp lệ');
+export function cacheKeyFromRaw(rawUrl: string): string {
+  const result = validateMediaUrl(rawUrl);
+  if (!result.valid) {
+    throw new Error(result.error ?? 'URL không hợp lệ');
   }
-  return cacheKey(res.normalized);
+  return cacheKey(result.normalized!);
 }

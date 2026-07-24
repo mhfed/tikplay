@@ -9,8 +9,8 @@ import { isMediaBlocked } from '@/lib/db/queries';
 // Audio files live on disk and are streamed; Node runtime required.
 export const runtime = 'nodejs';
 
-// Cache keys are 64-char hex (sha256). Reject anything else to avoid path abuse.
-const KEY_RE = /^[a-f0-9]{64}$/;
+// Cache keys are hex (MD5/SHA256). Reject anything else to avoid path abuse.
+const KEY_RE = /^[a-f0-9]{32,64}$/;
 
 const IMMUTABLE_MEDIA_CACHE = 'public, max-age=31536000, immutable';
 

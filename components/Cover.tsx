@@ -140,7 +140,7 @@ export default function Cover({
       {bustedSrc ? (
         // The sleeve stays underneath until the image has decoded successfully,
         // so a 404 can never expose browser broken-image chrome.
-        // eslint-disable-next-line @next/next/no-img-element
+        // biome-ignore lint/performance/noImgElement: intentional native img
         <img
           className={`cover__image${loadedSrc === imageSrc ? ' is-loaded' : ''}`}
           src={bustedSrc}

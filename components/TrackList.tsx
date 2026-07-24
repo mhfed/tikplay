@@ -170,7 +170,8 @@ export default function TrackList() {
           Chưa có bài hát
         </p>
         <p className="text-xs text-muted">
-          Dán liên kết TikTok hoặc YouTube để bắt đầu
+          Dán liên kết TikTok, YouTube, Instagram, Facebook hoặc SoundCloud để
+          bắt đầu
         </p>
       </div>
     );
