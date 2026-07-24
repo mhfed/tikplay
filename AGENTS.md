@@ -9,11 +9,15 @@
 
 ## Commands
 
+- Node version: 20.x (`>=20 <21`). Docker builds from `node:20-slim`; `.nvmrc` contains `20` and `package.json` `engines` enforces it. Use `nvm use` (or `fnm use`) before `npm install` if another version is active.
+
 - Install/run: `npm install`, then `npm run dev`.
 - Lint/format: `npm run lint` runs Biome, `npm run format` writes Biome formatting. Do not use ESLint or Prettier.
 - Typecheck: `npx tsc --noEmit` is required; `npm run build` does not enforce TS errors because `next.config.mjs` sets `typescript.ignoreBuildErrors: true` for TS7 native compiler compatibility.
 - Build/start standalone: `npm run build`, then `npm run start`.
 - E2E: `npm run test:e2e`; focused runs use Playwright directly, e.g. `npx playwright test e2e/global-playback.spec.ts`.
+
+- Dev: `npm run dev` uses Turbopack by default (Next.js 16); `next.config.mjs` has `turbopack: {}` to silence the warning about missing turbopack config — do not remove it.
 
 ## Runtime Prereqs
 

@@ -1,11 +1,11 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import { useGlobalAudioEngine, usePlayback } from '../hooks/usePlayback';
 import { MEDIA_SOURCE_LABELS, SOURCE_BADGE_COLORS } from '../lib/media/source';
 import Cover from './Cover';
-import Equalizer from './Equalizer';
 import {
   CheckIcon,
   CloseIcon,
@@ -25,9 +25,13 @@ import {
   VolumeLowIcon,
   VolumeMuteIcon,
 } from './icons';
-import SpectrumAnalyzer from './SpectrumAnalyzer';
-import SpeedControl from './SpeedControl';
-import TrackTrimmer from './TrackTrimmer';
+
+const Equalizer = dynamic(() => import('./Equalizer'), { ssr: false });
+const SpectrumAnalyzer = dynamic(() => import('./SpectrumAnalyzer'), {
+  ssr: false,
+});
+const SpeedControl = dynamic(() => import('./SpeedControl'), { ssr: false });
+const TrackTrimmer = dynamic(() => import('./TrackTrimmer'), { ssr: false });
 
 type PopoverPanel = 'queue' | 'eq' | null;
 
@@ -322,11 +326,10 @@ export default function PlayerPanel({
   const shareTrack = async () => {
     if (!currentTrack) return;
     const params = new URLSearchParams();
-    if (currentPlaylistId !== 1) params.set('pl', String(currentPlaylistId));
-    params.set('track', String(currentTrack.id));
     if (engine.currentTime > 1)
       params.set('t', String(Math.floor(engine.currentTime)));
-    const url = `${window.location.origin}${window.location.pathname}?${params}`;
+    const qs = params.toString();
+    const url = `${window.location.origin}/track/${currentTrack.slug}${qs ? `?${qs}` : ''}`;
     // Native share sheet only on touch devices — on desktop, copying the link
     // is what people actually want.
     const isTouch = window.matchMedia('(pointer: coarse)').matches;
@@ -349,7 +352,20 @@ export default function PlayerPanel({
     } catch {}
   };
 
-  const isLoading = !!currentTrack && !engine.isReady;
+  const isBuffering =
+    !!currentTrack &&
+    isPlaying &&
+    (engine.loadState === 'loading' || engine.loadState === 'stalled');
+  const hasPlaybackError = engine.loadState === 'error';
+  const playbackStatus = hasPlaybackError
+    ? 'Không thể phát. Nhấn để thử lại'
+    : engine.loadState === 'stalled'
+      ? 'Đang chờ mạng'
+      : isBuffering
+        ? 'Đang tải'
+        : isPlaying
+          ? 'Tạm dừng'
+          : 'Phát';
 
   const progressPercent =
     engine.duration > 0 ? (engine.currentTime / engine.duration) * 100 : 0;
@@ -458,10 +474,11 @@ export default function PlayerPanel({
         />
 
         {/* Thin indeterminate line while the track buffers */}
-        {isLoading && (
+        {isBuffering && (
           <div
             className="absolute inset-x-0 top-0 z-[5] h-0.5 overflow-hidden rounded-full bg-surface-3"
-            aria-hidden
+            role="status"
+            aria-label={playbackStatus}
           >
             <span className="absolute inset-y-0 left-0 w-2/5 -translate-x-[110%] rounded-full bg-accent [animation:np-indeterminate_1.1s_cubic-bezier(0.45,0,0.55,1)_infinite]" />
           </div>
@@ -601,13 +618,12 @@ export default function PlayerPanel({
             <button
               type="button"
               className={`inline-flex size-14 cursor-pointer items-center justify-center rounded-full border-0 bg-linear-to-br from-accent to-tertiary text-[#00201e] shadow-accent transition-[transform,filter] duration-[var(--motion-fast)] ease-spring hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.94] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent${isMobileVisible ? ' max-[1024px]:size-[76px] max-[1024px]:[&_svg]:size-7' : ''}`}
-              onClick={togglePlay}
-              aria-label={
-                isLoading ? 'Đang tải' : isPlaying ? 'Tạm dừng' : 'Phát'
-              }
-              title={`${isLoading ? 'Đang tải' : isPlaying ? 'Tạm dừng' : 'Phát'} (Space)`}
+              onClick={hasPlaybackError ? engine.retry : togglePlay}
+              aria-label={playbackStatus}
+              title={`${playbackStatus} (Space)`}
+              aria-busy={isBuffering}
             >
-              {isLoading ? (
+              {isBuffering ? (
                 <SpinnerIcon
                   className="[animation:np-spin-icon_0.8s_linear_infinite]"
                   size={22}
@@ -617,7 +633,11 @@ export default function PlayerPanel({
                   className="inline-flex [animation:np-icon-morph_var(--motion-fast)_var(--ease-spring)]"
                   key={isPlaying ? 'pause' : 'play'}
                 >
-                  {isPlaying ? <PauseIcon size={22} /> : <PlayIcon size={22} />}
+                  {isPlaying && !hasPlaybackError ? (
+                    <PauseIcon size={22} />
+                  ) : (
+                    <PlayIcon size={22} />
+                  )}
                 </span>
               )}
             </button>

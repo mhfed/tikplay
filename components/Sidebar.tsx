@@ -1,11 +1,10 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
-import AddPlaylistDialog from './AddPlaylistDialog';
-import AutoRuleDialog from './AutoRuleDialog';
 import {
   ClockIcon,
   HeartIcon,
@@ -18,7 +17,16 @@ import {
   SourceIcon,
   TagIcon,
 } from './icons';
-import YouTubeCookiesDialog from './YouTubeCookiesDialog';
+
+const AddPlaylistDialog = dynamic(() => import('./AddPlaylistDialog'), {
+  ssr: false,
+});
+const AutoRuleDialog = dynamic(() => import('./AutoRuleDialog'), {
+  ssr: false,
+});
+const YouTubeCookiesDialog = dynamic(() => import('./YouTubeCookiesDialog'), {
+  ssr: false,
+});
 
 export default function Sidebar() {
   const {

@@ -13,6 +13,7 @@ import {
   ShuffleIcon,
   TagIcon,
 } from './icons';
+import UrlInput from './UrlInput';
 
 interface HomeProps {
   /** Fires after navigating to a playlist/track list — lets the mobile shell flip to the Library tab. */
@@ -39,6 +40,9 @@ export default function Home({ onOpenLibrary }: HomeProps) {
     playAll,
     setShuffle,
     selectCategory,
+    addTrackFromUrl,
+    loading,
+    error,
   } = useAppStore();
 
   const heroTrack = useMemo<Track | null>(() => {
@@ -105,7 +109,25 @@ export default function Home({ onOpenLibrary }: HomeProps) {
   }
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-11 overflow-y-auto px-[clamp(24px,3vw,48px)] pb-14 pt-[calc(28px+env(safe-area-inset-top))] max-[640px]:gap-8 max-[640px]:px-4 max-[640px]:pb-[calc(var(--bottom-stack)+24px)] max-[640px]:pt-[calc(16px+env(safe-area-inset-top))]">
+    <div className="flex min-w-0 flex-1 flex-col gap-11 overflow-y-auto px-[clamp(24px,3vw,48px)] pb-14 pt-0 max-[640px]:gap-8 max-[640px]:px-4 max-[640px]:pb-[calc(var(--bottom-stack)+24px)] max-[640px]:pt-0">
+      {/* Header bar — consistent with PlaylistView header, always shows import */}
+      <div className="sticky top-0 z-10 -mx-[clamp(24px,3vw,48px)] mb-0 flex min-h-[var(--header-h)] shrink-0 items-center gap-4 border-b border-line-soft bg-canvas/80 px-[clamp(24px,3vw,48px)] py-3 backdrop-blur-[20px] max-[1024px]:min-h-[calc(var(--header-h)+env(safe-area-inset-top))] max-[1024px]:flex-wrap max-[1024px]:pt-[calc(12px+env(safe-area-inset-top))] max-[640px]:-mx-4 max-[640px]:h-auto max-[640px]:gap-2.5 max-[640px]:px-4 max-[640px]:pb-3 max-[640px]:pt-[calc(10px+env(safe-area-inset-top))]">
+        <div className="flex min-w-0 flex-col gap-0.5 max-[640px]:flex-[1_1_0]">
+          <h1 className="truncate font-display text-xl font-extrabold max-[640px]:text-[17px]">
+            Khám phá
+          </h1>
+          <p className="truncate font-mono text-[11px] text-muted">
+            {tracks.length} bài hát trong thư viện
+          </p>
+        </div>
+        <UrlInput
+          onAdd={addTrackFromUrl}
+          loading={loading}
+          error={error}
+          compact
+        />
+      </div>
+
       {heroTrack && (
         <div className="rounded-[26px] bg-[linear-gradient(145deg,rgba(255,255,255,0.1),rgba(255,255,255,0.025)_48%,rgba(0,221,214,0.1))] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_24px_70px_rgba(0,0,0,0.24)] max-[640px]:rounded-[21px] max-[640px]:p-1">
           <section

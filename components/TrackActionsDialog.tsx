@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import { CATEGORIES, DEFAULT_CATEGORY } from '../lib/categories';
 import type { Track } from '../lib/types';
+import { DialogOverlay } from './DialogOverlay';
 import { CheckIcon, PlusIcon } from './icons';
 
 interface Props {
@@ -60,13 +61,7 @@ export default function TrackActionsDialog({ track, onClose }: Props) {
     'w-full rounded-control border border-line bg-canvas px-3.5 py-2.5 text-sm text-ink outline-none transition-[border-color,box-shadow] duration-[var(--motion-fast)] focus:border-accent focus:shadow-[0_0_0_3px_var(--accent-muted)] max-[640px]:text-base';
 
   return (
-    <div className="fixed inset-0 z-[100] grid place-items-center px-4">
-      <button
-        type="button"
-        className="absolute inset-0 cursor-default border-0 bg-black/60"
-        onClick={onClose}
-        aria-label="Đóng hộp thoại"
-      />
+    <DialogOverlay onClose={onClose}>
       <form
         className="relative z-10 max-h-[calc(100vh-32px)] w-full max-w-[520px] overflow-y-auto rounded-panel border border-line-soft bg-[var(--glass-bg)] p-6 shadow-app backdrop-blur-[20px] max-[640px]:p-5"
         onSubmit={saveMetadata}
@@ -180,6 +175,6 @@ export default function TrackActionsDialog({ track, onClose }: Props) {
           </button>
         </div>
       </form>
-    </div>
+    </DialogOverlay>
   );
 }

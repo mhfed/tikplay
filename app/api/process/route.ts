@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
       existed: true,
       data: payload(key, meta, validation.source),
       trackId: dbTrack.id,
+      slug: dbTrack.slug,
     });
   }
 
@@ -100,6 +101,7 @@ export async function POST(req: NextRequest) {
       ok: true,
       data: payload(result.audioKey, result.meta, result.source),
       trackId: dbTrack.id,
+      slug: dbTrack.slug,
     });
   } catch (e) {
     return NextResponse.json(

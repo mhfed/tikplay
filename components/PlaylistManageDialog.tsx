@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import type { Playlist } from '../lib/types';
+import { DialogOverlay } from './DialogOverlay';
 import { ChevronUpIcon } from './icons';
 
 interface Props {
@@ -65,13 +66,7 @@ export default function PlaylistManageDialog({ playlist, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] grid place-items-center px-4">
-      <button
-        type="button"
-        className="absolute inset-0 cursor-default border-0 bg-black/60"
-        onClick={onClose}
-        aria-label="Đóng hộp thoại"
-      />
+    <DialogOverlay onClose={onClose}>
       <form
         className="relative z-10 w-full max-w-[440px] rounded-panel border border-line-soft bg-[var(--glass-bg)] p-6 shadow-app backdrop-blur-[20px]"
         onSubmit={saveName}
@@ -156,6 +151,6 @@ export default function PlaylistManageDialog({ playlist, onClose }: Props) {
           </button>
         </div>
       </form>
-    </div>
+    </DialogOverlay>
   );
 }

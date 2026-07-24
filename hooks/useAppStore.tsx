@@ -20,19 +20,12 @@ import type {
   Playlist,
   RepeatMode,
   Track,
+  TrackSort,
 } from '../lib/types';
 import { usePlayback } from './usePlayback';
 
 export type AppView = 'home' | 'library';
-export type TrackSort =
-  | 'playlist'
-  | 'added_desc'
-  | 'added_asc'
-  | 'title'
-  | 'author'
-  | 'duration'
-  | 'source'
-  | 'category';
+export type { TrackSort } from '../lib/types';
 
 export interface ImportJob {
   id: string;
@@ -41,9 +34,16 @@ export interface ImportJob {
   error?: string;
 }
 
+export interface InitialTrackPage {
+  nextCursor: string | null;
+  hasMore: boolean;
+  total: number;
+}
+
 /** Seeded server-side (app/page.tsx) from the on-disk DB + `?pl=&track=&t=` — replaces the old mount-time client fetch. */
 export interface InitialAppData {
   tracks: Track[];
+  trackPage: InitialTrackPage;
   playlists: Playlist[];
   categories: MusicCategory[];
   sources: MusicSource[];
@@ -73,6 +73,9 @@ interface AppState {
   eqGains: number[];
   query: string;
   loading: boolean;
+  pageLoading: boolean;
+  hasMoreTracks: boolean;
+  totalTracks: number;
   error: string | null;
   /** Seek position (seconds) restored from a shared URL, consumed once by the player. */
   pendingSeek: number | null;
@@ -90,6 +93,7 @@ interface AppState {
 
 interface AppActions {
   loadAll: () => Promise<void>;
+  loadMoreTracks: () => Promise<Track[]>;
   selectPlaylist: (id: number) => void;
   addTrackFromUrl: (url: string) => Promise<void>;
   pendingDownloads: string[];
@@ -206,12 +210,18 @@ export function AppStoreProvider({
     setShuffle,
     cycleRepeat,
     updateTrack: updatePlaybackTrack,
+    setQueueExtension,
   } = usePlayback();
   const [tracks, setTracks] = useState<Track[]>(initialData.tracks);
+  const [trackPage, setTrackPage] = useState<InitialTrackPage>(
+    initialData.trackPage,
+  );
+  const [pageLoading, setPageLoading] = useState(false);
   const [importJobs, setImportJobs] = useState<ImportJob[]>([]);
   const importControllers = useRef(new Map<string, AbortController>());
   const trackLoadController = useRef<AbortController | null>(null);
   const trackLoadGeneration = useRef(0);
+  const queryTimerRef = useRef<number | undefined>(undefined);
   const [playlists, setPlaylists] = useState<Playlist[]>(initialData.playlists);
   const [favorites, setFavorites] = useState<Set<number>>(
     () => new Set(initialData.favoriteIds),
@@ -263,44 +273,75 @@ export function AppStoreProvider({
     setPlaylists(data.playlists || []);
   }, []);
 
-  const loadTracks = useCallback(async (playlistId: number, q?: string) => {
-    trackLoadController.current?.abort();
-    const controller = new AbortController();
-    const generation = ++trackLoadGeneration.current;
-    trackLoadController.current = controller;
-    const searchParam = q ? `?q=${encodeURIComponent(q)}` : '';
-    try {
-      let data: { tracks: Track[] };
-      if (playlistId === 1) {
-        data = await api<{ tracks: Track[] }>(`/api/tracks${searchParam}`, {
-          signal: controller.signal,
-        });
-      } else if (playlistId === -1) {
-        data = await api<{ tracks: Track[] }>('/api/favorites', {
-          signal: controller.signal,
-        });
-      } else {
-        data = await api<{ tracks: Track[] }>(
-          `/api/playlists/${playlistId}/tracks`,
+  const loadTracks = useCallback(
+    async (
+      playlistId: number,
+      options: {
+        append?: boolean;
+        cursor?: string | null;
+        query?: string;
+        sort?: TrackSort;
+        category?: string | null;
+        source?: MediaSource | null;
+      } = {},
+    ) => {
+      const append = Boolean(options.append);
+      if (!append) trackLoadController.current?.abort();
+      const controller = new AbortController();
+      const generation = append
+        ? trackLoadGeneration.current
+        : ++trackLoadGeneration.current;
+      if (!append) trackLoadController.current = controller;
+      setPageLoading(true);
+
+      const params = new URLSearchParams();
+      const nextSort =
+        options.sort ?? (playlistId > 1 ? 'playlist' : 'added_desc');
+      params.set('sort', nextSort);
+      if (options.query?.trim()) params.set('q', options.query.trim());
+      if (options.category) params.set('category', options.category);
+      if (options.source) params.set('source', options.source);
+      if (options.cursor) params.set('cursor', options.cursor);
+      const endpoint =
+        playlistId === 1
+          ? '/api/tracks'
+          : playlistId === -1
+            ? '/api/favorites'
+            : `/api/playlists/${playlistId}/tracks`;
+
+      try {
+        const data = await api<{ tracks: Track[] } & InitialTrackPage>(
+          `${endpoint}?${params.toString()}`,
           { signal: controller.signal },
         );
+        if (generation !== trackLoadGeneration.current) return [];
+        const pageTracks = data.tracks || [];
+        setTracks((current) => {
+          if (!append) return pageTracks;
+          const ids = new Set(current.map((track) => track.id));
+          return [
+            ...current,
+            ...pageTracks.filter((track) => !ids.has(track.id)),
+          ];
+        });
+        setTrackPage({
+          nextCursor: data.nextCursor,
+          hasMore: data.hasMore,
+          total: data.total,
+        });
+        return pageTracks;
+      } catch (error) {
+        if (controller.signal.aborted) return [];
+        throw error;
+      } finally {
+        if (trackLoadController.current === controller) {
+          trackLoadController.current = null;
+        }
+        if (generation === trackLoadGeneration.current) setPageLoading(false);
       }
-      if (generation !== trackLoadGeneration.current) return [];
-      setTracks(data.tracks || []);
-      const favSet = new Set(
-        (data.tracks || []).filter((t) => t.isFavorite).map((t) => t.id),
-      );
-      setFavorites(favSet);
-      return data.tracks || [];
-    } catch (error) {
-      if (controller.signal.aborted) return [];
-      throw error;
-    } finally {
-      if (trackLoadController.current === controller) {
-        trackLoadController.current = null;
-      }
-    }
-  }, []);
+    },
+    [],
+  );
 
   const loadAutoRules = useCallback(async () => {
     const data = await api<{ rules: AutoRule[] }>('/api/auto-rules');
@@ -320,7 +361,12 @@ export function AppStoreProvider({
   const loadAll = useCallback(async () => {
     await Promise.all([
       loadPlaylists(),
-      loadTracks(currentPlaylistId),
+      loadTracks(currentPlaylistId, {
+        query,
+        sort: trackSort,
+        category: selectedCategory,
+        source: selectedSource,
+      }),
       loadAutoRules(),
       loadCategoriesFn(),
       loadSourcesFn(),
@@ -332,6 +378,10 @@ export function AppStoreProvider({
     loadCategoriesFn,
     loadSourcesFn,
     currentPlaylistId,
+    query,
+    trackSort,
+    selectedCategory,
+    selectedSource,
   ]);
 
   useEffect(
@@ -375,40 +425,38 @@ export function AppStoreProvider({
     });
   }, [currentTrack?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Keep the URL in sync with what's selected/playing so the address bar is
-  // always shareable. Uses path-based routing (/library, /library/3, etc.)
-  // instead of query params.
+  // Sync the address bar with the currently selected track using a clean
+  // path-based URL (/track/<slug>) that's SEO-friendly and shareable.
   useEffect(() => {
-    const basePath =
-      currentPlaylistId === 1
+    const path = window.location.pathname;
+
+    // During initial hydration on /track/<slug>, wait for currentTrack
+    // to be initialized before touching the URL.
+    if (!currentTrack && path.startsWith('/track/')) return;
+
+    const slug = currentTrack?.slug || String(currentTrack?.id || '');
+    const href = slug
+      ? `/track/${slug}`
+      : currentPlaylistId === 1
         ? '/library'
         : currentPlaylistId === -1
           ? '/library/favorites'
           : `/library/${currentPlaylistId}`;
 
-    const params = new URLSearchParams();
-    if (currentTrack) params.set('track', String(currentTrack.id));
-    const qs = params.toString();
-    const href = qs ? `${basePath}?${qs}` : basePath;
-
-    // Only update if the path part differs to avoid infinite loops with
-    // router.replace triggering re-renders.
-    if (
-      window.location.pathname !== basePath ||
-      window.location.search !== (qs ? `?${qs}` : '')
-    ) {
+    if (path + window.location.search !== href) {
       window.history.replaceState(null, '', href);
     }
-  }, [currentPlaylistId, currentTrack?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentPlaylistId, currentTrack?.slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const selectPlaylist = useCallback(
     (id: number) => {
+      const sort = id > 1 ? 'playlist' : 'added_desc';
       setSelectedCategory(null);
       setSelectedSource(null);
       setCurrentPlaylistId(id);
       setView('library');
-      setTrackSort(id > 1 ? 'playlist' : 'added_desc');
-      loadTracks(id, query);
+      setTrackSort(sort);
+      loadTracks(id, { query, sort });
     },
     [loadTracks, query],
   );
@@ -422,28 +470,21 @@ export function AppStoreProvider({
     setCurrentPlaylistId(1);
     setView('home');
     setTrackSort('added_desc');
-    loadTracks(1, query);
+    loadTracks(1, { query, sort: 'added_desc' });
   }, [loadTracks, query]);
 
   const selectCategory = useCallback(
     async (slug: string | null) => {
       setSelectedCategory(slug);
       setSelectedSource(null);
-      if (slug) {
-        setCurrentPlaylistId(1);
-        setView('library');
-        setTrackSort('added_desc');
-        const data = await api<{ tracks: Track[] }>(
-          `/api/categories?slug=${encodeURIComponent(slug)}`,
-        );
-        setTracks(data.tracks || []);
-        const favSet = new Set(
-          (data.tracks || []).filter((t) => t.isFavorite).map((t) => t.id),
-        );
-        setFavorites(favSet);
-      } else {
-        loadTracks(1, query);
-      }
+      setCurrentPlaylistId(1);
+      setView('library');
+      setTrackSort('added_desc');
+      await loadTracks(1, {
+        query,
+        sort: 'added_desc',
+        category: slug,
+      });
     },
     [loadTracks, query],
   );
@@ -452,21 +493,10 @@ export function AppStoreProvider({
     async (source: MediaSource | null) => {
       setSelectedSource(source);
       setSelectedCategory(null);
-      if (source) {
-        setCurrentPlaylistId(1);
-        setView('library');
-        setTrackSort('added_desc');
-        const data = await api<{ tracks: Track[] }>(
-          `/api/sources?source=${encodeURIComponent(source)}`,
-        );
-        setTracks(data.tracks || []);
-        const favSet = new Set(
-          (data.tracks || []).filter((t) => t.isFavorite).map((t) => t.id),
-        );
-        setFavorites(favSet);
-      } else {
-        loadTracks(1, query);
-      }
+      setCurrentPlaylistId(1);
+      setView('library');
+      setTrackSort('added_desc');
+      await loadTracks(1, { query, sort: 'added_desc', source });
     },
     [loadTracks, query],
   );
@@ -487,6 +517,7 @@ export function AppStoreProvider({
           error?: string;
           data?: Track;
           trackId?: number;
+          slug?: string;
         }>('/api/process', {
           method: 'POST',
           body: JSON.stringify({ url }),
@@ -512,7 +543,10 @@ export function AppStoreProvider({
         } else if (selectedCategory) {
           await selectCategory(selectedCategory);
         } else {
-          await loadTracks(currentPlaylistId, query);
+          await loadTracks(currentPlaylistId, {
+            query,
+            sort: trackSort,
+          });
         }
         await loadPlaylists();
         await loadCategoriesFn();
@@ -521,6 +555,7 @@ export function AppStoreProvider({
         if (res.data && res.trackId) {
           const newTrack: Track = {
             id: res.trackId,
+            slug: res.slug || String(res.trackId),
             url,
             audioUrl: res.data.audioUrl,
             title: res.data.title,
@@ -555,6 +590,7 @@ export function AppStoreProvider({
     [
       currentPlaylistId,
       query,
+      trackSort,
       selectedCategory,
       selectedSource,
       selectCategory,
@@ -592,6 +628,44 @@ export function AppStoreProvider({
     },
     [addTrackFromUrl, dismissImport, importJobs],
   );
+
+  const loadMoreTracks = useCallback(async () => {
+    if (pageLoading || !trackPage.hasMore || !trackPage.nextCursor) return [];
+    return loadTracks(currentPlaylistId, {
+      append: true,
+      cursor: trackPage.nextCursor,
+      query,
+      sort: trackSort,
+      category: selectedCategory,
+      source: selectedSource,
+    });
+  }, [
+    currentPlaylistId,
+    loadTracks,
+    pageLoading,
+    query,
+    selectedCategory,
+    selectedSource,
+    trackPage.hasMore,
+    trackPage.nextCursor,
+    trackSort,
+  ]);
+
+  useEffect(() => {
+    setQueueExtension(trackPage.hasMore ? loadMoreTracks : null);
+    return () => setQueueExtension(null);
+  }, [loadMoreTracks, setQueueExtension, trackPage.hasMore]);
+
+  useEffect(() => {
+    if (currentPlaylistId <= 1 || trackSort !== 'playlist') return;
+    if (trackPage.hasMore && !pageLoading) void loadMoreTracks();
+  }, [
+    currentPlaylistId,
+    loadMoreTracks,
+    pageLoading,
+    trackPage.hasMore,
+    trackSort,
+  ]);
 
   const playTrack = useCallback(
     (track: Track) => {
@@ -648,7 +722,10 @@ export function AppStoreProvider({
       } else if (selectedCategory) {
         await selectCategory(selectedCategory);
       } else {
-        await loadTracks(currentPlaylistId, query);
+        await loadTracks(currentPlaylistId, {
+          query,
+          sort: trackSort,
+        });
       }
       await loadPlaylists();
       await loadCategoriesFn();
@@ -657,6 +734,7 @@ export function AppStoreProvider({
     [
       currentPlaylistId,
       query,
+      trackSort,
       selectedCategory,
       selectedSource,
       selectCategory,
@@ -675,9 +753,9 @@ export function AppStoreProvider({
         method: 'PUT',
         body: JSON.stringify({ trackIds }),
       });
-      await loadTracks(currentPlaylistId, query);
+      await loadTracks(currentPlaylistId, { query, sort: trackSort });
     },
-    [currentPlaylistId, query, loadTracks],
+    [currentPlaylistId, query, trackSort, loadTracks],
   );
 
   const createPlaylistAction = useCallback(
@@ -700,7 +778,7 @@ export function AppStoreProvider({
       await loadPlaylists();
       if (currentPlaylistId === id) {
         setCurrentPlaylistId(1);
-        await loadTracks(1, query);
+        await loadTracks(1, { query, sort: 'added_desc' });
       }
     },
     [currentPlaylistId, query, loadPlaylists, loadTracks],
@@ -817,36 +895,40 @@ export function AppStoreProvider({
     }
   }, []);
 
-  const filteredTracks = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const filtered = q
-      ? tracks.filter(
-          (track) =>
-            track.title.toLowerCase().includes(q) ||
-            track.author.toLowerCase().includes(q),
-        )
-      : tracks;
-    if (trackSort === 'playlist') return filtered;
+  const changeQuery = useCallback(
+    (nextQuery: string) => {
+      setQuery(nextQuery);
+      window.clearTimeout(queryTimerRef.current);
+      queryTimerRef.current = window.setTimeout(() => {
+        void loadTracks(currentPlaylistId, {
+          query: nextQuery,
+          sort: trackSort,
+          category: selectedCategory,
+          source: selectedSource,
+        });
+      }, 250);
+    },
+    [
+      currentPlaylistId,
+      loadTracks,
+      selectedCategory,
+      selectedSource,
+      trackSort,
+    ],
+  );
 
-    return [...filtered].sort((a, b) => {
-      switch (trackSort) {
-        case 'added_asc':
-          return a.addedAt - b.addedAt;
-        case 'title':
-          return a.title.localeCompare(b.title, 'vi');
-        case 'author':
-          return a.author.localeCompare(b.author, 'vi');
-        case 'duration':
-          return b.duration - a.duration;
-        case 'source':
-          return a.source.localeCompare(b.source);
-        case 'category':
-          return (a.category || 'others').localeCompare(b.category || 'others');
-        default:
-          return b.addedAt - a.addedAt;
-      }
-    });
-  }, [tracks, query, trackSort]);
+  const changeTrackSort = useCallback(
+    (sort: TrackSort) => {
+      setTrackSort(sort);
+      void loadTracks(currentPlaylistId, {
+        query,
+        sort,
+        category: selectedCategory,
+        source: selectedSource,
+      });
+    },
+    [currentPlaylistId, loadTracks, query, selectedCategory, selectedSource],
+  );
 
   // Only resolves ids against tracks already loaded into memory (typically the
   // full library, since that's what loads by default) — good enough for a
@@ -857,7 +939,7 @@ export function AppStoreProvider({
   }, [recentIds, tracks]);
 
   const store: AppStore = {
-    tracks: filteredTracks,
+    tracks,
     playlists,
     categories,
     sources,
@@ -874,6 +956,9 @@ export function AppStoreProvider({
     eqGains,
     query,
     loading: importJobs.some((job) => job.status === 'processing'),
+    pageLoading,
+    hasMoreTracks: trackPage.hasMore,
+    totalTracks: trackPage.total,
     error,
     pendingSeek,
     view,
@@ -883,6 +968,7 @@ export function AppStoreProvider({
     trackSort,
     importJobs,
     loadAll,
+    loadMoreTracks,
     selectPlaylist,
     addTrackFromUrl,
     pendingDownloads: importJobs
@@ -909,13 +995,13 @@ export function AppStoreProvider({
     deleteAutoRule: deleteAutoRuleAction,
     updateTrackTiming,
     updateTrackMetadata,
-    setTrackSort,
+    setTrackSort: changeTrackSort,
     setVolume,
     setSpeed,
     setEqGains,
     setShuffle,
     cycleRepeat,
-    setQuery,
+    setQuery: changeQuery,
     clearPendingSeek,
     setView,
     goHome,

@@ -2,23 +2,44 @@ import { type NextRequest, NextResponse } from 'next/server';
 import {
   addTrackToPlaylist,
   getFavoriteIds,
-  getPlaylistTracks,
+  getTrackPage,
   removeTrackFromPlaylist,
   reorderPlaylistTracks,
 } from '@/lib/db/queries';
 import { toTrack } from '@/lib/types';
+import { parseTrackPageQuery } from '../../../tracks/pagination';
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const rows = getPlaylistTracks(Number(id));
-  const favIds = getFavoriteIds();
-  return NextResponse.json({
-    ok: true,
-    tracks: rows.map((r) => toTrack(r, favIds)),
-  });
+  const playlistId = Number(id);
+  if (!Number.isInteger(playlistId) || playlistId <= 1) {
+    return NextResponse.json(
+      { ok: false, error: 'Danh sách phát không hợp lệ' },
+      { status: 400 },
+    );
+  }
+  try {
+    const page = getTrackPage(
+      parseTrackPageQuery(req, { type: 'playlist', playlistId }, 'playlist'),
+    );
+    const favIds = getFavoriteIds();
+    return NextResponse.json({
+      ok: true,
+      ...page,
+      tracks: page.tracks.map((r) => toTrack(r, favIds)),
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: error instanceof Error ? error.message : 'Trang không hợp lệ',
+      },
+      { status: 400 },
+    );
+  }
 }
 
 export async function POST(

@@ -6,13 +6,13 @@ import {
   getAllCategories,
   getAllPlaylists,
   getAllSources,
-  getAllTracks,
   getAutoRules,
   getFavoriteIds,
-  getPlaylistTracks,
+  getTrack,
+  getTrackBySlug,
+  getTrackPage,
 } from '@/lib/db/queries';
-import { type Track, toTrack } from '@/lib/types';
-import { resolveSharedTrack } from '../shared';
+import { toTrack } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,16 +58,26 @@ export default async function PlaylistPage({
   }
 
   const favIds = getFavoriteIds();
-  const tracks: Track[] = getPlaylistTracks(playlistId).map((r) =>
-    toTrack(r, favIds),
-  );
-  const allTracks: Track[] = getAllTracks().map((r) => toTrack(r, favIds));
+  const page = getTrackPage({
+    scope: { type: 'playlist', playlistId },
+    sort: 'playlist',
+  });
+  const tracks = page.tracks.map((r) => toTrack(r, favIds));
+  const trackSlug = sp.track?.trim() || '';
   const sharedTrackId = Number(sp.track) || 0;
   const seekTime = Number(sp.t) || 0;
-  const currentTrack = resolveSharedTrack(tracks, allTracks, sharedTrackId);
+  const sharedRow = trackSlug
+    ? (getTrackBySlug(trackSlug) ?? getTrack(sharedTrackId))
+    : undefined;
+  const currentTrack = sharedRow ? toTrack(sharedRow, favIds) : null;
 
   const initialData: InitialAppData = {
     tracks,
+    trackPage: {
+      nextCursor: page.nextCursor,
+      hasMore: page.hasMore,
+      total: page.total,
+    },
     playlists,
     categories: getAllCategories(),
     sources: getAllSources(),

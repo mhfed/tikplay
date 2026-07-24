@@ -2,28 +2,16 @@
 import './globals.css';
 import './components.css';
 import type { Metadata, Viewport } from 'next';
-import { Hanken_Grotesk, JetBrains_Mono, Montserrat } from 'next/font/google';
+import { Poppins } from 'next/font/google';
+import PerformanceObserver from '@/components/PerformanceObserver';
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 import TermsDialog from '@/components/TermsDialog';
 import { PlaybackProvider } from '@/hooks/usePlayback';
 
-const montserrat = Montserrat({
-  weight: ['700', '800', '900'],
-  subsets: ['latin'],
-  variable: '--font-montserrat',
-  display: 'swap',
-});
-
-const hanken = Hanken_Grotesk({
-  subsets: ['latin'],
-  variable: '--font-hanken',
-  display: 'swap',
-});
-
-const mono = JetBrains_Mono({
-  weight: ['400', '500', '700'],
-  subsets: ['latin'],
-  variable: '--font-jetbrains',
+const poppins = Poppins({
+  weight: ['400', '500', '600', '700', '800', '900'],
+  subsets: ['latin', 'latin-ext'],
+  variable: '--font-poppins',
   display: 'swap',
 });
 
@@ -129,10 +117,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="vi"
-      className={`${montserrat.variable} ${hanken.variable} ${mono.variable}`}
-    >
+    <html lang="vi" className={poppins.variable}>
       <head>
         <script
           type="application/ld+json"
@@ -141,6 +126,7 @@ export default function RootLayout({
       </head>
       <body>
         <PlaybackProvider>
+          <PerformanceObserver />
           <ServiceWorkerRegister />
           {children}
           <TermsDialog />

@@ -4,12 +4,14 @@ import { getDb, saveDb } from '@/lib/db';
 import {
   applyAutoRules,
   deleteTrack,
-  getAllTracks,
+  generateTrackSlug,
   getTrack,
-  searchTracks,
+  getTrackPage,
   upsertTrack,
 } from '@/lib/db/queries';
+import type { DbTrack } from '@/lib/types';
 import { getFavoriteIds, toTrack } from './helpers';
+import { parseTrackPageQuery } from './pagination';
 
 const MAX_BATCH_TRACK_IDS = 100;
 
@@ -38,12 +40,24 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, tracks });
   }
 
-  const q = req.nextUrl.searchParams.get('q');
-  const rows = q ? searchTracks(q) : getAllTracks();
-  return NextResponse.json({
-    ok: true,
-    tracks: rows.map((r) => toTrack(r, favIds)),
-  });
+  try {
+    const page = getTrackPage(
+      parseTrackPageQuery(req, { type: 'library' }, 'added_desc'),
+    );
+    return NextResponse.json({
+      ok: true,
+      ...page,
+      tracks: page.tracks.map((r) => toTrack(r, favIds)),
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: error instanceof Error ? error.message : 'Trang không hợp lệ',
+      },
+      { status: 400 },
+    );
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -106,6 +120,9 @@ export async function PATCH(req: NextRequest) {
     }
     track.author = author.trim();
   }
+  if (title !== undefined || author !== undefined) {
+    track.slug = generateTrackSlug(track.title, track.author, track.id);
+  }
   if (cover !== undefined) {
     if (typeof cover !== 'string' || cover.length > 2000) {
       return NextResponse.json(
@@ -151,7 +168,7 @@ export async function PATCH(req: NextRequest) {
   saveDb();
   return NextResponse.json({
     ok: true,
-    track: toTrack(track, getFavoriteIds()),
+    track: toTrack(track as DbTrack, getFavoriteIds()),
   });
 }
 

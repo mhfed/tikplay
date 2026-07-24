@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
+import { DialogOverlay } from './DialogOverlay';
 
 interface Props {
   onClose: () => void;
@@ -20,13 +21,7 @@ export default function AddPlaylistDialog({ onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] grid place-items-center">
-      <button
-        type="button"
-        className="absolute inset-0 cursor-default border-0 bg-black/60 [animation:modal-backdrop-in_var(--motion-base)_var(--ease-out)]"
-        onClick={onClose}
-        aria-label="Đóng hộp thoại"
-      />
+    <DialogOverlay onClose={onClose}>
       <form
         className="relative z-10 min-w-[360px] max-w-[480px] rounded-panel border border-line-soft bg-[var(--glass-bg)] p-6 shadow-app backdrop-blur-[20px] [animation:modal-panel-in_var(--motion-base)_var(--ease-spring)] max-[640px]:mx-4 max-[640px]:min-w-0 max-[640px]:max-w-[calc(100vw-32px)]"
         onSubmit={handleSubmit}
@@ -65,6 +60,6 @@ export default function AddPlaylistDialog({ onClose }: Props) {
           </button>
         </div>
       </form>
-    </div>
+    </DialogOverlay>
   );
 }

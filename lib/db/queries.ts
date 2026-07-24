@@ -2,6 +2,14 @@ import { existsSync } from 'node:fs';
 import { basename } from 'node:path';
 import { CATEGORIES, detectCategory } from '../categories';
 import { MEDIA_SOURCE_LABELS, type MediaSource } from '../media/source';
+import {
+  type DbTrackPage,
+  decodeTrackCursor,
+  encodeTrackCursor,
+  normalizePageLimit,
+  type TrackPageQuery,
+  trackPageFingerprint,
+} from '../track-pagination';
 import type {
   AutoRule,
   DbTrack,
@@ -12,8 +20,52 @@ import type {
 import type { CopyrightReportStatus, DbCopyrightReportRow } from './index';
 import { type DbTrackRow, getDb, saveDb } from './index';
 
+export function slugify(text: string): string {
+  return (
+    text
+      .toLowerCase()
+      .trim()
+      .replace(/đ/g, 'd')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 100) || 'untitled'
+  );
+}
+
+export function generateTrackSlug(
+  title: string,
+  author: string,
+  id: number,
+): string {
+  const base = slugify(`${title} ${author}`);
+  if (!base || base === 'untitled') return String(id);
+  const db = getDb();
+  const collision = db.tracks.find((t) => t.id !== id && t.slug === base);
+  return collision ? `${base}-${id}` : base;
+}
+
 function toDbTrack(row: DbTrackRow): DbTrack {
-  return row as DbTrack;
+  return {
+    id: row.id,
+    url: row.url,
+    audio_key: row.audio_key,
+    title: row.title,
+    author: row.author,
+    cover: row.cover,
+    duration: row.duration,
+    added_at: row.added_at,
+    source: row.source,
+    category: row.category,
+    start_time: row.start_time,
+    end_time: row.end_time,
+    slug:
+      row.slug ??
+      `${slugify(`${row.title} ${row.author}`) || 'untitled'}-${row.id}`,
+  };
 }
 
 function trackSource(row: Pick<DbTrackRow, 'source'>): MediaSource {
@@ -30,14 +82,30 @@ export function getAllTracks(): DbTrack[] {
 }
 
 export function getTrack(id: number): DbTrack | undefined {
-  return getDb().tracks.find((t) => t.id === id) as DbTrack | undefined;
+  const row = getDb().tracks.find((t) => t.id === id);
+  return row ? toDbTrack(row) : undefined;
+}
+
+export function getTrackBySlug(slug: string): DbTrack | undefined {
+  const db = getDb();
+  const exact = db.tracks.find((t) => t.slug === slug);
+  if (exact) return toDbTrack(exact);
+  const legacy = db.tracks.find((t) => {
+    if (t.slug) return false;
+    if (!t.title && !t.author) return false;
+    return (
+      `${slugify(`${t.title} ${t.author}`) || 'untitled'}-${t.id}` === slug
+    );
+  });
+  return legacy ? toDbTrack(legacy) : undefined;
 }
 
 export function getTrackByUrl(url: string): DbTrack | undefined {
-  return getDb().tracks.find((t) => t.url === url) as DbTrack | undefined;
+  const row = getDb().tracks.find((t) => t.url === url);
+  return row ? toDbTrack(row) : undefined;
 }
 
-export function upsertTrack(t: Omit<DbTrack, 'id'>): DbTrack {
+export function upsertTrack(t: Omit<DbTrack, 'id' | 'slug'>): DbTrack {
   const db = getDb();
   const existing = db.tracks.find(
     (r) => r.url === t.url || r.audio_key === t.audio_key,
@@ -48,12 +116,14 @@ export function upsertTrack(t: Omit<DbTrack, 'id'>): DbTrack {
     existing.cover = t.cover;
     existing.duration = t.duration;
     existing.source = t.source ?? trackSource(existing);
+    existing.slug = generateTrackSlug(t.title, t.author, existing.id);
     saveDb();
     return toDbTrack(existing);
   }
   const id = db.nextTrackId++;
   const category = t.category || detectCategory(t.title, t.author);
-  const row: DbTrackRow = { id, ...t, category };
+  const slug = generateTrackSlug(t.title, t.author, id);
+  const row: DbTrackRow = { id, ...t, category, slug };
   db.tracks.push(row);
   saveDb();
   return toDbTrack(row);
@@ -181,6 +251,103 @@ export function searchTracks(q: string): DbTrack[] {
     )
     .sort((a, b) => b.added_at - a.added_at)
     .map(toDbTrack);
+}
+
+function compareText(a: string, b: string): number {
+  return a.localeCompare(b, 'vi', { sensitivity: 'base' });
+}
+
+function comparePaginatedTracks(
+  a: { track: DbTrackRow; position?: number },
+  b: { track: DbTrackRow; position?: number },
+  sort: TrackPageQuery['sort'],
+): number {
+  let comparison = 0;
+  switch (sort) {
+    case 'playlist':
+      comparison = (a.position ?? 0) - (b.position ?? 0);
+      break;
+    case 'added_asc':
+      comparison = a.track.added_at - b.track.added_at;
+      break;
+    case 'title':
+      comparison = compareText(a.track.title, b.track.title);
+      break;
+    case 'author':
+      comparison = compareText(a.track.author, b.track.author);
+      break;
+    case 'duration':
+      comparison = b.track.duration - a.track.duration;
+      break;
+    case 'source':
+      comparison = compareText(trackSource(a.track), trackSource(b.track));
+      break;
+    case 'category':
+      comparison = compareText(
+        a.track.category || 'others',
+        b.track.category || 'others',
+      );
+      break;
+    default:
+      comparison = b.track.added_at - a.track.added_at;
+  }
+  return comparison || a.track.id - b.track.id;
+}
+
+export function getTrackPage(query: TrackPageQuery): DbTrackPage {
+  const db = getDb();
+  const favoriteIds = new Set(db.favorites);
+  const playlistPositions = new Map<number, number>();
+  if (query.scope.type === 'playlist') {
+    for (const item of db.playlistTracks) {
+      if (item.playlist_id === query.scope.playlistId) {
+        playlistPositions.set(item.track_id, item.position);
+      }
+    }
+  }
+
+  const normalizedQuery = query.query?.trim().toLocaleLowerCase('vi') ?? '';
+  const candidates = db.tracks
+    .filter((track) => {
+      if (query.scope.type === 'favorites' && !favoriteIds.has(track.id)) {
+        return false;
+      }
+      if (query.scope.type === 'playlist' && !playlistPositions.has(track.id)) {
+        return false;
+      }
+      if (query.category && (track.category || 'others') !== query.category) {
+        return false;
+      }
+      if (query.source && trackSource(track) !== query.source) return false;
+      return (
+        !normalizedQuery ||
+        track.title.toLocaleLowerCase('vi').includes(normalizedQuery) ||
+        track.author.toLocaleLowerCase('vi').includes(normalizedQuery)
+      );
+    })
+    .map((track) => ({ track, position: playlistPositions.get(track.id) }))
+    .sort((a, b) => comparePaginatedTracks(a, b, query.sort));
+
+  const fingerprint = trackPageFingerprint(query);
+  const anchorId = decodeTrackCursor(query.cursor, fingerprint);
+  const start = anchorId
+    ? candidates.findIndex((item) => item.track.id === anchorId) + 1
+    : 0;
+  if (anchorId && start === 0) {
+    throw new Error('Cursor trang đã hết hạn');
+  }
+
+  const limit = normalizePageLimit(query.limit);
+  const page = candidates.slice(start, start + limit);
+  const hasMore = start + page.length < candidates.length;
+  const last = page.at(-1);
+  return {
+    tracks: page.map((item) => toDbTrack(item.track)),
+    nextCursor:
+      hasMore && last ? encodeTrackCursor(fingerprint, last.track.id) : null,
+    hasMore,
+    total: candidates.length,
+  };
 }
 
 // ── PLAYLISTS ───────────────────────────────────────────

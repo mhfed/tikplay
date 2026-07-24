@@ -2,6 +2,9 @@
   "name": "craw-music",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20 <21"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack && cp -r public .next/standalone/public && cp -r .next/static .next/standalone/.next/static",

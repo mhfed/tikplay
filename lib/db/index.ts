@@ -40,6 +40,7 @@ export interface DbTrackRow {
   end_time?: number;
   play_count?: number;
   last_played_at?: number;
+  slug?: string;
 }
 
 export interface DbPlaylistRow {
@@ -142,6 +143,19 @@ function normalizeDbData(data: Partial<DbData>): DbData {
 
 let cached: DbData | null = null;
 
+function logColdDbTiming(timing: {
+  readMs: number;
+  parseMs: number;
+  normalizeMs: number;
+  bytes: number;
+}): void {
+  if (process.env.PERF_LOG_DB !== '1') return;
+  console.info('[TikPlay performance] cold DB', {
+    ...timing,
+    totalMs: timing.readMs + timing.parseMs + timing.normalizeMs,
+  });
+}
+
 export function getDb(): DbData {
   if (cached) return cached;
   const dir = path.dirname(DB_PATH);
@@ -152,8 +166,20 @@ export function getDb(): DbData {
     return cached;
   }
   try {
-    cached = normalizeDbData(JSON.parse(fs.readFileSync(DB_PATH, 'utf-8')));
-    return cached!;
+    const readStart = performance.now();
+    const source = fs.readFileSync(DB_PATH, 'utf-8');
+    const readEnd = performance.now();
+    const parsed = JSON.parse(source) as Partial<DbData>;
+    const parseEnd = performance.now();
+    cached = normalizeDbData(parsed);
+    const normalizeEnd = performance.now();
+    logColdDbTiming({
+      readMs: readEnd - readStart,
+      parseMs: parseEnd - readEnd,
+      normalizeMs: normalizeEnd - parseEnd,
+      bytes: Buffer.byteLength(source),
+    });
+    return cached;
   } catch {
     cached = structuredClone(DEFAULT_DATA);
     return cached;
