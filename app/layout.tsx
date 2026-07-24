@@ -4,6 +4,7 @@ import './components.css';
 import type { Metadata, Viewport } from 'next';
 import { Poppins } from 'next/font/google';
 import PerformanceObserver from '@/components/PerformanceObserver';
+import PwaInstallModal from '@/components/PwaInstallModal';
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 import TermsDialog from '@/components/TermsDialog';
 import { PlaybackProvider } from '@/hooks/usePlayback';
@@ -129,6 +130,7 @@ export default function RootLayout({
           <PerformanceObserver />
           <ServiceWorkerRegister />
           {children}
+          <PwaInstallModal />
           <TermsDialog />
         </PlaybackProvider>
       </body>
