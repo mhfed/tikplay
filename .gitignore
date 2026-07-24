@@ -20,3 +20,7 @@ e2e/shot-*.png
 
 # local claude settings
 .claude/settings.local.json
+
+# build artifacts
+lint-out.txt
+e2e-output.log

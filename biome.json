@@ -39,7 +39,6 @@
         "noImportantStyles": "off"
       },
       "a11y": {
-        "useButtonType": "off",
         "noSvgWithoutTitle": "off",
         "useKeyWithClickEvents": "warn",
         "noStaticElementInteractions": "warn",

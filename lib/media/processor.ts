@@ -1,23 +1,10 @@
 import { execFile } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import { existsSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ensureCacheDir, FileCacheStore, getCacheDir } from '../cache';
 import { getDb } from '../db';
-import { type MediaSource, validateMediaUrl } from './source';
-
-export function cacheKey(normalizedUrl: string): string {
-  // Use MD5 to comfortably fit within filesystem filename limits. Since these
-  // are only used as lookup keys for public media, collisions/security aren't
-  // concerns.
-  return createHash('md5').update(normalizedUrl).digest('hex');
-}
-
-export function cacheKeyFromRaw(rawUrl: string): string {
-  const result = validateMediaUrl(rawUrl);
-  return cacheKey(result.normalized || rawUrl);
-}
+import { type MediaSource, cacheKeyFromRaw, validateMediaUrl } from './source';
 
 export interface TrackMeta {
   title: string;

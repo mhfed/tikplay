@@ -76,7 +76,9 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
       audio.id = 'global-audio';
       audio.crossOrigin = 'anonymous';
       audio.preload = 'metadata';
-      document.body.appendChild(audio);
+      if (!audio.parentNode) {
+        document.body.appendChild(audio);
+      }
       audioRef.current = audio;
     }
     return audioRef.current;

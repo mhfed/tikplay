@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { createCopyrightReport } from '@/lib/db/queries';
-import { cacheKey } from '@/lib/media/processor';
-import { validateMediaUrl } from '@/lib/media/source';
+import { cacheKey, validateMediaUrl } from '@/lib/media/source';
 import { checkRateLimit, requestIp } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';

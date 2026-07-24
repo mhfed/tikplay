@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 export type MediaSource =
   | 'tiktok'
   | 'youtube'
@@ -145,7 +147,7 @@ export function normalizeFacebookUrl(raw: string): string {
       return `${protocol}//fb.watch${url.pathname}`;
     }
 
-    // Keep ?v= parameter for Facebook video URLs, remote other tracking params
+    // Keep ?v= parameter for Facebook video URLs, remove other tracking params
     const videoId = url.searchParams.get('v');
     if (videoId) {
       return `${protocol}//www.facebook.com${url.pathname}?v=${videoId}`;
@@ -247,4 +249,18 @@ export function validateMediaUrl(raw: string): MediaValidationResult {
     error:
       'Chỉ hỗ trợ URL từ TikTok, YouTube, Instagram, Facebook hoặc SoundCloud',
   };
+}
+
+export function cacheKey(normalizedUrl: string): string {
+  // SHA-256 (64 chars) is well within macOS filename limits (255 chars).
+  // Cached data on disk uses this as the key, so the algorithm is stable.
+  return createHash('sha256').update(normalizedUrl).digest('hex');
+}
+
+export function cacheKeyFromRaw(rawUrl: string): string {
+  const result = validateMediaUrl(rawUrl);
+  if (!result.valid) {
+    throw new Error(result.error ?? 'URL không hợp lệ');
+  }
+  return cacheKey(result.normalized!);
 }

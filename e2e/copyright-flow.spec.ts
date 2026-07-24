@@ -1,8 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
-import { cacheKey } from '../lib/media/processor';
-import { validateMediaUrl } from '../lib/media/source';
+import { cacheKey, validateMediaUrl } from '../lib/media/source';
 
 test('publishes legal pages without requiring prior acceptance', async ({
   browser,
