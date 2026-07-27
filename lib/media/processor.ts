@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ensureCacheDir, FileCacheStore, getCacheDir } from '../cache';
 import { getDb } from '../db';
-import { type MediaSource, cacheKeyFromRaw, validateMediaUrl } from './source';
+import { cacheKeyFromRaw } from './cache-key';
+import { type MediaSource, validateMediaUrl } from './source';
 
 export interface TrackMeta {
   title: string;
