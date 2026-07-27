@@ -5,12 +5,21 @@ import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import { categoryName } from '../lib/categories';
 import { MEDIA_SOURCE_LABELS } from '../lib/media/source';
-import { CloseIcon, PlayIcon, SettingsIcon, ShareIcon } from './icons';
+import {
+  CloseIcon,
+  PlayIcon,
+  ScanIcon,
+  SettingsIcon,
+  ShareIcon,
+} from './icons';
 import SearchBar from './SearchBar';
 import TrackList from './TrackList';
 import UrlInput from './UrlInput';
 
 const PlaylistManageDialog = dynamic(() => import('./PlaylistManageDialog'), {
+  ssr: false,
+});
+const ProfileInputDialog = dynamic(() => import('./ProfileInputDialog'), {
   ssr: false,
 });
 
@@ -38,6 +47,7 @@ export default function PlaylistView() {
   } = useAppStore();
   const [showPlaylistManager, setShowPlaylistManager] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  const [showProfileInput, setShowProfileInput] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -158,6 +168,15 @@ export default function PlaylistView() {
           error={error}
           compact
         />
+        <button
+          type="button"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-control border border-line bg-surface px-3 py-2 text-xs font-semibold text-muted hover:border-line-strong hover:text-ink max-[640px]:px-2.5 max-[640px]:py-1.5"
+          onClick={() => setShowProfileInput(true)}
+          title="Tải từ TikTok Profile"
+        >
+          <ScanIcon size={15} />
+          <span className="max-[480px]:hidden">Tải từ Profile</span>
+        </button>
       </div>
       <div className="flex-1 overflow-y-auto px-6 pb-6 pt-4 max-[1024px]:pb-[calc(var(--player-bar-h-mobile)+36px)] max-[640px]:px-4 max-[640px]:pb-[calc(var(--mini-h)+40px)] max-[640px]:pt-3">
         <div className="mb-4 flex w-full min-w-0 items-center gap-2 max-[640px]:mb-3 max-[640px]:flex-wrap">
@@ -231,6 +250,9 @@ export default function PlaylistView() {
             onClose={() => setShowPlaylistManager(false)}
           />
         )}
+      {showProfileInput && (
+        <ProfileInputDialog onClose={() => setShowProfileInput(false)} />
+      )}
     </div>
   );
 }

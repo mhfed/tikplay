@@ -6,7 +6,7 @@ import { isMediaBlocked } from '@/lib/db/queries';
 export const runtime = 'nodejs';
 
 // Cache keys are hex (MD5/SHA256). Reject anything else to avoid path abuse.
-const KEY_RE = /^[a-f0-9]{32,64}$/;
+const KEY_RE = /^(?:preview:)?[a-f0-9]{32,64}$/;
 
 const cache = new FileCacheStore();
 const IMMUTABLE_MEDIA_CACHE = 'public, max-age=31536000, immutable';

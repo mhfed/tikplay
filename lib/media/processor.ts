@@ -1,10 +1,10 @@
 import { execFile } from 'node:child_process';
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ensureCacheDir, FileCacheStore, getCacheDir } from '../cache';
 import { getDb } from '../db';
-import { type MediaSource, cacheKeyFromRaw, validateMediaUrl } from './source';
+import { cacheKeyFromRaw, type MediaSource, validateMediaUrl } from './source';
 
 export interface TrackMeta {
   title: string;
@@ -20,6 +20,16 @@ export interface ProcessResult {
   meta: TrackMeta;
 }
 
+export interface BatchItemResult {
+  url: string;
+  ok: boolean;
+  trackId?: number;
+  title?: string;
+  author?: string;
+  error?: string;
+  _internalRaw?: any;
+}
+
 /**
  * Wraps `yt-dlp` + `ffmpeg` (called internally by yt-dlp) to download and
  * extract the best available audio from a supported media URL, caching the result on
@@ -31,6 +41,7 @@ export class MediaProcessor {
   private cache: FileCacheStore;
   /** In-flight jobs keyed by cacheKey so concurrent identical URLs share one. */
   private inFlight = new Map<string, Promise<ProcessResult>>();
+  private inFlightPreviews = new Map<string, Promise<ProcessResult>>();
 
   /** Concurrency queue to avoid freezing the system with 10x concurrent FFmpeg encodings */
   private queue: Array<() => void> = [];
@@ -165,6 +176,150 @@ export class MediaProcessor {
     await this.cache.saveMeta(key, meta);
 
     return { audioKey: key, source, meta };
+  }
+
+  /**
+   * Download only the first 30 seconds of audio for preview purposes.
+   * Uses yt-dlp's --download-sections to minimize data transfer.
+   */
+  async preview(rawUrl: string): Promise<ProcessResult> {
+    const validation = validateMediaUrl(rawUrl);
+    if (!validation.valid || !validation.normalized || !validation.source) {
+      throw new Error(validation.error ?? 'URL không hợp lệ');
+    }
+
+    const baseKey = cacheKeyFromRaw(rawUrl);
+    const key = `preview:${baseKey}`; // Namespace riêng cho preview
+
+    const existing = this.inFlightPreviews.get(key);
+    if (existing) return existing;
+
+    // Phải xin phép concurrency slot giống process
+    await this.acquireSlot();
+
+    if (this.inFlightPreviews.has(key)) {
+      this.releaseSlot();
+      return this.inFlightPreviews.get(key)!;
+    }
+
+    const job = this.runPreview(
+      validation.normalized,
+      key,
+      baseKey,
+      validation.source,
+    ).finally(() => {
+      this.inFlightPreviews.delete(key);
+      this.releaseSlot();
+    });
+
+    this.inFlightPreviews.set(key, job);
+    return job;
+  }
+
+  private async runPreview(
+    url: string,
+    key: string,
+    baseKey: string,
+    source: MediaSource,
+  ): Promise<ProcessResult> {
+    const meta = await this.fetchMetadata(url);
+
+    const cacheDir = getCacheDir();
+    const previewDir = join(cacheDir, 'preview');
+    ensureCacheDir(previewDir);
+    const outputTemplate = join(previewDir, `${baseKey}.m4a`);
+
+    // Download format and args for preview
+    const format =
+      source === 'tiktok' ? 'download/bestaudio*/best' : 'bestaudio*/best';
+    // TikTok section download support can be flaky, this fetches the first 30s
+    // --force-keyframes-at-cuts helps with accuracy on some formats
+    const args = [
+      '-f',
+      format,
+      '--download-sections',
+      '*0:00-0:30',
+      '--force-overwrites',
+      '--extract-audio',
+      '--audio-format',
+      'm4a',
+      '--audio-quality',
+      '0',
+      // We don't normalize volume for previews to save processing time
+      '--no-part', // Avoid issues with long filenames
+      url,
+      '-o',
+      outputTemplate,
+    ];
+
+    const [, cover] = await Promise.all([
+      this.execYtDlp(args),
+      this.downloadCover(meta.cover, source),
+    ]);
+
+    if (cover) {
+      // Store preview cover with preview prefix in metadata
+      // The API endpoint will still use /api/cover/{previewKey}
+      await this.cache.saveCover(key, cover.buffer, cover.contentType);
+      meta.cover = `/api/cover/${key}`;
+    } else {
+      meta.cover = '';
+    }
+
+    // Limit preview duration
+    meta.duration = Math.min(meta.duration, 30);
+
+    await this.cache.saveMeta(key, meta);
+
+    return { audioKey: key, source, meta };
+  }
+
+  /**
+   * Process multiple URLs. Internally runs them using the normal process() pipeline
+   * but handles errors returning an array of results.
+   * This is used by the frontend to batch-download selected tracks from a profile.
+   */
+  async downloadBatch(urls: string[]): Promise<BatchItemResult[]> {
+    // Để frontend theo dõi tiến độ tốt hơn, việc gửi từng promise và xử lý phía frontend
+    // qua /api/process (route hiện tại) là an toàn nhất. Tuy nhiên, endpoint /api/profile/download
+    // gọi hàm này sẽ giới hạn xử lý để không quá lâu timeout.
+
+    const promises = urls.map(async (url) => {
+      try {
+        const result = await this.process(url);
+        return {
+          url,
+          ok: true,
+          title: result.meta.title,
+          author: result.meta.author,
+          audioKey: result.audioKey,
+          meta: result.meta,
+          source: result.source,
+        };
+      } catch (err) {
+        return {
+          url,
+          ok: false,
+          error: (err as Error).message || 'Xử lý thất bại',
+        };
+      }
+    });
+
+    // Chờ tối đa tất cả cùng xong, process() sẽ tự lo concurrency
+    const settled = await Promise.all(promises);
+    return settled.map((item) => {
+      if (!item.ok) {
+        return { url: item.url, ok: false, error: item.error };
+      }
+      return {
+        url: item.url,
+        ok: true,
+        title: item.title,
+        author: item.author,
+        // The endpoint will do the DB persisting (upsertTrack) mapping to trackId
+        _internalRaw: item,
+      };
+    });
   }
 
   /** Best-effort fetch of the cover image; some networks gate their CDN on Referer. */

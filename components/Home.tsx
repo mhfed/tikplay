@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
@@ -10,10 +11,15 @@ import {
   ClockIcon,
   ListMusicIcon,
   PlayIcon,
+  ScanIcon,
   ShuffleIcon,
   TagIcon,
 } from './icons';
 import UrlInput from './UrlInput';
+
+const ProfileInputDialog = dynamic(() => import('./ProfileInputDialog'), {
+  ssr: false,
+});
 
 interface HomeProps {
   /** Fires after navigating to a playlist/track list — lets the mobile shell flip to the Library tab. */
@@ -44,6 +50,7 @@ export default function Home({ onOpenLibrary }: HomeProps) {
     loading,
     error,
   } = useAppStore();
+  const [showProfileInput, setShowProfileInput] = useState(false);
 
   const heroTrack = useMemo<Track | null>(() => {
     if (recentlyPlayed[0]) return recentlyPlayed[0];
@@ -126,6 +133,15 @@ export default function Home({ onOpenLibrary }: HomeProps) {
           error={error}
           compact
         />
+        <button
+          type="button"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-control border border-line bg-surface px-3 py-2 text-xs font-semibold text-muted hover:border-line-strong hover:text-ink max-[640px]:px-2.5 max-[640px]:py-1.5"
+          onClick={() => setShowProfileInput(true)}
+          title="Tải từ TikTok Profile"
+        >
+          <ScanIcon size={15} />
+          <span className="max-[480px]:hidden">Tải từ Profile</span>
+        </button>
       </div>
 
       {heroTrack && (
@@ -341,6 +357,10 @@ export default function Home({ onOpenLibrary }: HomeProps) {
           />
         ))}
       </HomeRow>
+
+      {showProfileInput && (
+        <ProfileInputDialog onClose={() => setShowProfileInput(false)} />
+      )}
     </div>
   );
 }

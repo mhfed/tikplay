@@ -2,9 +2,9 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { MEDIA_SOURCE_LABELS, SOURCE_BADGE_COLORS } from '../lib/media/source';
 import type { CSSProperties, HTMLAttributes, Ref } from 'react';
 import { memo } from 'react';
+import { MEDIA_SOURCE_LABELS, SOURCE_BADGE_COLORS } from '../lib/media/source';
 import type { Track } from '../lib/types';
 import Cover from './Cover';
 import {

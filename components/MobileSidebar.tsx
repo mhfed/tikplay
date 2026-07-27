@@ -11,6 +11,7 @@ import {
   ListMusicIcon,
   PlusIcon,
   RefreshCwIcon,
+  ScanIcon,
   SettingsIcon,
   SourceIcon,
   TagIcon,
@@ -23,6 +24,9 @@ const AutoRuleDialog = dynamic(() => import('./AutoRuleDialog'), {
   ssr: false,
 });
 const YouTubeCookiesDialog = dynamic(() => import('./YouTubeCookiesDialog'), {
+  ssr: false,
+});
+const ProfileInputDialog = dynamic(() => import('./ProfileInputDialog'), {
   ssr: false,
 });
 
@@ -50,6 +54,7 @@ export default function MobileSidebar({
   const [showAddPlaylist, setShowAddPlaylist] = useState(false);
   const [showAutoRules, setShowAutoRules] = useState(false);
   const [showYoutubeCookies, setShowYoutubeCookies] = useState(false);
+  const [showProfileInput, setShowProfileInput] = useState(false);
 
   const handleSelect = (id: number) => {
     selectPlaylist(id);
@@ -199,6 +204,13 @@ export default function MobileSidebar({
           <button
             type="button"
             className={actionClass}
+            onClick={() => setShowProfileInput(true)}
+          >
+            <ScanIcon size={16} /> Tải từ Profile
+          </button>
+          <button
+            type="button"
+            className={actionClass}
             onClick={() => setShowAddPlaylist(true)}
           >
             <PlusIcon size={16} /> Tạo danh sách
@@ -243,6 +255,9 @@ export default function MobileSidebar({
         )}
         {showYoutubeCookies && (
           <YouTubeCookiesDialog onClose={() => setShowYoutubeCookies(false)} />
+        )}
+        {showProfileInput && (
+          <ProfileInputDialog onClose={() => setShowProfileInput(false)} />
         )}
       </aside>
     </>
