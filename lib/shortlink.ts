@@ -93,12 +93,38 @@ export function resolveShortCode(code: string): string | null {
 }
 
 /**
- * Build the full short URL for a given short code.
+ * Extract the origin from a server-side Request object.
+ * This uses the Origin header first, then falls back to Host + protocol
+ * headers which are set by reverse proxies like Fly.io.
  */
-export function shortUrl(code: string): string {
-  const origin =
-    typeof window !== 'undefined'
+export function originFromRequest(request: Request): string {
+  const origin = request.headers.get('origin');
+  if (origin) return origin;
+
+  const host =
+    request.headers.get('x-forwarded-host') ||
+    request.headers.get('host') ||
+    'localhost:3000';
+  const proto =
+    request.headers.get('x-forwarded-proto') ||
+    (host.includes('localhost') || host.includes('127.0.0.1')
+      ? 'http'
+      : 'https');
+  return `${proto}://${host}`;
+}
+
+/**
+ * Build the full short URL for a given short code.
+ *
+ * On the client side (`window` is defined) the origin is read from the
+ * browser. On the server side an explicit `origin` must be passed (usually
+ * derived from the incoming request via {@link originFromRequest}).
+ */
+export function shortUrl(code: string, origin?: string): string {
+  const resolved =
+    origin ??
+    (typeof window !== 'undefined'
       ? window.location.origin
-      : process.env.NEXT_PUBLIC_ORIGIN || 'http://localhost:3000';
-  return `${origin}/s/${code}`;
+      : process.env.NEXT_PUBLIC_ORIGIN || 'http://localhost:3000');
+  return `${resolved}/s/${code}`;
 }

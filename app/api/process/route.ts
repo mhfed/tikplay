@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { FileCacheStore } from '@/lib/cache';
 import { applyAutoRules, isMediaBlocked, upsertTrack } from '@/lib/db/queries';
-import { cacheKeyFromRaw } from '@/lib/media/cache';
 import { MediaProcessor, type TrackMeta } from '@/lib/media/processor';
+import { cacheKeyFromRaw } from '@/lib/media/cache-key';
 import { type MediaSource, validateMediaUrl } from '@/lib/media/source';
 import { checkRateLimit, requestIp } from '@/lib/rateLimit';
 

@@ -58,7 +58,7 @@ export default function ProfileScannerDialog({
   const globalAudio = useGlobalAudioEngine();
   const scanPromiseRef = useRef<Promise<{
     ok: boolean;
-    data: unknown;
+    data?: { items: ProfileItem[]; profile: { username: string; url: string; }; };
     error?: string;
   }> | null>(null);
 
@@ -82,8 +82,10 @@ export default function ProfileScannerDialog({
           throw new Error(data.error || 'Lỗi quét profile');
         }
 
-        setItems(data.data.items);
-        setProfile(data.data.profile);
+        // @ts-ignore
+        setItems(data.data?.items || []);
+        // @ts-ignore
+        setProfile(data.data?.profile || null);
       } catch (err) {
         if (mounted) setError((err as Error).message);
       } finally {

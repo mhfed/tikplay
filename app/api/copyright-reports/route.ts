@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { cacheKey } from '@/lib/media/cache';
 import { createCopyrightReport } from '@/lib/db/queries';
+import { cacheKey } from '@/lib/media/cache-key';
 import { validateMediaUrl } from '@/lib/media/source';
 import { checkRateLimit, requestIp } from '@/lib/rateLimit';
 
