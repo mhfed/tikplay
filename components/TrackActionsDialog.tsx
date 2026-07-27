@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
+import { useOffline } from '@/hooks/useOffline';
 import { CATEGORIES, DEFAULT_CATEGORY } from '../lib/categories';
 import type { Track } from '../lib/types';
 import { DialogOverlay } from './DialogOverlay';
-import { CheckIcon, PlusIcon, ShareIcon } from './icons';
+import { CheckIcon, PlusIcon, ShareIcon, DownloadIcon, TrashIcon } from './icons';
 
 interface Props {
   track: Track;
@@ -24,6 +25,9 @@ export default function TrackActionsDialog({ track, onClose }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
+  const { downloadedTracks, downloadTrack, removeTrack, isSupported } = useOffline();
+
+  const downloadState = downloadedTracks.get(track.id);
 
   const saveMetadata = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -198,6 +202,38 @@ export default function TrackActionsDialog({ track, onClose }: Props) {
             </span>
           </button>
         </div>
+
+        {isSupported && (
+          <div className="mt-5 border-t border-line-soft pt-4">
+            <h3 className="mb-2 text-sm font-bold">Offline Storage</h3>
+            {!downloadState ? (
+              <button
+                type="button"
+                className="flex w-full cursor-pointer items-center gap-2 rounded-control border-0 bg-transparent px-3 py-2.5 text-left text-sm text-ink-secondary transition-colors hover:bg-surface hover:text-accent"
+                onClick={() => {
+                  downloadTrack(track).catch(() => {});
+                  onClose();
+                }}
+              >
+                <DownloadIcon size={16} />
+                <span>Tải bài hát này về máy</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="flex w-full cursor-pointer items-center gap-2 rounded-control border-0 bg-transparent px-3 py-2.5 text-left text-sm text-ink-secondary transition-colors hover:bg-surface hover:text-danger"
+                onClick={() => {
+                  removeTrack(track.id);
+                  onClose();
+                }}
+              >
+                <TrashIcon size={16} />
+                <span>Xóa bản tải offline</span>
+              </button>
+            )}
+          </div>
+        )}
+
         {error && <p className="mt-3 text-xs text-danger">{error}</p>}
         <div className="mt-5 flex justify-end gap-2">
           <button

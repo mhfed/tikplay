@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useState } from 'react';
+import OfflineIndicator from './OfflineIndicator';
 import { useAppStore } from '../hooks/useAppStore';
 import {
   ClockIcon,
@@ -27,6 +28,9 @@ const YouTubeCookiesDialog = dynamic(() => import('./YouTubeCookiesDialog'), {
   ssr: false,
 });
 const ProfileInputDialog = dynamic(() => import('./ProfileInputDialog'), {
+  ssr: false,
+});
+const OfflineManagerDialog = dynamic(() => import('./OfflineManagerDialog'), {
   ssr: false,
 });
 
@@ -55,6 +59,7 @@ export default function MobileSidebar({
   const [showAutoRules, setShowAutoRules] = useState(false);
   const [showYoutubeCookies, setShowYoutubeCookies] = useState(false);
   const [showProfileInput, setShowProfileInput] = useState(false);
+  const [showOfflineManager, setShowOfflineManager] = useState(false);
 
   const handleSelect = (id: number) => {
     selectPlaylist(id);
@@ -80,19 +85,22 @@ export default function MobileSidebar({
       <aside
         className={`fixed top-0 bottom-[var(--bottom-stack)] left-0 z-[48] hidden w-full flex-col overflow-y-auto bg-[rgba(14,14,16,0.97)] opacity-[0.92] shadow-[inset_-1px_0_0_rgba(255,255,255,0.06)] backdrop-blur-[20px] transition-[transform,opacity] duration-[var(--motion-base)] ease-out-app max-[1024px]:flex${visible ? ' translate-x-0 opacity-100' : ' -translate-x-full'}`}
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-line-soft px-4 pb-3 pt-[calc(16px+env(safe-area-inset-top))]">
-          <h2 className="font-display text-lg font-extrabold text-ink">
-            Danh sách phát
-          </h2>
-          <button
-            type="button"
-            className="flex cursor-pointer items-center border-0 bg-transparent p-1 text-muted hover:text-ink"
-            onClick={onClose}
-            aria-label="Đóng"
-            title="Đóng"
-          >
-            <CloseIcon size={20} />
-          </button>
+        <div className="flex flex-col gap-3 border-b border-line-soft px-4 pb-3 pt-[calc(16px+env(safe-area-inset-top))]">
+          <div className="flex shrink-0 items-center justify-between">
+            <h2 className="font-display text-lg font-extrabold text-ink">
+              Danh sách phát
+            </h2>
+            <button
+              type="button"
+              className="flex cursor-pointer items-center border-0 bg-transparent p-1 text-muted hover:text-ink"
+              onClick={onClose}
+              aria-label="Đóng"
+              title="Đóng"
+            >
+              <CloseIcon size={20} />
+            </button>
+          </div>
+          <OfflineIndicator onClick={() => setShowOfflineManager(true)} className="w-fit" />
         </div>
 
         <div className={sectionClass}>Thư viện</div>
@@ -258,6 +266,9 @@ export default function MobileSidebar({
         )}
         {showProfileInput && (
           <ProfileInputDialog onClose={() => setShowProfileInput(false)} />
+        )}
+        {showOfflineManager && (
+          <OfflineManagerDialog onClose={() => setShowOfflineManager(false)} />
         )}
       </aside>
     </>

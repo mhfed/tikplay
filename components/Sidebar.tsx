@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import OfflineIndicator from './OfflineIndicator';
 import { useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import {
@@ -31,6 +32,9 @@ const YouTubeCookiesDialog = dynamic(() => import('./YouTubeCookiesDialog'), {
 const ProfileInputDialog = dynamic(() => import('./ProfileInputDialog'), {
   ssr: false,
 });
+const OfflineManagerDialog = dynamic(() => import('./OfflineManagerDialog'), {
+  ssr: false,
+});
 
 export default function Sidebar() {
   const {
@@ -47,6 +51,7 @@ export default function Sidebar() {
   const [showAutoRules, setShowAutoRules] = useState(false);
   const [showYoutubeCookies, setShowYoutubeCookies] = useState(false);
   const [showProfileInput, setShowProfileInput] = useState(false);
+  const [showOfflineManager, setShowOfflineManager] = useState(false);
 
   const isActive = (href: string) => pathname === href;
   const itemClass =
@@ -62,20 +67,23 @@ export default function Sidebar() {
 
   return (
     <aside className="flex w-[var(--sidebar-w)] shrink-0 flex-col overflow-hidden border-r border-line-soft bg-[var(--glass-bg)] backdrop-blur-[20px] max-[1024px]:hidden">
-      <div className="flex shrink-0 items-center gap-2.5 px-4 pb-4 pt-5">
-        <div className="grid size-9 place-items-center rounded-compact bg-linear-to-br from-accent to-tertiary text-lg text-[#00201e] shadow-[0_0_16px_var(--accent-glow)]">
-          <MusicIcon size={18} />
+      <div className="flex flex-col gap-3 px-4 pb-4 pt-5">
+        <div className="flex shrink-0 items-center gap-2.5">
+          <div className="grid size-9 place-items-center rounded-compact bg-linear-to-br from-accent to-tertiary text-lg text-[#00201e] shadow-[0_0_16px_var(--accent-glow)]">
+            <MusicIcon size={18} />
+          </div>
+          <div className="flex min-w-0 flex-col gap-px">
+            <Link href="/" className="flex min-w-0 flex-col">
+              <span className="font-display text-xl font-extrabold text-ink [text-shadow:0_0_12px_var(--accent-glow)]">
+                TikPlay
+              </span>
+              <span className="truncate font-mono text-[10px] tracking-[0.04em] text-muted-2">
+                TikTok, YouTube & more
+              </span>
+            </Link>
+          </div>
         </div>
-        <div className="flex min-w-0 flex-col gap-px">
-          <Link href="/" className="flex min-w-0 flex-col">
-            <span className="font-display text-xl font-extrabold text-ink [text-shadow:0_0_12px_var(--accent-glow)]">
-              TikPlay
-            </span>
-            <span className="truncate font-mono text-[10px] tracking-[0.04em] text-muted-2">
-              TikTok, YouTube & more
-            </span>
-          </Link>
-        </div>
+        <OfflineIndicator onClick={() => setShowOfflineManager(true)} className="w-fit" />
       </div>
 
       <div className={sectionClass}>Thư viện</div>
@@ -245,6 +253,9 @@ export default function Sidebar() {
       )}
       {showProfileInput && (
         <ProfileInputDialog onClose={() => setShowProfileInput(false)} />
+      )}
+      {showOfflineManager && (
+        <OfflineManagerDialog onClose={() => setShowOfflineManager(false)} />
       )}
     </aside>
   );

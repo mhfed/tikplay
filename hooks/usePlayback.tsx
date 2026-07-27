@@ -367,19 +367,62 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     next();
   };
 
-  // The engine lives here, above the route tree. Route-level players only
-  // render controls; navigation never creates or tears down playback.
   useEffect(() => {
     if (!currentTrack) {
       pauseAudio();
       return;
     }
-
-    loadTrack(currentTrack.audioUrl, restoredPositionRef.current ?? undefined);
-    restoredPositionRef.current = null;
     if (isPlaying) playAudio();
     else pauseAudio();
-  }, [currentTrack, isPlaying, loadTrack, pauseAudio, playAudio]);
+  }, [currentTrack?.id, isPlaying, playAudio, pauseAudio]);
+
+  // The engine lives here, above the route tree. Route-level players only
+  // render controls; navigation never creates or tears down playback.
+  useEffect(() => {
+    if (!currentTrack) return;
+
+    let isSubscribed = true;
+    let createdBlobUrl: string | null = null;
+    
+    // We cannot use await directly inside useEffect, nor can we block.
+    // Instead we load immediately if offline metadata is missing,
+    // or wait for offline resolution.
+    const doLoad = async () => {
+      let audioUrl = currentTrack.audioUrl;
+      try {
+        const { offlineMetadataStore, offlineFileStore } = await import(
+          '../lib/offline'
+        );
+        const isDownloaded = await offlineMetadataStore.isDownloaded(currentTrack.id);
+        if (isDownloaded) {
+          const meta = await offlineMetadataStore.getTrack(currentTrack.id);
+          if (meta) {
+            const file = await offlineFileStore.getAudioFile(meta.audioKey);
+            if (file) {
+              createdBlobUrl = URL.createObjectURL(file);
+              audioUrl = createdBlobUrl;
+            }
+          }
+        }
+      } catch (e) {
+        // Fallback to online url
+      }
+
+      if (!isSubscribed) {
+        if (createdBlobUrl) URL.revokeObjectURL(createdBlobUrl);
+        return;
+      }
+
+      loadTrack(audioUrl, restoredPositionRef.current ?? undefined);
+      restoredPositionRef.current = null;
+    };
+
+    doLoad();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [currentTrack, loadTrack]);
 
   useEffect(() => {
     applyVolume(volume);

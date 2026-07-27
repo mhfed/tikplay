@@ -167,8 +167,20 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
   const trackGenerationRef = useRef(0);
   const playRequestRef = useRef(0);
 
+  const lastBlobUrlRef = useRef<string | null>(null);
+
   const loadTrack = useCallback(
     (audioUrl: string, initialTime?: number) => {
+      // Revoke old offline blob URL if loading a new track
+      if (lastBlobUrlRef.current && lastBlobUrlRef.current !== audioUrl) {
+        URL.revokeObjectURL(lastBlobUrlRef.current);
+        lastBlobUrlRef.current = null;
+      }
+      
+      if (audioUrl.startsWith('blob:')) {
+        lastBlobUrlRef.current = audioUrl;
+      }
+
       if (lastUrlRef.current === audioUrl) {
         if (initialTime != null && initialTime > 0) {
           const audio = getOrCreateAudio();
@@ -566,6 +578,11 @@ export function useAudioEngine(opts: AudioEngineOptions = {}) {
       sourceRef.current?.disconnect();
       if (ctxRef.current?.state !== 'closed') {
         ctxRef.current?.close().catch(() => {});
+      }
+
+      if (lastBlobUrlRef.current) {
+        URL.revokeObjectURL(lastBlobUrlRef.current);
+        lastBlobUrlRef.current = null;
       }
 
       audioRef.current = null;

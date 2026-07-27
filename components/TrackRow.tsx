@@ -7,6 +7,7 @@ import { memo } from 'react';
 import { MEDIA_SOURCE_LABELS, SOURCE_BADGE_COLORS } from '../lib/media/source';
 import type { Track } from '../lib/types';
 import Cover from './Cover';
+import OfflineBadge from './OfflineBadge';
 import {
   CloseIcon,
   GripIcon,
@@ -99,6 +100,9 @@ function TrackRow({
           </span>
         )}
       </button>
+      <div className="flex size-[30px] shrink-0 items-center justify-center">
+        <OfflineBadge track={track} size={15} className="opacity-0 group-hover:opacity-100 max-[640px]:opacity-100 transition-opacity" />
+      </div>
       <button
         type="button"
         className="flex size-[30px] shrink-0 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-muted-2 opacity-0 transition-[opacity,color,transform] duration-[var(--motion-fast)] group-hover:opacity-100 hover:scale-[1.08] hover:text-accent max-[640px]:opacity-100 [@media(hover:none)]:min-h-11 [@media(hover:none)]:min-w-9"
