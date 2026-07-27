@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getOrCreateShortLink, shortUrl } from '@/lib/shortlink';
+import {
+  getOrCreateShortLink,
+  originFromRequest,
+  shortUrl,
+} from '@/lib/shortlink';
 
 export async function POST(request: Request) {
   try {
@@ -23,7 +27,8 @@ export async function POST(request: Request) {
     }
 
     const code = getOrCreateShortLink(target_type, target_id);
-    return NextResponse.json({ ok: true, code, url: shortUrl(code) });
+    const origin = originFromRequest(request);
+    return NextResponse.json({ ok: true, code, url: shortUrl(code, origin) });
   } catch {
     return NextResponse.json(
       { error: 'Invalid request body' },
