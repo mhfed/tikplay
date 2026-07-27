@@ -33,7 +33,7 @@ export async function generateMetadata({
   searchParams,
 }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const sp = await searchParams;
+  const _sp = await searchParams;
   const numId = Number(slug) || 0;
   const row = getTrackBySlug(slug) ?? (numId ? getTrack(numId) : undefined);
 

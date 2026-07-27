@@ -56,26 +56,29 @@ export default function ProfileScannerDialog({
 
   const { loadAll } = useAppStore();
   const globalAudio = useGlobalAudioEngine();
-  const fetchedRef = useRef(false);
+  const scanPromiseRef = useRef<Promise<{
+    ok: boolean;
+    data: unknown;
+    error?: string;
+  }> | null>(null);
 
   useEffect(() => {
-    // Guard against React StrictMode double-mount in development
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-
     let mounted = true;
     const scan = async () => {
       try {
-        const res = await fetch('/api/profile/scan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url }),
-        });
-        const data = await res.json();
+        if (!scanPromiseRef.current) {
+          scanPromiseRef.current = fetch('/api/profile/scan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url }),
+          }).then((res) => res.json());
+        }
+
+        const data = await scanPromiseRef.current;
 
         if (!mounted) return;
 
-        if (!res.ok || !data.ok) {
+        if (data.ok === false) {
           throw new Error(data.error || 'Lỗi quét profile');
         }
 
@@ -302,15 +305,21 @@ export default function ProfileScannerDialog({
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {loading ? (
-            <div className="flex flex-1 flex-col items-center justify-center p-12 text-center">
-              <SpinnerIcon className="size-8 text-accent animate-spin mb-4" />
-              <p className="text-sm font-semibold text-ink">
-                Đang quét danh sách bài hát...
-              </p>
-              <p className="text-xs text-muted mt-1.5 max-w-[280px]">
-                TikPlay đang quét các bài hát mới nhất từ profile này. Vui lòng
-                đợi trong giây lát.
-              </p>
+            <div className="flex flex-1 flex-col p-4 gap-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  // biome-ignore lint/suspicious/noArrayIndexKey: skeleton loading uses array
+                  key={i}
+                  className="flex gap-4 p-3 rounded-[20px] border border-line-soft bg-surface/40 animate-pulse"
+                >
+                  <div className="w-[84px] h-[112px] rounded-[14px] bg-line-soft shrink-0" />
+                  <div className="flex flex-col justify-center flex-1 space-y-3 py-1">
+                    <div className="h-3.5 bg-line-soft rounded-full w-2/3" />
+                    <div className="h-3 bg-line-soft/60 rounded-full w-1/3" />
+                    <div className="mt-auto h-3 bg-line-soft/60 rounded-full w-1/4" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : error ? (
             <div className="flex flex-1 flex-col items-center justify-center p-10 text-center text-danger">

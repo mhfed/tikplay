@@ -62,7 +62,6 @@ export default function PlayerPanel({
   const {
     currentTrack,
     currentIndex,
-    currentPlaylistId,
     isPlaying,
     repeat,
     shuffle,
@@ -119,7 +118,7 @@ export default function PlayerPanel({
     if (pendingSeek == null || !engine.isReady || !currentTrack) return;
     engine.seek(pendingSeek);
     clearPendingSeek();
-  }, [pendingSeek, engine.isReady, currentTrack?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pendingSeek, engine.isReady, currentTrack?.id, currentTrack]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll-wheel over the volume track nudges volume in 5% steps (0–300%).
   useEffect(() => {
