@@ -1,12 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { FileCacheStore } from '@/lib/cache';
 import { applyAutoRules, isMediaBlocked, upsertTrack } from '@/lib/db/queries';
+import { cacheKeyFromRaw } from '@/lib/media/cache';
 import { MediaProcessor, type TrackMeta } from '@/lib/media/processor';
-import {
-  cacheKeyFromRaw,
-  type MediaSource,
-  validateMediaUrl,
-} from '@/lib/media/source';
+import { type MediaSource, validateMediaUrl } from '@/lib/media/source';
 import { checkRateLimit, requestIp } from '@/lib/rateLimit';
 
 // Long-running yt-dlp jobs must run on the Node.js runtime, never Edge.
