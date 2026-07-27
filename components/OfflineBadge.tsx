@@ -2,11 +2,11 @@
 
 import { useOffline } from '@/hooks/useOffline';
 import { Track } from '@/lib/types';
-import { 
-  DownloadIcon, 
-  CheckCircleIcon, 
-  SpinnerIcon, 
-  ShieldAlertIcon // for error
+import {
+  DownloadIcon,
+  CheckCircleIcon,
+  SpinnerIcon,
+  ShieldAlertIcon, // for error
 } from './icons';
 
 interface OfflineBadgeProps {
@@ -15,7 +15,11 @@ interface OfflineBadgeProps {
   size?: number;
 }
 
-export default function OfflineBadge({ track, className = '', size = 16 }: OfflineBadgeProps) {
+export default function OfflineBadge({
+  track,
+  className = '',
+  size = 16,
+}: OfflineBadgeProps) {
   const { downloadedTracks, downloadTrack, isSupported } = useOffline();
 
   if (!isSupported) return null;
@@ -42,7 +46,7 @@ export default function OfflineBadge({ track, className = '', size = 16 }: Offli
   if (downloadState.isDownloading) {
     const percent = Math.round(downloadState.progress * 100);
     return (
-      <div 
+      <div
         className={`flex items-center gap-1 text-blue-400 ${className}`}
         title={`Đang tải... ${percent}%`}
       >
@@ -54,9 +58,18 @@ export default function OfflineBadge({ track, className = '', size = 16 }: Offli
 
   if (downloadState.error) {
     return (
-      <div className={`text-red-400 ${className}`} title={downloadState.error}>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          downloadTrack(track).catch(() => {});
+        }}
+        className={`text-red-400 hover:text-red-300 transition-colors ${className}`}
+        title={`Lỗi: ${downloadState.error} — Nhấp để thử lại`}
+      >
         <ShieldAlertIcon size={size} />
-      </div>
+      </button>
     );
   }
 

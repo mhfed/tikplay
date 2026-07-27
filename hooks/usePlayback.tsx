@@ -383,7 +383,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
 
     let isSubscribed = true;
     let createdBlobUrl: string | null = null;
-    
+
     // We cannot use await directly inside useEffect, nor can we block.
     // Instead we load immediately if offline metadata is missing,
     // or wait for offline resolution.
@@ -393,7 +393,9 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
         const { offlineMetadataStore, offlineFileStore } = await import(
           '../lib/offline'
         );
-        const isDownloaded = await offlineMetadataStore.isDownloaded(currentTrack.id);
+        const isDownloaded = await offlineMetadataStore.isDownloaded(
+          currentTrack.id,
+        );
         if (isDownloaded) {
           const meta = await offlineMetadataStore.getTrack(currentTrack.id);
           if (meta) {

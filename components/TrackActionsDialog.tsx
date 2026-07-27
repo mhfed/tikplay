@@ -6,7 +6,13 @@ import { useOffline } from '@/hooks/useOffline';
 import { CATEGORIES, DEFAULT_CATEGORY } from '../lib/categories';
 import type { Track } from '../lib/types';
 import { DialogOverlay } from './DialogOverlay';
-import { CheckIcon, PlusIcon, ShareIcon, DownloadIcon, TrashIcon } from './icons';
+import {
+  CheckIcon,
+  PlusIcon,
+  ShareIcon,
+  DownloadIcon,
+  TrashIcon,
+} from './icons';
 
 interface Props {
   track: Track;
@@ -25,7 +31,8 @@ export default function TrackActionsDialog({ track, onClose }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
-  const { downloadedTracks, downloadTrack, removeTrack, isSupported } = useOffline();
+  const { downloadedTracks, downloadTrack, removeTrack, isSupported } =
+    useOffline();
 
   const downloadState = downloadedTracks.get(track.id);
 

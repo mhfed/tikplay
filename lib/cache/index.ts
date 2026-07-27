@@ -7,7 +7,7 @@ import {
   statSync,
   unlinkSync,
 } from 'node:fs';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 
 const DEFAULT_TTL_DAYS = 7;
 const DEFAULT_MAX_GB = 5;
@@ -36,7 +36,18 @@ export interface CacheStore {
 
 /** Cache directory: env override or default `./cache` next to the app. */
 export function getCacheDir(): string {
-  return process.env.CACHE_DIR || './cache';
+  if (process.env.CACHE_DIR) return process.env.CACHE_DIR;
+
+  const cwd = process.cwd();
+
+  // Next.js standalone mode: server.js calls process.chdir(__dirname),
+  // so CWD becomes project-root/.next/standalone/.
+  // Cache is at project-root/cache/ (two levels up from CWD).
+  if (cwd.includes(`${sep}.next${sep}standalone`)) {
+    return join(cwd, '..', '..', 'cache');
+  }
+
+  return join(cwd, 'cache');
 }
 
 /** Create the cache directory if missing. */

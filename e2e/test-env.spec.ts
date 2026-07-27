@@ -9,7 +9,10 @@ test.describe('Check Environment', () => {
     const spanText = await page.locator('span', { hasText: 'Lưu trữ' }).count();
     console.log('Lưu trữ count:', spanText);
     if (spanText > 0) {
-      console.log('Lưu trữ text:', await page.locator('span', { hasText: 'Lưu trữ' }).first().innerText());
+      console.log(
+        'Lưu trữ text:',
+        await page.locator('span', { hasText: 'Lưu trữ' }).first().innerText(),
+      );
     }
   });
 });

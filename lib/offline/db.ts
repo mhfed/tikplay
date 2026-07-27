@@ -33,9 +33,14 @@ export class OfflineFileStore {
     const fileName = `audio-${audioKey}.m4a`;
     const fileHandle = await dir.getFileHandle(fileName, { create: true });
 
+    if (typeof (fileHandle as any).createWritable !== 'function') {
+      throw new Error(
+        'Trình duyệt hiện tại không hỗ trợ ghi OPFS trực tiếp. Vui lòng sử dụng Chrome, Edge hoặc Safari 16.4+',
+      );
+    }
     // FileSystemWritableFileStream is standard in modern browsers (Chrome/Safari)
     // @ts-ignore - TS might miss createWritable on FileSystemFileHandle
-    const writable = await fileHandle.createWritable();
+    const writable = await (fileHandle as any).createWritable();
     await writable.write(blob);
     await writable.close();
 
@@ -52,8 +57,13 @@ export class OfflineFileStore {
     const fileName = `audio-${audioKey}.m4a`;
     const fileHandle = await dir.getFileHandle(fileName, { create: true });
 
+    if (typeof (fileHandle as any).createWritable !== 'function') {
+      throw new Error(
+        'Trình duyệt hiện tại không hỗ trợ ghi OPFS trực tiếp. Vui lòng sử dụng Chrome, Edge hoặc Safari 16.4+',
+      );
+    }
     // @ts-ignore
-    const writable = await fileHandle.createWritable();
+    const writable = await (fileHandle as any).createWritable();
 
     let receivedLength = 0;
     while (true) {

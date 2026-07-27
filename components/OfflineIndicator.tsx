@@ -8,8 +8,12 @@ interface OfflineIndicatorProps {
   className?: string;
 }
 
-export default function OfflineIndicator({ onClick, className = '' }: OfflineIndicatorProps) {
-  const { isOnline, downloadedTracks, isSupported, isInitialized } = useOffline();
+export default function OfflineIndicator({
+  onClick,
+  className = '',
+}: OfflineIndicatorProps) {
+  const { isOnline, downloadedTracks, isSupported, isInitialized } =
+    useOffline();
 
   if (!isSupported || !isInitialized) return null;
 
@@ -20,8 +24,8 @@ export default function OfflineIndicator({ onClick, className = '' }: OfflineInd
       type="button"
       onClick={onClick}
       className={`flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-        isOnline 
-          ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white' 
+        isOnline
+          ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white'
           : 'bg-emerald-900/50 text-emerald-400 hover:bg-emerald-900/70 border border-emerald-800'
       } ${className}`}
     >

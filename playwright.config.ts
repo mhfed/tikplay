@@ -1,4 +1,5 @@
 import { defineConfig } from '@playwright/test';
+import path from 'node:path';
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000';
 
@@ -33,5 +34,9 @@ export default defineConfig({
     url: baseURL,
     reuseExistingServer: true,
     timeout: 120_000,
+    env: {
+      DB_PATH: path.resolve(__dirname, 'data', 'tikplay.json'),
+      CACHE_DIR: path.resolve(__dirname, 'cache'),
+    },
   },
 });
