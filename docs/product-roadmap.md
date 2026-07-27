@@ -77,13 +77,13 @@ double-counted, and history remains bounded.
 
 ## Phase 5: Offline audio
 
-Status: Planned
+Status: Completed (2026-07-27)
 
-- [ ] Add explicit offline download and removal controls for tracks/playlists.
-- [ ] Cache audio separately from the application shell.
-- [ ] Add download progress, failure, and unavailable states.
-- [ ] Provide a storage manager with usage and per-item removal.
-- [ ] Reconcile offline entries when tracks are deleted or media changes.
+- [x] Add explicit offline download and removal controls for tracks/playlists.
+- [x] Cache audio separately from the application shell.
+- [x] Add download progress, failure, and unavailable states.
+- [x] Provide a storage manager with usage and per-item removal.
+- [x] Reconcile offline entries when tracks are deleted or media changes.
 
 Done when selected audio remains playable without a network connection and
 users retain explicit control over browser storage.

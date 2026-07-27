@@ -342,6 +342,78 @@ export function SpinnerIcon({ size = 24, ...rest }: IconProps) {
   );
 }
 
+export function DownloadIcon({ size = 24, ...rest }: IconProps) {
+  return (
+    <svg {...stroke(size)} aria-hidden {...rest}>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
+export function CheckCircleIcon({ size = 24, ...rest }: IconProps) {
+  return (
+    <svg {...stroke(size)} aria-hidden {...rest}>
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+  );
+}
+
+export function WifiIcon({ size = 24, ...rest }: IconProps) {
+  return (
+    <svg {...stroke(size)} aria-hidden {...rest}>
+      <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+      <path d="M1.42 9a16 16 0 0 1 21.16 0" />
+      <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+      <line x1="12" y1="20" x2="12.01" y2="20" />
+    </svg>
+  );
+}
+
+export function WifiOffIcon({ size = 24, ...rest }: IconProps) {
+  return (
+    <svg {...stroke(size)} aria-hidden {...rest}>
+      <line x1="2" y1="2" x2="22" y2="22" />
+      <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+      <line x1="12" y1="20" x2="12.01" y2="20" />
+      <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+      <path d="M1.42 9a16 16 0 0 1 21.16 0" />
+    </svg>
+  );
+}
+
+export function HardDriveIcon({ size = 24, ...rest }: IconProps) {
+  return (
+    <svg {...stroke(size)} aria-hidden {...rest}>
+      <line x1="22" y1="12" x2="2" y2="12" />
+      <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+      <line x1="6" y1="16" x2="6.01" y2="16" />
+      <line x1="10" y1="16" x2="10.01" y2="16" />
+    </svg>
+  );
+}
+
+export function TrashIcon({ size = 24, ...rest }: IconProps) {
+  return (
+    <svg {...stroke(size)} aria-hidden {...rest}>
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </svg>
+  );
+}
+
+export function ShieldAlertIcon({ size = 24, ...rest }: IconProps) {
+  return (
+    <svg {...stroke(size)} aria-hidden {...rest}>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+  );
+}
+
 export function ScanIcon({ size = 24, ...rest }: IconProps) {
   return (
     <svg {...stroke(size)} aria-hidden {...rest}>

@@ -8,6 +8,7 @@ import PwaInstallModal from '@/components/PwaInstallModal';
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 import TermsDialog from '@/components/TermsDialog';
 import { PlaybackProvider } from '@/hooks/usePlayback';
+import { OfflineProvider } from '@/hooks/useOffline';
 
 const poppins = Poppins({
   weight: ['400', '500', '600', '700', '800', '900'],
@@ -126,6 +127,7 @@ export default function RootLayout({
         />
       </head>
       <body>
+        <OfflineProvider>
         <PlaybackProvider>
           <PerformanceObserver />
           <ServiceWorkerRegister />
@@ -133,6 +135,7 @@ export default function RootLayout({
           <PwaInstallModal />
           <TermsDialog />
         </PlaybackProvider>
+        </OfflineProvider>
       </body>
     </html>
   );

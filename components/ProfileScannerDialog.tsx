@@ -58,7 +58,7 @@ export default function ProfileScannerDialog({
   const globalAudio = useGlobalAudioEngine();
   const scanPromiseRef = useRef<Promise<{
     ok: boolean;
-    data?: { items: ProfileItem[]; profile: { username: string; url: string; }; };
+    data?: { items: ProfileItem[]; profile: { username: string; url: string } };
     error?: string;
   }> | null>(null);
 
