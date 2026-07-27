@@ -10,7 +10,8 @@ import { isMediaBlocked } from '@/lib/db/queries';
 export const runtime = 'nodejs';
 
 // Cache keys are hex (MD5/SHA256). Reject anything else to avoid path abuse.
-const KEY_RE = /^[a-f0-9]{32,64}$/;
+// Previews prepend 'preview:' to the hex key.
+const KEY_RE = /^(?:preview:)?[a-f0-9]{32,64}$/;
 
 const IMMUTABLE_MEDIA_CACHE = 'public, max-age=31536000, immutable';
 
@@ -49,7 +50,15 @@ export async function GET(
   }
 
   const startedAt = performance.now();
-  const file = join(getCacheDir(), `${key}.m4a`);
+
+  let file: string;
+  if (key.startsWith('preview:')) {
+    const baseKey = key.replace('preview:', '');
+    file = join(getCacheDir(), 'preview', `${baseKey}.m4a`);
+  } else {
+    file = join(getCacheDir(), `${key}.m4a`);
+  }
+
   let size: number;
   try {
     size = (await stat(file)).size;

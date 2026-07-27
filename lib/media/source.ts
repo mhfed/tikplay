@@ -178,6 +178,22 @@ export function normalizeSoundCloudUrl(raw: string): string {
   }
 }
 
+export function isTikTokProfileUrl(url: string | URL): boolean {
+  try {
+    const parsed = typeof url === 'string' ? new URL(url) : url;
+    if (
+      !TIKTOK_HOSTS.has(parsed.hostname.toLowerCase()) &&
+      !parsed.hostname.toLowerCase().endsWith('.tiktok.com')
+    ) {
+      return false;
+    }
+    const pathname = parsed.pathname.replace(/\/+$/, '');
+    return /^\/@[\w.-]+(\/)?$/.test(pathname);
+  } catch {
+    return false;
+  }
+}
+
 export function validateMediaUrl(raw: string): MediaValidationResult {
   if (!raw || typeof raw !== 'string') {
     return { valid: false, error: 'URL không được để trống' };
