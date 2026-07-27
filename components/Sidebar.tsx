@@ -83,7 +83,10 @@ export default function Sidebar() {
             </Link>
           </div>
         </div>
-        <OfflineIndicator onClick={() => setShowOfflineManager(true)} className="w-fit" />
+        <OfflineIndicator
+          onClick={() => setShowOfflineManager(true)}
+          className="w-fit"
+        />
       </div>
 
       <div className={sectionClass}>Thư viện</div>

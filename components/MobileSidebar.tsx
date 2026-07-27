@@ -100,7 +100,10 @@ export default function MobileSidebar({
               <CloseIcon size={20} />
             </button>
           </div>
-          <OfflineIndicator onClick={() => setShowOfflineManager(true)} className="w-fit" />
+          <OfflineIndicator
+            onClick={() => setShowOfflineManager(true)}
+            className="w-fit"
+          />
         </div>
 
         <div className={sectionClass}>Thư viện</div>

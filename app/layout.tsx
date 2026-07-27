@@ -128,13 +128,13 @@ export default function RootLayout({
       </head>
       <body>
         <OfflineProvider>
-        <PlaybackProvider>
-          <PerformanceObserver />
-          <ServiceWorkerRegister />
-          {children}
-          <PwaInstallModal />
-          <TermsDialog />
-        </PlaybackProvider>
+          <PlaybackProvider>
+            <PerformanceObserver />
+            <ServiceWorkerRegister />
+            {children}
+            <PwaInstallModal />
+            <TermsDialog />
+          </PlaybackProvider>
         </OfflineProvider>
       </body>
     </html>

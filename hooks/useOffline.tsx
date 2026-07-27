@@ -1,6 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  createContext,
+  useContext,
+  ReactNode,
+} from 'react';
 import { Track } from '@/lib/types';
 import {
   offlineFileStore,
@@ -8,7 +15,7 @@ import {
   OfflineTrackMeta,
   getStorageInfo,
   StorageInfo,
-  requestPersistentStorage
+  requestPersistentStorage,
 } from '@/lib/offline';
 
 export interface DownloadState {
@@ -43,7 +50,9 @@ export function useOffline() {
 }
 
 export function OfflineProvider({ children }: { children: ReactNode }) {
-  const [downloadedTracks, setDownloadedTracks] = useState<Map<number, DownloadState>>(new Map());
+  const [downloadedTracks, setDownloadedTracks] = useState<
+    Map<number, DownloadState>
+  >(new Map());
   const [storageInfo, setStorageInfo] = useState<StorageInfo | null>(null);
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
@@ -58,7 +67,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
           meta: track,
           isDownloading: false,
           progress: 1,
-          error: null
+          error: null,
         });
       }
       setDownloadedTracks(map);
@@ -86,7 +95,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         setIsInitialized(true);
         return;
       }
-      
+
       try {
         await offlineFileStore.init();
         await requestPersistentStorage();
@@ -108,119 +117,132 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     };
   }, [loadMetadata, refreshStorageInfo]);
 
-  const downloadTrack = useCallback(async (track: Track) => {
-    if (!isSupported) {
-      throw new Error('Offline storage is not supported');
-    }
+  const downloadTrack = useCallback(
+    async (track: Track) => {
+      if (!isSupported) {
+        throw new Error('Offline storage is not supported');
+      }
 
-    const audioKey = track.audioUrl.split('/').pop() || String(track.id);
+      const audioKey = track.audioUrl.split('/').pop() || String(track.id);
 
-    setDownloadedTracks(prev => {
-      const next = new Map(prev);
-      next.set(track.id, {
-        meta: {
+      setDownloadedTracks((prev) => {
+        const next = new Map(prev);
+        next.set(track.id, {
+          meta: {
+            trackId: track.id,
+            audioKey,
+            title: track.title,
+            author: track.author,
+            cover: track.cover,
+            duration: track.duration,
+            fileSize: 0,
+            downloadedAt: Date.now(),
+            lastPlayedAt: null,
+          },
+          isDownloading: true,
+          progress: 0,
+          error: null,
+        });
+        return next;
+      });
+
+      try {
+        const response = await fetch(track.audioUrl);
+        if (!response.ok) {
+          throw new Error(
+            `Không tìm thấy tệp âm thanh (Lỗi HTTP ${response.status})`,
+          );
+        }
+        if (!response.body) {
+          throw new Error('Đường truyền âm thanh không hợp lệ (Trống dữ liệu)');
+        }
+
+        const contentLength = Number(
+          response.headers.get('Content-Length') || 0,
+        );
+        const reader = response.body.getReader();
+
+        const { fileSize } = await offlineFileStore.saveAudioFromStream(
+          audioKey,
+          reader,
+          contentLength,
+          (percent) => {
+            setDownloadedTracks((prev) => {
+              const current = prev.get(track.id);
+              if (!current) return prev;
+              const next = new Map(prev);
+              next.set(track.id, { ...current, progress: percent });
+              return next;
+            });
+          },
+        );
+
+        const meta: OfflineTrackMeta = {
           trackId: track.id,
           audioKey,
           title: track.title,
           author: track.author,
           cover: track.cover,
           duration: track.duration,
-          fileSize: 0,
+          fileSize,
           downloadedAt: Date.now(),
-          lastPlayedAt: null
-        },
-        isDownloading: true,
-        progress: 0,
-        error: null
-      });
-      return next;
-    });
+          lastPlayedAt: null,
+        };
 
-    try {
-      const response = await fetch(track.audioUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch audio: ${response.statusText}`);
-      }
-      if (!response.body) {
-        throw new Error('Response body is null');
-      }
+        await offlineMetadataStore.addTrack(meta);
+        await refreshStorageInfo();
 
-      const contentLength = Number(response.headers.get('Content-Length') || 0);
-      const reader = response.body.getReader();
-
-      const { fileSize } = await offlineFileStore.saveAudioFromStream(
-        audioKey,
-        reader,
-        contentLength,
-        (percent) => {
-          setDownloadedTracks(prev => {
-            const current = prev.get(track.id);
-            if (!current) return prev;
-            const next = new Map(prev);
-            next.set(track.id, { ...current, progress: percent });
-            return next;
+        setDownloadedTracks((prev) => {
+          const next = new Map(prev);
+          next.set(track.id, {
+            meta,
+            isDownloading: false,
+            progress: 1,
+            error: null,
           });
-        }
-      );
-
-      const meta: OfflineTrackMeta = {
-        trackId: track.id,
-        audioKey,
-        title: track.title,
-        author: track.author,
-        cover: track.cover,
-        duration: track.duration,
-        fileSize,
-        downloadedAt: Date.now(),
-        lastPlayedAt: null
-      };
-
-      await offlineMetadataStore.addTrack(meta);
-      await refreshStorageInfo();
-
-      setDownloadedTracks(prev => {
-        const next = new Map(prev);
-        next.set(track.id, {
-          meta,
-          isDownloading: false,
-          progress: 1,
-          error: null
+          return next;
         });
-        return next;
-      });
+      } catch (e: any) {
+        console.error('Download error:', e);
+        setDownloadedTracks((prev) => {
+          const current = prev.get(track.id);
+          if (!current) return prev;
+          const next = new Map(prev);
+          next.set(track.id, {
+            ...current,
+            isDownloading: false,
+            error: e.message || 'Lỗi tải xuống',
+          });
+          return next;
+        });
+      }
+    },
+    [isSupported, refreshStorageInfo],
+  );
 
-    } catch (e: any) {
-      console.error('Download error:', e);
-      setDownloadedTracks(prev => {
-        const current = prev.get(track.id);
-        if (!current) return prev;
-        const next = new Map(prev);
-        next.set(track.id, { ...current, isDownloading: false, error: e.message || 'Lỗi tải xuống' });
-        return next;
-      });
-    }
-  }, [isSupported, refreshStorageInfo]);
+  const removeTrack = useCallback(
+    async (trackId: number) => {
+      if (!isSupported) return;
 
-  const removeTrack = useCallback(async (trackId: number) => {
-    if (!isSupported) return;
-    
-    const trackEntry = downloadedTracks.get(trackId);
-    if (!trackEntry) return;
+      const trackEntry = downloadedTracks.get(trackId);
+      if (!trackEntry) return;
 
-    try {
-      await offlineFileStore.deleteAudio(trackEntry.meta.audioKey);
-      await offlineMetadataStore.removeTrack(trackId);
-      await refreshStorageInfo();
+      try {
+        await offlineFileStore.deleteAudio(trackEntry.meta.audioKey);
+        await offlineMetadataStore.removeTrack(trackId);
+        await refreshStorageInfo();
 
-      setDownloadedTracks(prev => {
-        const next = new Map(prev);
-        next.delete(trackId);
-        return next;
-      });
-    } catch (e) {
-      console.error('Error removing track offline data:', e);
-    }
-  }, [isSupported, downloadedTracks, refreshStorageInfo]);
+        setDownloadedTracks((prev) => {
+          const next = new Map(prev);
+          next.delete(trackId);
+          return next;
+        });
+      } catch (e) {
+        console.error('Error removing track offline data:', e);
+      }
+    },
+    [isSupported, downloadedTracks, refreshStorageInfo],
+  );
 
   const removeAll = useCallback(async () => {
     if (!isSupported) return;
@@ -234,31 +256,37 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     }
   }, [isSupported, refreshStorageInfo]);
 
-  const isDownloaded = useCallback((trackId: number) => {
-    const entry = downloadedTracks.get(trackId);
-    return !!entry && !entry.isDownloading && !entry.error;
-  }, [downloadedTracks]);
+  const isDownloaded = useCallback(
+    (trackId: number) => {
+      const entry = downloadedTracks.get(trackId);
+      return !!entry && !entry.isDownloading && !entry.error;
+    },
+    [downloadedTracks],
+  );
 
-  const getAudioUrl = useCallback(async (trackId: number): Promise<string | null> => {
-    if (!isSupported) return null;
-    
-    try {
-      const meta = await offlineMetadataStore.getTrack(trackId);
-      if (!meta) return null;
-      
-      const file = await offlineFileStore.getAudioFile(meta.audioKey);
-      if (!file) return null;
-      
-      // Update last played
-      meta.lastPlayedAt = Date.now();
-      await offlineMetadataStore.addTrack(meta);
-      
-      return URL.createObjectURL(file);
-    } catch (e) {
-      console.error('Error getting offline audio URL:', e);
-      return null;
-    }
-  }, [isSupported]);
+  const getAudioUrl = useCallback(
+    async (trackId: number): Promise<string | null> => {
+      if (!isSupported) return null;
+
+      try {
+        const meta = await offlineMetadataStore.getTrack(trackId);
+        if (!meta) return null;
+
+        const file = await offlineFileStore.getAudioFile(meta.audioKey);
+        if (!file) return null;
+
+        // Update last played
+        meta.lastPlayedAt = Date.now();
+        await offlineMetadataStore.addTrack(meta);
+
+        return URL.createObjectURL(file);
+      } catch (e) {
+        console.error('Error getting offline audio URL:', e);
+        return null;
+      }
+    },
+    [isSupported],
+  );
 
   const value = {
     downloadedTracks,
@@ -271,8 +299,10 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     removeAll,
     isDownloaded,
     getAudioUrl,
-    refreshStorageInfo
+    refreshStorageInfo,
   };
 
-  return <OfflineContext.Provider value={value}>{children}</OfflineContext.Provider>;
+  return (
+    <OfflineContext.Provider value={value}>{children}</OfflineContext.Provider>
+  );
 }

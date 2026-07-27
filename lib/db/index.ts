@@ -108,8 +108,21 @@ export interface DbListeningHistoryRow {
   percentage: number;
 }
 
-const DB_PATH =
-  process.env.DB_PATH || path.join(process.cwd(), 'data', 'tikplay.json');
+const DB_PATH = (function resolveDbPath(): string {
+  if (process.env.DB_PATH) return process.env.DB_PATH;
+
+  const cwd = process.cwd();
+  const devPath = path.join(cwd, 'data', 'tikplay.json');
+
+  // Next.js standalone mode: server.js calls process.chdir(__dirname),
+  // so CWD becomes project-root/.next/standalone/.
+  // Data lives at project-root/data/tikplay.json (two levels up from CWD).
+  if (cwd.includes(`${path.sep}.next${path.sep}standalone`)) {
+    return path.join(cwd, '..', '..', 'data', 'tikplay.json');
+  }
+
+  return devPath;
+})();
 
 const DEFAULT_DATA: DbData = {
   tracks: [],

@@ -101,7 +101,11 @@ function TrackRow({
         )}
       </button>
       <div className="flex size-[30px] shrink-0 items-center justify-center">
-        <OfflineBadge track={track} size={15} className="opacity-0 group-hover:opacity-100 max-[640px]:opacity-100 transition-opacity" />
+        <OfflineBadge
+          track={track}
+          size={15}
+          className="opacity-0 group-hover:opacity-100 max-[640px]:opacity-100 transition-opacity"
+        />
       </div>
       <button
         type="button"
