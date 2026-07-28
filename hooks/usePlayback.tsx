@@ -111,6 +111,8 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   const [eqGains, setEqGains] = useState<number[]>([...DEFAULT_EQ_GAINS]);
   const [storageReady, setStorageReady] = useState(false);
   const handleEndedRef = useRef<() => void>(() => {});
+  const isPlayingRef = useRef(isPlaying);
+  const loadedTrackIdRef = useRef<number | null>(null);
   const queueExtensionRef = useRef<QueueExtension | null>(null);
   const queueExtensionPromiseRef = useRef<Promise<Track[]> | null>(null);
   const restoredPositionRef = useRef<number | null>(null);
@@ -281,6 +283,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     setSpeed: applySpeed,
     setAllBands: applyEqGains,
   } = engine;
+  isPlayingRef.current = isPlaying;
   if (engine.currentTime > 0) {
     playbackPositionRef.current = engine.currentTime;
     resumePositionRef.current = null;
@@ -367,47 +370,38 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     next();
   };
 
+  // Resolve the source before attempting playback. The offline implementation
+  // used to play the previous source first, then pause it when the async lookup
+  // completed and replaced `audio.src`, leaving the new track stuck loading.
   useEffect(() => {
     if (!currentTrack) {
+      loadedTrackIdRef.current = null;
       pauseAudio();
       return;
     }
-    if (isPlaying) playAudio();
-    else pauseAudio();
-  }, [currentTrack?.id, isPlaying, playAudio, pauseAudio]);
 
-  // The engine lives here, above the route tree. Route-level players only
-  // render controls; navigation never creates or tears down playback.
-  useEffect(() => {
-    if (!currentTrack) return;
-
+    const trackId = currentTrack.id;
+    const onlineUrl = currentTrack.audioUrl;
     let isSubscribed = true;
     let createdBlobUrl: string | null = null;
+    loadedTrackIdRef.current = null;
 
-    // We cannot use await directly inside useEffect, nor can we block.
-    // Instead we load immediately if offline metadata is missing,
-    // or wait for offline resolution.
-    const doLoad = async () => {
-      let audioUrl = currentTrack.audioUrl;
+    const loadResolvedTrack = async () => {
+      let audioUrl = onlineUrl;
       try {
         const { offlineMetadataStore, offlineFileStore } = await import(
           '../lib/offline'
         );
-        const isDownloaded = await offlineMetadataStore.isDownloaded(
-          currentTrack.id,
-        );
-        if (isDownloaded) {
-          const meta = await offlineMetadataStore.getTrack(currentTrack.id);
-          if (meta) {
-            const file = await offlineFileStore.getAudioFile(meta.audioKey);
-            if (file) {
-              createdBlobUrl = URL.createObjectURL(file);
-              audioUrl = createdBlobUrl;
-            }
+        const meta = await offlineMetadataStore.getTrack(trackId);
+        if (meta) {
+          const file = await offlineFileStore.getAudioFile(meta.audioKey);
+          if (file) {
+            createdBlobUrl = URL.createObjectURL(file);
+            audioUrl = createdBlobUrl;
           }
         }
-      } catch (e) {
-        // Fallback to online url
+      } catch {
+        // IndexedDB/OPFS can be unavailable; the online source remains valid.
       }
 
       if (!isSubscribed) {
@@ -417,14 +411,28 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
 
       loadTrack(audioUrl, restoredPositionRef.current ?? undefined);
       restoredPositionRef.current = null;
+      loadedTrackIdRef.current = trackId;
+      if (isPlayingRef.current) void playAudio();
     };
 
-    doLoad();
+    void loadResolvedTrack();
 
     return () => {
       isSubscribed = false;
     };
-  }, [currentTrack, loadTrack]);
+  }, [
+    currentTrack?.id,
+    currentTrack?.audioUrl,
+    loadTrack,
+    pauseAudio,
+    playAudio,
+  ]);
+
+  useEffect(() => {
+    if (!currentTrack || loadedTrackIdRef.current !== currentTrack.id) return;
+    if (isPlaying) void playAudio();
+    else pauseAudio();
+  }, [currentTrack?.id, isPlaying, playAudio, pauseAudio]);
 
   useEffect(() => {
     applyVolume(volume);

@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import { useGlobalAudioEngine, usePlayback } from '../hooks/usePlayback';
 import { MEDIA_SOURCE_LABELS, SOURCE_BADGE_COLORS } from '../lib/media/source';
@@ -82,12 +82,22 @@ export default function PlayerPanel({
   } = useAppStore();
   const { queue: playbackQueue, playTrack: playQueuedTrack } = usePlayback();
   const engine = useGlobalAudioEngine();
+  const {
+    play: playAudio,
+    pause: pauseAudio,
+    retry: retryAudio,
+    seek,
+    toggleMute,
+  } = engine;
 
   const [shareCopied, setShareCopied] = useState(false);
   const [openPanel, setOpenPanel] = useState<PopoverPanel>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
-  const upNext =
-    currentIndex >= 0 ? playbackQueue.slice(currentIndex + 1) : playbackQueue;
+  const upNext = useMemo(
+    () =>
+      currentIndex >= 0 ? playbackQueue.slice(currentIndex + 1) : playbackQueue,
+    [currentIndex, playbackQueue],
+  );
 
   // ── Scrub-preview seeking ──────────────────────────────
   const [isScrubbing, setIsScrubbing] = useState(false);
@@ -314,7 +324,10 @@ export default function PlayerPanel({
     setPlaying,
     next,
     prev,
-    engine,
+    playAudio,
+    pauseAudio,
+    seek,
+    toggleMute,
     volume,
     setVolume,
     shuffle,
@@ -639,7 +652,7 @@ export default function PlayerPanel({
             <button
               type="button"
               className={`inline-flex size-14 cursor-pointer items-center justify-center rounded-full border-0 bg-linear-to-br from-accent to-tertiary text-[#00201e] shadow-accent transition-[transform,filter] duration-[var(--motion-fast)] ease-spring hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.94] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent${isMobileVisible ? ' max-[1024px]:size-[76px] max-[1024px]:[&_svg]:size-7' : ''}`}
-              onClick={hasPlaybackError ? engine.retry : togglePlay}
+              onClick={hasPlaybackError ? retryAudio : togglePlay}
               aria-label={playbackStatus}
               title={`${playbackStatus} (Space)`}
               aria-busy={isBuffering}

@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
-import { useGlobalAudioEngine } from '../hooks/usePlayback';
 import Cover from './Cover';
 import { DialogOverlay } from './DialogOverlay';
 import { CloseIcon, PauseIcon, PlayIcon, PlusIcon, SpinnerIcon } from './icons';
@@ -54,8 +53,7 @@ export default function ProfileScannerDialog({
     trimsRef.current = trims;
   }, [trims]);
 
-  const { loadAll } = useAppStore();
-  const globalAudio = useGlobalAudioEngine();
+  const { loadAll, setPlaying } = useAppStore();
   const scanPromiseRef = useRef<Promise<{
     ok: boolean;
     data?: { items: ProfileItem[]; profile: { username: string; url: string } };
@@ -148,12 +146,10 @@ export default function ProfileScannerDialog({
         audioRef.current.pause();
       }
 
-      // Pause global main player to prevent overlaying sounds
-      try {
-        globalAudio.pause();
-      } catch (e) {
-        console.warn('Could not pause global audio', e);
-      }
+      // Pause global main player to prevent overlaying sounds. Use the stable
+      // playback controller instead of subscribing this large dialog to every
+      // high-frequency audio-engine timeline update.
+      setPlaying(false);
 
       const audio = new Audio(data.data.audioUrl);
       audioRef.current = audio;
