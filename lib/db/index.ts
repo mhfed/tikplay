@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { MediaSource } from '@/lib/media/source';
+import { isValidCacheMaxGb } from '../cache/config';
 
 export interface DbShortLinkRow {
   code: string;
@@ -28,6 +29,7 @@ export interface DbData {
 }
 
 export interface DbSettingsRow {
+  cacheMaxGb?: number;
   youtubeCookiesB64?: string;
   youtubeCookiesUpdatedAt?: number;
   youtubeCookiesFileName?: string;
@@ -144,6 +146,11 @@ const DEFAULT_DATA: DbData = {
   nextListeningHistoryId: 1,
 };
 
+function normalizeSettings(settings: DbSettingsRow | undefined): DbSettingsRow {
+  const { cacheMaxGb, ...rest } = settings ?? {};
+  return isValidCacheMaxGb(cacheMaxGb) ? { ...rest, cacheMaxGb } : rest;
+}
+
 function normalizeDbData(data: Partial<DbData>): DbData {
   return {
     tracks: data.tracks ?? [],
@@ -154,7 +161,7 @@ function normalizeDbData(data: Partial<DbData>): DbData {
     copyrightReports: data.copyrightReports ?? [],
     blockedMedia: data.blockedMedia ?? [],
     listeningHistory: data.listeningHistory ?? [],
-    settings: data.settings ?? {},
+    settings: normalizeSettings(data.settings),
     shortLinks: data.shortLinks ?? [],
     nextTrackId: data.nextTrackId ?? 1,
     nextPlaylistId: data.nextPlaylistId ?? 2,
