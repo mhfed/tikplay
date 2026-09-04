@@ -53,7 +53,7 @@ export default function ProfileScannerDialog({
     trimsRef.current = trims;
   }, [trims]);
 
-  const { loadAll, setPlaying } = useAppStore();
+  const { loadAll, setPlaying, playbackQueue } = useAppStore();
   const scanPromiseRef = useRef<Promise<{
     ok: boolean;
     data?: { items: ProfileItem[]; profile: { username: string; url: string } };
@@ -232,7 +232,10 @@ export default function ProfileScannerDialog({
         const res = await fetch('/api/profile/download', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items: batch }),
+          body: JSON.stringify({
+            items: batch,
+            protectedTrackIds: playbackQueue.map((track) => track.id),
+          }),
         });
 
         const data = await res.json();

@@ -1,8 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { FileCacheStore } from '@/lib/cache';
 import { applyAutoRules, isMediaBlocked, upsertTrack } from '@/lib/db/queries';
-import { MediaProcessor, type TrackMeta } from '@/lib/media/processor';
 import { cacheKeyFromRaw } from '@/lib/media/cache-key';
+import { MediaProcessor, type TrackMeta } from '@/lib/media/processor';
+import { parseProtectedTrackIds } from '@/lib/media/protected-tracks';
 import { type MediaSource, validateMediaUrl } from '@/lib/media/source';
 import { checkRateLimit, requestIp } from '@/lib/rateLimit';
 
@@ -16,6 +17,7 @@ const processor = new MediaProcessor(cache);
 
 interface ProcessBody {
   url?: unknown;
+  protectedTrackIds?: unknown;
 }
 
 export async function POST(req: NextRequest) {
@@ -41,6 +43,13 @@ export async function POST(req: NextRequest) {
   }
 
   const url = typeof body.url === 'string' ? body.url : '';
+  const protectedTrackIds = parseProtectedTrackIds(body.protectedTrackIds);
+  if (!protectedTrackIds) {
+    return NextResponse.json(
+      { ok: false, error: 'Danh sách bài đang phát không hợp lệ' },
+      { status: 400 },
+    );
+  }
   if (url.length > 2048) {
     return NextResponse.json(
       { ok: false, error: 'URL vượt quá độ dài cho phép' },
@@ -87,7 +96,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const result = await processor.process(url);
+    const result = await processor.process(url, { protectedTrackIds });
     const dbTrack = persistTrack(
       url,
       result.audioKey,

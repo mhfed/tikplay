@@ -65,6 +65,7 @@ interface AppState {
   currentPlaylistId: number;
   currentTrack: Track | null;
   currentIndex: number;
+  playbackQueue: Track[];
   isPlaying: boolean;
   shuffle: boolean;
   repeat: RepeatMode;
@@ -211,6 +212,7 @@ export function AppStoreProvider({
     cycleRepeat,
     updateTrack: updatePlaybackTrack,
     setQueueExtension,
+    queue: playbackQueue,
   } = usePlayback();
   const [tracks, setTracks] = useState<Track[]>(initialData.tracks);
   const [trackPage, setTrackPage] = useState<InitialTrackPage>(
@@ -520,7 +522,10 @@ export function AppStoreProvider({
           slug?: string;
         }>('/api/process', {
           method: 'POST',
-          body: JSON.stringify({ url }),
+          body: JSON.stringify({
+            url,
+            protectedTrackIds: playbackQueue.map((track) => track.id),
+          }),
           signal: controller.signal,
         });
         if (!res.ok) {
@@ -601,6 +606,7 @@ export function AppStoreProvider({
       loadSourcesFn,
       currentTrack,
       playGlobalTrack,
+      playbackQueue,
       tracks,
     ],
   );
@@ -948,6 +954,7 @@ export function AppStoreProvider({
     currentPlaylistId,
     currentTrack,
     currentIndex,
+    playbackQueue,
     isPlaying,
     shuffle,
     repeat,

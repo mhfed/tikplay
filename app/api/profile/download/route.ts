@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { FileCacheStore } from '@/lib/cache';
 import { applyAutoRules, upsertTrack } from '@/lib/db/queries';
 import { MediaProcessor } from '@/lib/media/processor';
+import { parseProtectedTrackIds } from '@/lib/media/protected-tracks';
 import { checkRateLimit, requestIp } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs';
@@ -25,6 +26,13 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
+    const protectedTrackIds = parseProtectedTrackIds(body.protectedTrackIds);
+    if (!protectedTrackIds) {
+      return NextResponse.json(
+        { ok: false, error: 'Danh sách bài đang phát không hợp lệ' },
+        { status: 400 },
+      );
+    }
     let downloadItems: { url: string; startTime?: number; endTime?: number }[] =
       [];
 
@@ -49,7 +57,7 @@ export async function POST(req: NextRequest) {
     }
 
     const urls = downloadItems.map((i) => i.url);
-    const results = await processor.downloadBatch(urls);
+    const results = await processor.downloadBatch(urls, { protectedTrackIds });
 
     // Save successful downloads to DB
     for (let idx = 0; idx < results.length; idx++) {

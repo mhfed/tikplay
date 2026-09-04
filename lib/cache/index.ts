@@ -4,6 +4,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  statfsSync,
   statSync,
   unlinkSync,
 } from 'node:fs';
@@ -11,12 +12,23 @@ import { join, sep } from 'node:path';
 
 const DEFAULT_TTL_DAYS = 7;
 const DEFAULT_MAX_GB = 5;
+const DEFAULT_MIN_FREE_MB = 256;
+const STALE_TEMP_TTL_MS = 60 * 60 * 1000;
+const PREVIEW_TTL_MS = 60 * 60 * 1000;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export interface CacheOptions {
   dir?: string;
   ttlDays?: number;
   maxGb?: number;
+  minFreeMb?: number;
+}
+
+export interface CacheEvictionOptions {
+  /** Keys that must never be evicted during the current operation. */
+  protectedKeys?: ReadonlySet<string>;
+  /** Keys represented in the library; skip TTL eviction but evict under pressure. */
+  referencedKeys?: ReadonlySet<string>;
 }
 
 /**
@@ -30,8 +42,8 @@ export interface CacheStore {
   set(key: string, srcPath: string): Promise<void>;
   /** Remove audio and every sidecar associated with `key`. */
   remove(key: string): Promise<void>;
-  /** Drop expired files, then evict LRU until under the size cap. */
-  evictOld(): Promise<void>;
+  /** Drop expired orphan files, then evict LRU until under the size cap. */
+  evictOld(options?: CacheEvictionOptions): Promise<string[]>;
 }
 
 /** Cache directory: env override or default `./cache` next to the app. */
@@ -86,6 +98,7 @@ export class FileCacheStore implements CacheStore {
   private dir: string;
   private ttlDays: number;
   private maxBytes: number;
+  private minFreeBytes: number;
 
   constructor(opts: CacheOptions = {}) {
     this.dir = opts.dir || getCacheDir();
@@ -96,6 +109,12 @@ export class FileCacheStore implements CacheStore {
       1024 *
       1024 *
       1024;
+    const configuredMinFreeMb =
+      opts.minFreeMb ?? Number(process.env.CACHE_MIN_FREE_MB);
+    const minFreeMb = Number.isFinite(configuredMinFreeMb)
+      ? configuredMinFreeMb
+      : DEFAULT_MIN_FREE_MB;
+    this.minFreeBytes = Math.max(0, minFreeMb) * 1024 * 1024;
     ensureCacheDir(this.dir);
   }
 
@@ -154,38 +173,111 @@ export class FileCacheStore implements CacheStore {
     return null;
   }
 
-  async evictOld(): Promise<void> {
+  async evictOld(options: CacheEvictionOptions = {}): Promise<string[]> {
+    const protectedKeys = options.protectedKeys ?? new Set<string>();
+    const referencedKeys = options.referencedKeys ?? new Set<string>();
     ensureCacheDir(this.dir);
-    const files = readdirSync(this.dir).filter((f) => f.endsWith('.m4a'));
     const now = Date.now();
+    this.removeStaleTempFiles(now);
+    this.removeExpiredPreviews(now);
+    const files = readdirSync(this.dir).filter((f) => f.endsWith('.m4a'));
     const ttlMs = this.ttlDays * MS_PER_DAY;
 
-    const entries: { file: string; mtime: number; size: number }[] = [];
+    const entries: {
+      file: string;
+      mtime: number;
+      size: number;
+      referenced: boolean;
+    }[] = [];
+    const evictedKeys: string[] = [];
     let totalBytes = 0;
 
     for (const f of files) {
       const full = join(this.dir, f);
       const st = statSync(full);
       const key = f.slice(0, -'.m4a'.length);
-      // Expire by file mtime (when the audio was last written).
-      if (now - st.mtimeMs > ttlMs) {
+      const protectedEntry = protectedKeys.has(key);
+      const referencedEntry = referencedKeys.has(key);
+
+      // Expire only files no longer represented by the library. Library tracks
+      // remain available until the cache needs to make room for new media.
+      if (!protectedEntry && !referencedEntry && now - st.mtimeMs > ttlMs) {
         unlinkSync(full);
         this.removeSidecars(key);
+        evictedKeys.push(key);
         continue;
       }
-      entries.push({ file: full, mtime: st.mtimeMs, size: st.size });
       totalBytes += st.size;
+      if (!protectedEntry) {
+        entries.push({
+          file: full,
+          mtime: st.mtimeMs,
+          size: st.size,
+          referenced: referencedEntry,
+        });
+      }
     }
 
     // If still over the cap, evict least-recently-used (oldest mtime) first.
-    if (totalBytes > this.maxBytes) {
-      entries.sort((a, b) => a.mtime - b.mtime);
+    if (totalBytes > this.maxBytes || !this.hasEnoughFreeSpace()) {
+      // Prefer removing orphaned cache files before removing saved library
+      // tracks. Within each group, evict the oldest file first.
+      entries.sort(
+        (a, b) =>
+          Number(a.referenced) - Number(b.referenced) || a.mtime - b.mtime,
+      );
       for (const e of entries) {
-        if (totalBytes <= this.maxBytes) break;
+        if (totalBytes <= this.maxBytes && this.hasEnoughFreeSpace()) break;
         unlinkSync(e.file);
         const key = e.file.slice(this.dir.length + 1, -'.m4a'.length);
         this.removeSidecars(key);
         totalBytes -= e.size;
+        evictedKeys.push(key);
+      }
+    }
+
+    return evictedKeys;
+  }
+
+  private hasEnoughFreeSpace(): boolean {
+    try {
+      const stats = statfsSync(this.dir);
+      return stats.bavail * stats.bsize >= this.minFreeBytes;
+    } catch {
+      // The cache size limit still protects the filesystem if statfs is not
+      // available on a particular deployment target.
+      return true;
+    }
+  }
+
+  private removeExpiredPreviews(now: number): void {
+    const previewDir = join(this.dir, 'preview');
+    if (!existsSync(previewDir)) return;
+
+    for (const file of readdirSync(previewDir)) {
+      const full = join(previewDir, file);
+      try {
+        if (now - statSync(full).mtimeMs > PREVIEW_TTL_MS) {
+          unlinkSync(full);
+        }
+      } catch {
+        // A concurrent preview may have removed or replaced this file.
+      }
+    }
+  }
+
+  private removeStaleTempFiles(now: number): void {
+    const temporaryFile = /\.(?:part|tmp|ytdl)$/i;
+    for (const file of readdirSync(this.dir)) {
+      if (!temporaryFile.test(file)) continue;
+
+      const full = join(this.dir, file);
+      try {
+        if (now - statSync(full).mtimeMs > STALE_TEMP_TTL_MS) {
+          unlinkSync(full);
+        }
+      } catch {
+        // A concurrent download may have removed or replaced this fragment.
       }
     }
   }

@@ -48,8 +48,9 @@ Dự án Next.js (App Router, TypeScript) làm cả frontend lẫn API. Phần b
 | Biến             | Mặc định     | Ý nghĩa                                              |
 | ---------------- | ------------ | ---------------------------------------------------- |
 | `CACHE_DIR`      | `./cache`    | Thư mục lưu file audio đã xử lý. Cần ổ đĩa bền.      |
-| `CACHE_TTL_DAYS` | `7`          | Xoá file cũ hơn số ngày này.                         |
-| `CACHE_MAX_GB`   | `5`          | Khi tổng dung lượng vượt mức, xoá theo LRU.          |
+| `CACHE_TTL_DAYS` | `7`          | Xoá file rác không còn trong thư viện sau số ngày này. |
+| `CACHE_MAX_GB`   | `5`          | Khi vượt mức, xoá file rác rồi các bài cũ không nằm trong queue. |
+| `CACHE_MIN_FREE_MB` | `256`     | Dung lượng trống tối thiểu; cache dọn thêm khi ổ gần đầy. |
 | `YTDLP_PATH`     | `yt-dlp`     | Đường dẫn binary yt-dlp (phải có `curl_cffi` để impersonate TikTok). |
 | `DB_PATH`        | `./data/tikplay.json` | File dữ liệu thư viện, báo cáo và danh sách chặn. |
 | `ADMIN_TOKEN`    | Không có     | Token bắt buộc để truy cập API quản trị bản quyền. |
@@ -59,6 +60,7 @@ Ví dụ:
 export CACHE_DIR=/data/cache
 export CACHE_TTL_DAYS=7
 export CACHE_MAX_GB=5
+export CACHE_MIN_FREE_MB=256
 export YTDLP_PATH=yt-dlp
 export ADMIN_TOKEN='thay-bang-token-dai-ngau-nhien'
 npm run dev
@@ -76,7 +78,10 @@ Màn hình xử lý báo cáo nằm tại `/admin/copyright`. Token chỉ đư�
 ## API
 
 ### `POST /api/process`
-Body: `{ "url": "https://www.tiktok.com/@user/video/123" }`
+Body: `{ "url": "https://www.tiktok.com/@user/video/123", "protectedTrackIds": [1, 2] }`
+
+`protectedTrackIds` là tùy chọn; frontend gửi các bài đang phát hoặc đang nằm trong
+queue để cache không loại chúng khi tự dọn dung lượng.
 
 - 200: `{ "ok": true, "data": { "audioUrl": "/api/audio/<key>", "title", "author", "cover", "duration" } }`
 - 400: `{ "ok": false, "error": "..." }`
@@ -157,7 +162,7 @@ Trong container có thể thêm cron hoặc chạy trong startup script.
 ```
 lib/
   tiktok/validate.ts     # validate + normalize URL, cacheKey = sha256(url)
-  cache/index.ts         # FileCacheStore: get/set/evictOld (TTL + LRU)
+  cache/index.ts         # FileCacheStore: get/set/evictOld (TTL + LRU + free-space guard)
   media/processor.ts     # MediaProcessor: yt-dlp + ffmpeg, debounce
 app/api/process/route.ts # POST: nhận URL → cache/process → JSON
 app/api/audio/[key]/route.ts # GET: stream file audio

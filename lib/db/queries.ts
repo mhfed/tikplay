@@ -138,12 +138,21 @@ export function deleteTrack(id: number): void {
 }
 
 export function deleteTracksByAudioKey(audioKey: string): void {
+  deleteTracksByAudioKeys([audioKey]);
+}
+
+export function deleteTracksByAudioKeys(audioKeys: Iterable<string>): void {
+  const keys = new Set(audioKeys);
+  if (keys.size === 0) return;
+
   const db = getDb();
   const ids = new Set(
     db.tracks
-      .filter((track) => track.audio_key === audioKey)
+      .filter((track) => keys.has(track.audio_key))
       .map((track) => track.id),
   );
+  if (ids.size === 0) return;
+
   db.tracks = db.tracks.filter((track) => !ids.has(track.id));
   db.playlistTracks = db.playlistTracks.filter(
     (item) => !ids.has(item.track_id),

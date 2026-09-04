@@ -1,9 +1,10 @@
 import { execFile } from 'node:child_process';
-import { existsSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ensureCacheDir, FileCacheStore, getCacheDir } from '../cache';
 import { getDb } from '../db';
+import { deleteTracksByAudioKeys } from '../db/queries';
 import { cacheKeyFromRaw } from './cache-key';
 import { type MediaSource, validateMediaUrl } from './source';
 
@@ -19,6 +20,11 @@ export interface ProcessResult {
   audioKey: string;
   source: MediaSource;
   meta: TrackMeta;
+}
+
+export interface ProcessOptions {
+  /** Track IDs currently playing or present in the client's playback queue. */
+  protectedTrackIds?: readonly number[];
 }
 
 export interface BatchItemResult {
@@ -49,6 +55,8 @@ export class MediaProcessor {
   private activeJobs = 0;
   private readonly MAX_CONCURRENT = 2; // Process 2 tracks at most simultaneously
   private cookiesPath: string | null = null;
+  /** Serialize cache maintenance so concurrent batch downloads cannot evict the same files. */
+  private cacheMaintenance: Promise<void> = Promise.resolve();
 
   constructor(cache?: FileCacheStore, ytdlpPath?: string) {
     this.ytdlpPath = ytdlpPath ?? process.env.YTDLP_PATH ?? 'yt-dlp';
@@ -79,7 +87,10 @@ export class MediaProcessor {
    * same cacheKey resolve to the same underlying job.
    * Throttles active processing to prevent CPU overload from parallel yt-dlp/ffmpeg tasks.
    */
-  async process(rawUrl: string): Promise<ProcessResult> {
+  async process(
+    rawUrl: string,
+    options: ProcessOptions = {},
+  ): Promise<ProcessResult> {
     const validation = validateMediaUrl(rawUrl);
     if (!validation.valid || !validation.normalized || !validation.source) {
       throw new Error(validation.error ?? 'URL không hợp lệ');
@@ -99,12 +110,15 @@ export class MediaProcessor {
       return this.inFlight.get(key)!;
     }
 
-    const job = this.run(validation.normalized, key, validation.source).finally(
-      () => {
-        this.inFlight.delete(key);
-        this.releaseSlot();
-      },
-    );
+    const job = this.run(
+      validation.normalized,
+      key,
+      validation.source,
+      options.protectedTrackIds ?? [],
+    ).finally(() => {
+      this.inFlight.delete(key);
+      this.releaseSlot();
+    });
 
     this.inFlight.set(key, job);
     return job;
@@ -114,7 +128,9 @@ export class MediaProcessor {
     url: string,
     key: string,
     source: MediaSource,
+    protectedTrackIds: readonly number[],
   ): Promise<ProcessResult> {
+    await this.prepareCache(key, protectedTrackIds);
     const meta = await this.fetchMetadata(url);
 
     const cacheDir = getCacheDir();
@@ -175,8 +191,42 @@ export class MediaProcessor {
 
     // Persist metadata so the API can serve it from cache without re-running.
     await this.cache.saveMeta(key, meta);
+    await this.prepareCache(key, protectedTrackIds);
 
     return { audioKey: key, source, meta };
+  }
+
+  private async prepareCache(
+    incomingKey: string,
+    protectedTrackIds: readonly number[],
+  ): Promise<void> {
+    const previous = this.cacheMaintenance;
+    let release!: () => void;
+    this.cacheMaintenance = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    await previous;
+    try {
+      const db = getDb();
+      const protectedIds = new Set(
+        protectedTrackIds.filter((id) => Number.isInteger(id) && id > 0),
+      );
+      const protectedKeys = new Set<string>([incomingKey]);
+      const referencedKeys = new Set<string>();
+      for (const track of db.tracks) {
+        referencedKeys.add(track.audio_key);
+        if (protectedIds.has(track.id)) protectedKeys.add(track.audio_key);
+      }
+
+      const evictedKeys = await this.cache.evictOld({
+        protectedKeys,
+        referencedKeys,
+      });
+      deleteTracksByAudioKeys(evictedKeys);
+    } finally {
+      release();
+    }
   }
 
   /**
@@ -280,14 +330,17 @@ export class MediaProcessor {
    * but handles errors returning an array of results.
    * This is used by the frontend to batch-download selected tracks from a profile.
    */
-  async downloadBatch(urls: string[]): Promise<BatchItemResult[]> {
+  async downloadBatch(
+    urls: string[],
+    options: ProcessOptions = {},
+  ): Promise<BatchItemResult[]> {
     // Để frontend theo dõi tiến độ tốt hơn, việc gửi từng promise và xử lý phía frontend
     // qua /api/process (route hiện tại) là an toàn nhất. Tuy nhiên, endpoint /api/profile/download
     // gọi hàm này sẽ giới hạn xử lý để không quá lâu timeout.
 
     const promises = urls.map(async (url) => {
       try {
-        const result = await this.process(url);
+        const result = await this.process(url, options);
         return {
           url,
           ok: true,
