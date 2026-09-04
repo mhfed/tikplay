@@ -9,13 +9,27 @@ import {
   unlinkSync,
 } from 'node:fs';
 import { join, sep } from 'node:path';
+import {
+  DEFAULT_MIN_FREE_MB,
+  isValidCacheMaxGb,
+  resolveCacheMaxGb,
+} from './config';
 
 const DEFAULT_TTL_DAYS = 7;
-const DEFAULT_MAX_GB = 5;
-const DEFAULT_MIN_FREE_MB = 256;
 const STALE_TEMP_TTL_MS = 60 * 60 * 1000;
 const PREVIEW_TTL_MS = 60 * 60 * 1000;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const CACHE_KEY_PATTERN = /^[a-f0-9]{64}$/;
+const PREVIEW_CACHE_KEY_PATTERN = /^preview:[a-f0-9]{64}$/;
+const CACHE_FILE_EXTENSIONS = [
+  '.m4a',
+  '.json',
+  '.jpg',
+  '.png',
+  '.webp',
+  '.gif',
+];
+const TEMPORARY_FILE_PATTERN = /\.(?:part|tmp|ytdl)$/i;
 
 export interface CacheOptions {
   dir?: string;
@@ -29,6 +43,32 @@ export interface CacheEvictionOptions {
   protectedKeys?: ReadonlySet<string>;
   /** Keys represented in the library; skip TTL eviction but evict under pressure. */
   referencedKeys?: ReadonlySet<string>;
+  /** Overrides the configured limit for this maintenance run. */
+  maxGb?: number;
+}
+
+export interface CacheStorageEntry {
+  key: string;
+  size: number;
+  mtimeMs: number;
+  referenced: boolean;
+}
+
+export interface CacheStorageStatus {
+  cacheBytes: number;
+  limitBytes: number;
+  freeBytes: number | null;
+  minFreeBytes: number;
+  isOverLimit: boolean;
+  isLowDisk: boolean;
+  safeCleanupBytes: number;
+  safeCleanupFiles: number;
+  evictionPlan: CacheStorageEntry[];
+}
+
+export interface CacheCleanupResult {
+  removedFiles: number;
+  freedBytes: number;
 }
 
 /**
@@ -44,6 +84,10 @@ export interface CacheStore {
   remove(key: string): Promise<void>;
   /** Drop expired orphan files, then evict LRU until under the size cap. */
   evictOld(options?: CacheEvictionOptions): Promise<string[]>;
+  /** Inspect cached media without changing any files. */
+  getStorageStatus(options?: CacheEvictionOptions): CacheStorageStatus;
+  /** Remove only stale or unreferenced cache data. */
+  cleanupSafe(options?: CacheEvictionOptions): Promise<CacheCleanupResult>;
 }
 
 /** Cache directory: env override or default `./cache` next to the app. */
@@ -104,11 +148,7 @@ export class FileCacheStore implements CacheStore {
     this.dir = opts.dir || getCacheDir();
     this.ttlDays =
       (opts.ttlDays ?? Number(process.env.CACHE_TTL_DAYS)) || DEFAULT_TTL_DAYS;
-    this.maxBytes =
-      ((opts.maxGb ?? Number(process.env.CACHE_MAX_GB)) || DEFAULT_MAX_GB) *
-      1024 *
-      1024 *
-      1024;
+    this.maxBytes = resolveCacheMaxGb(opts.maxGb) * 1024 * 1024 * 1024;
     const configuredMinFreeMb =
       opts.minFreeMb ?? Number(process.env.CACHE_MIN_FREE_MB);
     const minFreeMb = Number.isFinite(configuredMinFreeMb)
@@ -173,6 +213,60 @@ export class FileCacheStore implements CacheStore {
     return null;
   }
 
+  getStorageStatus(options: CacheEvictionOptions = {}): CacheStorageStatus {
+    const protectedKeys = options.protectedKeys ?? new Set<string>();
+    const referencedKeys = options.referencedKeys ?? new Set<string>();
+    ensureCacheDir(this.dir);
+
+    const cacheBytes = this.getCacheBytes();
+    const limitBytes = this.getMaxBytes(options.maxGb);
+    const freeBytes = this.getFreeBytes();
+    const safeCleanup = this.getFileTotals(
+      this.getSafeCleanupPaths(options, Date.now()),
+    );
+    const evictionPlan: CacheStorageEntry[] = [];
+    for (const file of readdirSync(this.dir)) {
+      if (!file.endsWith('.m4a')) continue;
+      const key = file.slice(0, -'.m4a'.length);
+      try {
+        const stats = statSync(join(this.dir, file));
+        if (!stats.isFile() || protectedKeys.has(key)) continue;
+        evictionPlan.push({
+          key,
+          size: stats.size,
+          mtimeMs: stats.mtimeMs,
+          referenced: referencedKeys.has(key),
+        });
+      } catch {
+        // A concurrent cache operation may have removed or replaced this file.
+      }
+    }
+
+    evictionPlan.sort(
+      (a, b) =>
+        Number(a.referenced) - Number(b.referenced) || a.mtimeMs - b.mtimeMs,
+    );
+
+    return {
+      cacheBytes,
+      limitBytes,
+      freeBytes,
+      minFreeBytes: this.minFreeBytes,
+      isOverLimit: cacheBytes > limitBytes,
+      isLowDisk: freeBytes !== null && freeBytes < this.minFreeBytes,
+      safeCleanupBytes: safeCleanup.freedBytes,
+      safeCleanupFiles: safeCleanup.removedFiles,
+      evictionPlan,
+    };
+  }
+
+  async cleanupSafe(
+    options: CacheEvictionOptions = {},
+  ): Promise<CacheCleanupResult> {
+    ensureCacheDir(this.dir);
+    return this.removeFiles(this.getSafeCleanupPaths(options, Date.now()));
+  }
+
   async evictOld(options: CacheEvictionOptions = {}): Promise<string[]> {
     const protectedKeys = options.protectedKeys ?? new Set<string>();
     const referencedKeys = options.referencedKeys ?? new Set<string>();
@@ -182,6 +276,7 @@ export class FileCacheStore implements CacheStore {
     this.removeExpiredPreviews(now);
     const files = readdirSync(this.dir).filter((f) => f.endsWith('.m4a'));
     const ttlMs = this.ttlDays * MS_PER_DAY;
+    const maxBytes = this.getMaxBytes(options.maxGb);
 
     const entries: {
       file: string;
@@ -190,7 +285,7 @@ export class FileCacheStore implements CacheStore {
       referenced: boolean;
     }[] = [];
     const evictedKeys: string[] = [];
-    let totalBytes = 0;
+    let totalBytes = this.getCacheBytes();
 
     for (const f of files) {
       const full = join(this.dir, f);
@@ -198,28 +293,29 @@ export class FileCacheStore implements CacheStore {
       const key = f.slice(0, -'.m4a'.length);
       const protectedEntry = protectedKeys.has(key);
       const referencedEntry = referencedKeys.has(key);
+      const entryBytes = this.getMediaBytes(key);
 
       // Expire only files no longer represented by the library. Library tracks
       // remain available until the cache needs to make room for new media.
       if (!protectedEntry && !referencedEntry && now - st.mtimeMs > ttlMs) {
         unlinkSync(full);
         this.removeSidecars(key);
+        totalBytes -= entryBytes;
         evictedKeys.push(key);
         continue;
       }
-      totalBytes += st.size;
       if (!protectedEntry) {
         entries.push({
           file: full,
           mtime: st.mtimeMs,
-          size: st.size,
+          size: entryBytes,
           referenced: referencedEntry,
         });
       }
     }
 
     // If still over the cap, evict least-recently-used (oldest mtime) first.
-    if (totalBytes > this.maxBytes || !this.hasEnoughFreeSpace()) {
+    if (totalBytes > maxBytes || !this.hasEnoughFreeSpace()) {
       // Prefer removing orphaned cache files before removing saved library
       // tracks. Within each group, evict the oldest file first.
       entries.sort(
@@ -227,7 +323,7 @@ export class FileCacheStore implements CacheStore {
           Number(a.referenced) - Number(b.referenced) || a.mtime - b.mtime,
       );
       for (const e of entries) {
-        if (totalBytes <= this.maxBytes && this.hasEnoughFreeSpace()) break;
+        if (totalBytes <= maxBytes && this.hasEnoughFreeSpace()) break;
         unlinkSync(e.file);
         const key = e.file.slice(this.dir.length + 1, -'.m4a'.length);
         this.removeSidecars(key);
@@ -240,55 +336,258 @@ export class FileCacheStore implements CacheStore {
   }
 
   private hasEnoughFreeSpace(): boolean {
-    try {
-      const stats = statfsSync(this.dir);
-      return stats.bavail * stats.bsize >= this.minFreeBytes;
-    } catch {
-      // The cache size limit still protects the filesystem if statfs is not
-      // available on a particular deployment target.
-      return true;
-    }
+    const freeBytes = this.getFreeBytes();
+    return freeBytes === null || freeBytes >= this.minFreeBytes;
   }
 
-  private removeExpiredPreviews(now: number): void {
+  private removeExpiredPreviews(now: number): CacheCleanupResult {
     const previewDir = join(this.dir, 'preview');
-    if (!existsSync(previewDir)) return;
+    if (!existsSync(previewDir)) return { removedFiles: 0, freedBytes: 0 };
+
+    const result: CacheCleanupResult = { removedFiles: 0, freedBytes: 0 };
 
     for (const file of readdirSync(previewDir)) {
       const full = join(previewDir, file);
       try {
-        if (now - statSync(full).mtimeMs > PREVIEW_TTL_MS) {
-          unlinkSync(full);
+        const stats = statSync(full);
+        if (stats.isFile() && now - stats.mtimeMs > PREVIEW_TTL_MS) {
+          const removed = this.removeFiles([full]);
+          result.removedFiles += removed.removedFiles;
+          result.freedBytes += removed.freedBytes;
+
+          if (file.endsWith('.m4a')) {
+            const key = file.slice(0, -'.m4a'.length);
+            if (CACHE_KEY_PATTERN.test(key)) {
+              const sidecars = this.removeFiles(
+                this.sidecarPaths(`preview:${key}`),
+              );
+              result.removedFiles += sidecars.removedFiles;
+              result.freedBytes += sidecars.freedBytes;
+            }
+          }
         }
       } catch {
         // A concurrent preview may have removed or replaced this file.
       }
     }
+
+    return result;
   }
 
-  private removeStaleTempFiles(now: number): void {
-    const temporaryFile = /\.(?:part|tmp|ytdl)$/i;
+  private removeStaleTempFiles(now: number): CacheCleanupResult {
+    const result: CacheCleanupResult = { removedFiles: 0, freedBytes: 0 };
     for (const file of readdirSync(this.dir)) {
-      if (!temporaryFile.test(file)) continue;
+      if (!TEMPORARY_FILE_PATTERN.test(file)) continue;
 
       const full = join(this.dir, file);
       try {
-        if (now - statSync(full).mtimeMs > STALE_TEMP_TTL_MS) {
-          unlinkSync(full);
+        const stats = statSync(full);
+        if (stats.isFile() && now - stats.mtimeMs > STALE_TEMP_TTL_MS) {
+          const removed = this.removeFiles([full]);
+          result.removedFiles += removed.removedFiles;
+          result.freedBytes += removed.freedBytes;
         }
       } catch {
         // A concurrent download may have removed or replaced this fragment.
       }
     }
+
+    return result;
   }
 
   /** Remove the meta + cover files that ride alongside an evicted audio file. */
   private removeSidecars(key: string): void {
+    this.removeFiles(this.sidecarPaths(key));
+  }
+
+  private sidecarPaths(key: string): string[] {
     const meta = metaPath(this.dir, key);
-    if (existsSync(meta)) unlinkSync(meta);
+    const paths = [meta];
     for (const ext of Object.keys(EXT_COVER_MIME)) {
-      const p = join(this.dir, `${key}.${ext}`);
-      if (existsSync(p)) unlinkSync(p);
+      paths.push(join(this.dir, `${key}.${ext}`));
     }
+    return paths;
+  }
+
+  private getCacheBytes(): number {
+    let bytes = 0;
+    const files = readdirSync(this.dir);
+    const counted = new Set<string>();
+
+    for (const file of files) {
+      if (!file.endsWith('.m4a')) continue;
+      const key = file.slice(0, -'.m4a'.length);
+      for (const path of [
+        audioPath(this.dir, key),
+        ...this.sidecarPaths(key),
+      ]) {
+        if (counted.has(path)) continue;
+        counted.add(path);
+        try {
+          const stats = statSync(path);
+          if (stats.isFile()) bytes += stats.size;
+        } catch {
+          // A concurrent cache operation may have removed or replaced this file.
+        }
+      }
+    }
+
+    for (const file of files) {
+      const full = join(this.dir, file);
+      if (counted.has(full)) continue;
+      try {
+        const stats = statSync(full);
+        if (
+          stats.isFile() &&
+          (this.previewCacheKeyFromFile(file) ||
+            TEMPORARY_FILE_PATTERN.test(file))
+        ) {
+          bytes += stats.size;
+        }
+      } catch {
+        // A concurrent cache operation may have removed or replaced this file.
+      }
+    }
+
+    const previewDir = join(this.dir, 'preview');
+    if (!existsSync(previewDir)) return bytes;
+    for (const file of readdirSync(previewDir)) {
+      try {
+        const stats = statSync(join(previewDir, file));
+        if (stats.isFile()) bytes += stats.size;
+      } catch {
+        // A concurrent preview may have removed or replaced this file.
+      }
+    }
+    return bytes;
+  }
+
+  private getMediaBytes(key: string): number {
+    return this.getFileTotals([
+      audioPath(this.dir, key),
+      ...this.sidecarPaths(key),
+    ]).freedBytes;
+  }
+
+  private previewCacheKeyFromFile(file: string): string | null {
+    const extension = CACHE_FILE_EXTENSIONS.find((candidate) =>
+      file.endsWith(candidate),
+    );
+    if (!extension) return null;
+    const key = file.slice(0, -extension.length);
+    return PREVIEW_CACHE_KEY_PATTERN.test(key) ? key : null;
+  }
+
+  private getMaxBytes(maxGb: number | undefined): number {
+    return isValidCacheMaxGb(maxGb)
+      ? maxGb * 1024 * 1024 * 1024
+      : this.maxBytes;
+  }
+
+  private getFreeBytes(): number | null {
+    try {
+      const stats = statfsSync(this.dir);
+      return stats.bavail * stats.bsize;
+    } catch {
+      // A cache cap still limits growth when filesystem statistics are absent.
+      return null;
+    }
+  }
+
+  private getSafeCleanupPaths(
+    options: CacheEvictionOptions,
+    now: number,
+  ): string[] {
+    const referencedKeys = options.referencedKeys ?? new Set<string>();
+    const protectedKeys = options.protectedKeys ?? new Set<string>();
+    const paths = new Set<string>();
+    const orphanAudioKeys = new Set<string>();
+
+    for (const file of readdirSync(this.dir)) {
+      const full = join(this.dir, file);
+      try {
+        const stats = statSync(full);
+        if (!stats.isFile()) continue;
+        if (
+          TEMPORARY_FILE_PATTERN.test(file) &&
+          now - stats.mtimeMs > STALE_TEMP_TTL_MS
+        ) {
+          paths.add(full);
+          continue;
+        }
+        if (!file.endsWith('.m4a')) continue;
+        const key = file.slice(0, -'.m4a'.length);
+        if (
+          CACHE_KEY_PATTERN.test(key) &&
+          !referencedKeys.has(key) &&
+          !protectedKeys.has(key)
+        ) {
+          orphanAudioKeys.add(key);
+        }
+      } catch {
+        // A concurrent cache operation may have removed or replaced this file.
+      }
+    }
+
+    for (const key of orphanAudioKeys) {
+      for (const path of [
+        audioPath(this.dir, key),
+        ...this.sidecarPaths(key),
+      ]) {
+        paths.add(path);
+      }
+    }
+
+    const previewDir = join(this.dir, 'preview');
+    if (!existsSync(previewDir)) return [...paths];
+    for (const file of readdirSync(previewDir)) {
+      const full = join(previewDir, file);
+      try {
+        const stats = statSync(full);
+        if (!stats.isFile() || now - stats.mtimeMs <= PREVIEW_TTL_MS) continue;
+        paths.add(full);
+        if (!file.endsWith('.m4a')) continue;
+        const key = file.slice(0, -'.m4a'.length);
+        if (!CACHE_KEY_PATTERN.test(key)) continue;
+        for (const sidecar of this.sidecarPaths(`preview:${key}`)) {
+          paths.add(sidecar);
+        }
+      } catch {
+        // A concurrent preview may have removed or replaced this file.
+      }
+    }
+
+    return [...paths];
+  }
+
+  private getFileTotals(paths: readonly string[]): CacheCleanupResult {
+    const result: CacheCleanupResult = { removedFiles: 0, freedBytes: 0 };
+    for (const file of paths) {
+      try {
+        const stats = statSync(file);
+        if (!stats.isFile()) continue;
+        result.removedFiles++;
+        result.freedBytes += stats.size;
+      } catch {
+        // A concurrent cache operation may have removed or replaced this file.
+      }
+    }
+    return result;
+  }
+
+  private removeFiles(paths: readonly string[]): CacheCleanupResult {
+    const result: CacheCleanupResult = { removedFiles: 0, freedBytes: 0 };
+    for (const file of paths) {
+      try {
+        const stats = statSync(file);
+        if (!stats.isFile()) continue;
+        unlinkSync(file);
+        result.removedFiles++;
+        result.freedBytes += stats.size;
+      } catch {
+        // A concurrent operation may have removed or replaced this file.
+      }
+    }
+    return result;
   }
 }
