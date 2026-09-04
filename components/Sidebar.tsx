@@ -3,11 +3,11 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import OfflineIndicator from './OfflineIndicator';
 import { useState } from 'react';
 import { useAppStore } from '../hooks/useAppStore';
 import {
   ClockIcon,
+  HardDriveIcon,
   HeartIcon,
   HomeIcon,
   ListMusicIcon,
@@ -19,6 +19,7 @@ import {
   SourceIcon,
   TagIcon,
 } from './icons';
+import OfflineIndicator from './OfflineIndicator';
 
 const AddPlaylistDialog = dynamic(() => import('./AddPlaylistDialog'), {
   ssr: false,
@@ -33,6 +34,9 @@ const ProfileInputDialog = dynamic(() => import('./ProfileInputDialog'), {
   ssr: false,
 });
 const OfflineManagerDialog = dynamic(() => import('./OfflineManagerDialog'), {
+  ssr: false,
+});
+const CacheStorageDialog = dynamic(() => import('./CacheStorageDialog'), {
   ssr: false,
 });
 
@@ -52,6 +56,7 @@ export default function Sidebar() {
   const [showYoutubeCookies, setShowYoutubeCookies] = useState(false);
   const [showProfileInput, setShowProfileInput] = useState(false);
   const [showOfflineManager, setShowOfflineManager] = useState(false);
+  const [showCacheStorage, setShowCacheStorage] = useState(false);
 
   const isActive = (href: string) => pathname === href;
   const itemClass =
@@ -235,6 +240,13 @@ export default function Sidebar() {
         >
           <RefreshCwIcon size={14} /> Refresh YouTube cookies
         </button>
+        <button
+          type="button"
+          className={actionClass}
+          onClick={() => setShowCacheStorage(true)}
+        >
+          <HardDriveIcon size={14} /> Quản lý dung lượng
+        </button>
         <div className="mt-1 flex gap-3 px-1 pt-2 text-[11px] text-muted-2">
           <Link href="/terms" className="hover:text-ink-secondary">
             Điều khoản
@@ -259,6 +271,9 @@ export default function Sidebar() {
       )}
       {showOfflineManager && (
         <OfflineManagerDialog onClose={() => setShowOfflineManager(false)} />
+      )}
+      {showCacheStorage && (
+        <CacheStorageDialog onClose={() => setShowCacheStorage(false)} />
       )}
     </aside>
   );

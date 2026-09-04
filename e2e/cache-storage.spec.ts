@@ -75,3 +75,78 @@ test('runs safe cleanup and returns reclaimed bytes with refreshed status', asyn
     await rm(orphanAudio, { force: true });
   }
 });
+
+test('opens the storage manager, saves a limit, and cleans only safe cache data', async ({
+  page,
+}) => {
+  const status = {
+    ok: true,
+    cacheMaxGb: 5,
+    savedCacheMaxGb: null,
+    status: {
+      cacheBytes: 2 * 1024 * 1024 * 1024,
+      limitBytes: 5 * 1024 * 1024 * 1024,
+      remainingBytes: 3 * 1024 * 1024 * 1024,
+      freeBytes: 20 * 1024 * 1024 * 1024,
+      minFreeBytes: 256 * 1024 * 1024,
+      isOverLimit: false,
+      isLowDisk: false,
+      safeCleanupBytes: 1234,
+      safeCleanupFiles: 2,
+      orphanedEntries: 0,
+      evictionCandidates: [
+        {
+          trackId: 1,
+          audioKey: 'a'.repeat(64),
+          title: 'Bài kiểm tra',
+          author: 'TikPlay',
+          cover: '',
+          size: 1024,
+          mtimeMs: Date.now() - 60 * 60 * 1000,
+        },
+      ],
+    },
+  };
+
+  await page.route('**/api/cache*', async (route) => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ...status,
+          removedFiles: 2,
+          freedBytes: 1234,
+        }),
+      });
+      return;
+    }
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify(status),
+    });
+  });
+
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Quản lý dung lượng' }).click();
+  await expect(
+    page.getByRole('dialog', { name: 'Dung lượng cache' }),
+  ).toBeVisible();
+  await expect(page.getByText('Bài có thể bị dọn tiếp theo')).toBeVisible();
+  await expect(page.getByText('Bài kiểm tra')).toBeVisible();
+  await page.getByLabel('Giới hạn cache (GB)').fill('2.5');
+  await page.getByRole('button', { name: 'Lưu giới hạn' }).click();
+  await page.getByRole('button', { name: 'Dọn ngay' }).click();
+  await expect(page.getByText(/đã giải phóng/i)).toBeVisible();
+});
+
+test('opens the storage manager from the mobile playlist drawer', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Playlist', exact: true }).click();
+  await page.getByRole('button', { name: 'Quản lý dung lượng' }).click();
+  await expect(
+    page.getByRole('dialog', { name: 'Dung lượng cache' }),
+  ).toBeVisible();
+});
