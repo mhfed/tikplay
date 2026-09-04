@@ -58,7 +58,7 @@ test('runs safe cleanup and returns reclaimed bytes with refreshed status', asyn
   await writeFile(orphanAudio, Buffer.alloc(12));
 
   try {
-    const response = await request.post('/api/cache');
+    const response = await request.post('/api/cache/cleanup');
     expect(response.ok()).toBe(true);
     const body = (await response.json()) as {
       ok: boolean;

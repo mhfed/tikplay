@@ -180,7 +180,7 @@ export default function CacheStorageDialog({
     setNotice(null);
     try {
       const response = await fetch(
-        `/api/cache${protectedQuery ? `?protectedTrackIds=${protectedQuery}` : ''}`,
+        `/api/cache/cleanup${protectedQuery ? `?protectedTrackIds=${protectedQuery}` : ''}`,
         { method: 'POST' },
       );
       const body = (await response.json()) as CacheResponse;

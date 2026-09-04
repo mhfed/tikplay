@@ -71,6 +71,14 @@ export interface CacheCleanupResult {
   freedBytes: number;
 }
 
+interface CacheEvictionEntry {
+  file: string;
+  key: string;
+  mtimeMs: number;
+  size: number;
+  referenced: boolean;
+}
+
 /**
  * Filesystem-backed cache of processed audio. The interface is intentionally
  * small so it can later be swapped for R2/S3/Redis without touching callers.
@@ -224,28 +232,15 @@ export class FileCacheStore implements CacheStore {
     const safeCleanup = this.getFileTotals(
       this.getSafeCleanupPaths(options, Date.now()),
     );
-    const evictionPlan: CacheStorageEntry[] = [];
-    for (const file of readdirSync(this.dir)) {
-      if (!file.endsWith('.m4a')) continue;
-      const key = file.slice(0, -'.m4a'.length);
-      try {
-        const stats = statSync(join(this.dir, file));
-        if (!stats.isFile() || protectedKeys.has(key)) continue;
-        evictionPlan.push({
-          key,
-          size: stats.size,
-          mtimeMs: stats.mtimeMs,
-          referenced: referencedKeys.has(key),
-        });
-      } catch {
-        // A concurrent cache operation may have removed or replaced this file.
-      }
-    }
-
-    evictionPlan.sort(
-      (a, b) =>
-        Number(a.referenced) - Number(b.referenced) || a.mtimeMs - b.mtimeMs,
-    );
+    const evictionPlan = this.getEvictionEntries(
+      protectedKeys,
+      referencedKeys,
+    ).map(({ key, size, mtimeMs, referenced }) => ({
+      key,
+      size,
+      mtimeMs,
+      referenced,
+    }));
 
     return {
       cacheBytes,
@@ -274,61 +269,34 @@ export class FileCacheStore implements CacheStore {
     const now = Date.now();
     this.removeStaleTempFiles(now);
     this.removeExpiredPreviews(now);
-    const files = readdirSync(this.dir).filter((f) => f.endsWith('.m4a'));
     const ttlMs = this.ttlDays * MS_PER_DAY;
     const maxBytes = this.getMaxBytes(options.maxGb);
-
-    const entries: {
-      file: string;
-      mtime: number;
-      size: number;
-      referenced: boolean;
-    }[] = [];
     const evictedKeys: string[] = [];
     let totalBytes = this.getCacheBytes();
+    const entries = this.getEvictionEntries(protectedKeys, referencedKeys);
+    const capacityEntries: CacheEvictionEntry[] = [];
 
-    for (const f of files) {
-      const full = join(this.dir, f);
-      const st = statSync(full);
-      const key = f.slice(0, -'.m4a'.length);
-      const protectedEntry = protectedKeys.has(key);
-      const referencedEntry = referencedKeys.has(key);
-      const entryBytes = this.getMediaBytes(key);
-
+    for (const entry of entries) {
       // Expire only files no longer represented by the library. Library tracks
       // remain available until the cache needs to make room for new media.
-      if (!protectedEntry && !referencedEntry && now - st.mtimeMs > ttlMs) {
-        unlinkSync(full);
-        this.removeSidecars(key);
-        totalBytes -= entryBytes;
-        evictedKeys.push(key);
+      if (!entry.referenced && now - entry.mtimeMs > ttlMs) {
+        unlinkSync(entry.file);
+        this.removeSidecars(entry.key);
+        totalBytes -= entry.size;
+        evictedKeys.push(entry.key);
         continue;
       }
-      if (!protectedEntry) {
-        entries.push({
-          file: full,
-          mtime: st.mtimeMs,
-          size: entryBytes,
-          referenced: referencedEntry,
-        });
-      }
+      capacityEntries.push(entry);
     }
 
     // If still over the cap, evict least-recently-used (oldest mtime) first.
     if (totalBytes > maxBytes || !this.hasEnoughFreeSpace()) {
-      // Prefer removing orphaned cache files before removing saved library
-      // tracks. Within each group, evict the oldest file first.
-      entries.sort(
-        (a, b) =>
-          Number(a.referenced) - Number(b.referenced) || a.mtime - b.mtime,
-      );
-      for (const e of entries) {
+      for (const e of capacityEntries) {
         if (totalBytes <= maxBytes && this.hasEnoughFreeSpace()) break;
         unlinkSync(e.file);
-        const key = e.file.slice(this.dir.length + 1, -'.m4a'.length);
-        this.removeSidecars(key);
+        this.removeSidecars(e.key);
         totalBytes -= e.size;
-        evictedKeys.push(key);
+        evictedKeys.push(e.key);
       }
     }
 
@@ -411,7 +379,12 @@ export class FileCacheStore implements CacheStore {
 
   private getCacheBytes(): number {
     let bytes = 0;
-    const files = readdirSync(this.dir);
+    let files: string[];
+    try {
+      files = readdirSync(this.dir);
+    } catch {
+      return 0;
+    }
     const counted = new Set<string>();
 
     for (const file of files) {
@@ -451,7 +424,13 @@ export class FileCacheStore implements CacheStore {
 
     const previewDir = join(this.dir, 'preview');
     if (!existsSync(previewDir)) return bytes;
-    for (const file of readdirSync(previewDir)) {
+    let previewFiles: string[];
+    try {
+      previewFiles = readdirSync(previewDir);
+    } catch {
+      return bytes;
+    }
+    for (const file of previewFiles) {
       try {
         const stats = statSync(join(previewDir, file));
         if (stats.isFile()) bytes += stats.size;
@@ -503,7 +482,14 @@ export class FileCacheStore implements CacheStore {
     const paths = new Set<string>();
     const orphanAudioKeys = new Set<string>();
 
-    for (const file of readdirSync(this.dir)) {
+    let files: string[];
+    try {
+      files = readdirSync(this.dir);
+    } catch {
+      return [];
+    }
+
+    for (const file of files) {
       const full = join(this.dir, file);
       try {
         const stats = statSync(full);
@@ -540,7 +526,13 @@ export class FileCacheStore implements CacheStore {
 
     const previewDir = join(this.dir, 'preview');
     if (!existsSync(previewDir)) return [...paths];
-    for (const file of readdirSync(previewDir)) {
+    let previewFiles: string[];
+    try {
+      previewFiles = readdirSync(previewDir);
+    } catch {
+      return [...paths];
+    }
+    for (const file of previewFiles) {
       const full = join(previewDir, file);
       try {
         const stats = statSync(full);
@@ -558,6 +550,44 @@ export class FileCacheStore implements CacheStore {
     }
 
     return [...paths];
+  }
+
+  private getEvictionEntries(
+    protectedKeys: ReadonlySet<string>,
+    referencedKeys: ReadonlySet<string>,
+  ): CacheEvictionEntry[] {
+    let files: string[];
+    try {
+      files = readdirSync(this.dir);
+    } catch {
+      return [];
+    }
+
+    const entries: CacheEvictionEntry[] = [];
+    for (const file of files) {
+      if (!file.endsWith('.m4a')) continue;
+      const key = file.slice(0, -'.m4a'.length);
+      if (protectedKeys.has(key)) continue;
+      try {
+        const stats = statSync(join(this.dir, file));
+        if (!stats.isFile()) continue;
+        entries.push({
+          file: join(this.dir, file),
+          key,
+          mtimeMs: stats.mtimeMs,
+          size: this.getMediaBytes(key),
+          referenced: referencedKeys.has(key),
+        });
+      } catch {
+        // A concurrent cache operation may have removed or replaced this file.
+      }
+    }
+
+    entries.sort(
+      (a, b) =>
+        Number(a.referenced) - Number(b.referenced) || a.mtimeMs - b.mtimeMs,
+    );
+    return entries;
   }
 
   private getFileTotals(paths: readonly string[]): CacheCleanupResult {
