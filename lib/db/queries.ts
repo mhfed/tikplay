@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { basename } from 'node:path';
+import { isValidCacheMaxGb, resolveCacheMaxGb } from '../cache/config';
 import { CATEGORIES, detectCategory } from '../categories';
 import { MEDIA_SOURCE_LABELS, type MediaSource } from '../media/source';
 import {
@@ -594,6 +595,27 @@ export function getTracksBySource(source: MediaSource): DbTrack[] {
 }
 
 // ── SETTINGS ─────────────────────────────────────────────
+
+export function getCacheSettings() {
+  const savedCacheMaxGb = getDb().settings?.cacheMaxGb;
+  return {
+    cacheMaxGb: resolveCacheMaxGb(savedCacheMaxGb),
+    savedCacheMaxGb: isValidCacheMaxGb(savedCacheMaxGb)
+      ? savedCacheMaxGb
+      : null,
+  };
+}
+
+export function setCacheMaxGb(cacheMaxGb: number) {
+  if (!isValidCacheMaxGb(cacheMaxGb)) {
+    throw new Error('Giới hạn cache phải lớn hơn 0 GB');
+  }
+
+  const db = getDb();
+  db.settings = { ...(db.settings || {}), cacheMaxGb };
+  saveDb();
+  return getCacheSettings();
+}
 
 export function getYoutubeCookiesInfo() {
   const settings = getDb().settings || {};

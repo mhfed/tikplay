@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ensureCacheDir, FileCacheStore, getCacheDir } from '../cache';
 import { getDb } from '../db';
-import { deleteTracksByAudioKeys } from '../db/queries';
+import { deleteTracksByAudioKeys, getCacheSettings } from '../db/queries';
 import { cacheKeyFromRaw } from './cache-key';
 import { type MediaSource, validateMediaUrl } from './source';
 
@@ -218,10 +218,12 @@ export class MediaProcessor {
         referencedKeys.add(track.audio_key);
         if (protectedIds.has(track.id)) protectedKeys.add(track.audio_key);
       }
+      const { cacheMaxGb } = getCacheSettings();
 
       const evictedKeys = await this.cache.evictOld({
         protectedKeys,
         referencedKeys,
+        maxGb: cacheMaxGb,
       });
       deleteTracksByAudioKeys(evictedKeys);
     } finally {

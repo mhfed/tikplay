@@ -3,11 +3,11 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useState } from 'react';
-import OfflineIndicator from './OfflineIndicator';
 import { useAppStore } from '../hooks/useAppStore';
 import {
   ClockIcon,
   CloseIcon,
+  HardDriveIcon,
   HeartIcon,
   ListMusicIcon,
   PlusIcon,
@@ -17,6 +17,7 @@ import {
   SourceIcon,
   TagIcon,
 } from './icons';
+import OfflineIndicator from './OfflineIndicator';
 
 const AddPlaylistDialog = dynamic(() => import('./AddPlaylistDialog'), {
   ssr: false,
@@ -31,6 +32,9 @@ const ProfileInputDialog = dynamic(() => import('./ProfileInputDialog'), {
   ssr: false,
 });
 const OfflineManagerDialog = dynamic(() => import('./OfflineManagerDialog'), {
+  ssr: false,
+});
+const CacheStorageDialog = dynamic(() => import('./CacheStorageDialog'), {
   ssr: false,
 });
 
@@ -60,6 +64,7 @@ export default function MobileSidebar({
   const [showYoutubeCookies, setShowYoutubeCookies] = useState(false);
   const [showProfileInput, setShowProfileInput] = useState(false);
   const [showOfflineManager, setShowOfflineManager] = useState(false);
+  const [showCacheStorage, setShowCacheStorage] = useState(false);
 
   const handleSelect = (id: number) => {
     selectPlaylist(id);
@@ -240,6 +245,13 @@ export default function MobileSidebar({
           >
             <RefreshCwIcon size={16} /> Refresh YouTube cookies
           </button>
+          <button
+            type="button"
+            className={actionClass}
+            onClick={() => setShowCacheStorage(true)}
+          >
+            <HardDriveIcon size={16} /> Quản lý dung lượng
+          </button>
           <div className="mt-1 flex gap-4 px-2 pt-2 text-xs text-muted-2">
             <Link
               href="/terms"
@@ -272,6 +284,9 @@ export default function MobileSidebar({
         )}
         {showOfflineManager && (
           <OfflineManagerDialog onClose={() => setShowOfflineManager(false)} />
+        )}
+        {showCacheStorage && (
+          <CacheStorageDialog onClose={() => setShowCacheStorage(false)} />
         )}
       </aside>
     </>
